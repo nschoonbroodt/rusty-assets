@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod commands;
-use commands::*;
+use commands::{accounts::*, db::*, demo::*, prices};
 
 #[derive(Parser)]
 #[command(name = "assets-cli")]
@@ -22,11 +22,15 @@ enum Commands {
     Db {
         #[command(subcommand)]
         action: DbCommands,
-    },
-    /// Account management and chart of accounts
+    },    /// Account management and chart of accounts
     Accounts {
         #[command(subcommand)]
         action: AccountCommands,
+    },
+    /// Price tracking for investments
+    Prices {
+        #[command(subcommand)]
+        action: PriceCommands,
     },
     /// Demo and examples
     Demo {
@@ -56,12 +60,24 @@ enum AccountCommands {
     /// Create a new account interactively
     Create,
     /// Show chart of accounts as a tree
-    Tree,
-    /// Show account ownership details
+    Tree,    /// Show account ownership details
     Ownership {
         /// Account ID to show ownership for
         account_id: String,
     },
+}
+
+#[derive(Subcommand)]
+enum PriceCommands {
+    /// Add a price entry for an asset
+    Add,
+    /// Show price history for a symbol or all symbols
+    History {
+        /// Symbol to show history for (optional)
+        symbol: Option<String>,
+    },
+    /// Show market values for all investment accounts
+    Market,
 }
 
 #[derive(Subcommand)]
@@ -79,9 +95,10 @@ enum DemoCommands {
     /// Create sample users and accounts with database
     CreateSample,
     /// Create deep category hierarchy examples in database
-    CreateDeepCategories,
-    /// Create deep account hierarchy examples in database
+    CreateDeepCategories,    /// Create deep account hierarchy examples in database
     CreateDeepAccounts,
+    /// Create sample price data for investments
+    CreateSamplePrices,
 }
 
 #[tokio::main]
@@ -99,10 +116,13 @@ async fn main() -> Result<()> {
             AccountCommands::List => list_accounts().await?,
             AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
             AccountCommands::Create => create_account_interactive().await?,
-            AccountCommands::Tree => show_accounts_tree().await?,
-            AccountCommands::Ownership { account_id } => {
+            AccountCommands::Tree => show_accounts_tree().await?,            AccountCommands::Ownership { account_id } => {
                 show_account_ownership(&account_id).await?
             }
+        },        Commands::Prices { action } => match action {
+            PriceCommands::Add => prices::add_price_interactive().await?,
+            PriceCommands::History { symbol } => prices::show_price_history(symbol.as_deref()).await?,
+            PriceCommands::Market => prices::show_market_values().await?,
         },
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,
@@ -111,8 +131,8 @@ async fn main() -> Result<()> {
             DemoCommands::Ownership => show_ownership_examples(),
             DemoCommands::Categories => show_category_examples().await?,
             DemoCommands::CreateSample => create_sample_data(&cli.user).await?,
-            DemoCommands::CreateDeepCategories => create_deep_categories().await?,
-            DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
+            DemoCommands::CreateDeepCategories => create_deep_categories().await?,            DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
+            DemoCommands::CreateSamplePrices => create_sample_prices().await?,
         },
     }
     Ok(())

@@ -572,6 +572,61 @@ impl SampleDataService {
 
         println!("✅ Deep account hierarchies created!");
         Ok(())
+    }    /// Create sample price data for investment accounts
+    pub async fn create_sample_price_data(&self) -> Result<()> {
+        use chrono::{Utc, Duration};
+        use rust_decimal::Decimal;
+        use rust_decimal::prelude::FromPrimitive;
+        use std::str::FromStr;
+        
+        println!("📈 Creating sample price data...");
+
+        // Sample symbols with realistic prices in EUR
+        let sample_prices = vec![
+            ("AAPL", "150.00", "Apple Inc."),
+            ("GOOGL", "2800.00", "Alphabet Inc."),
+            ("MSFT", "350.00", "Microsoft Corp."),
+            ("TSLA", "800.00", "Tesla Inc."),
+            ("SPY", "450.00", "SPDR S&P 500 ETF"),
+            ("QQQ", "380.00", "Invesco QQQ Trust"),
+            ("VTI", "220.00", "Vanguard Total Stock Market ETF"),
+            ("BTC", "45000.00", "Bitcoin"),
+            ("ETH", "3000.00", "Ethereum"),
+        ];        let today = Utc::now().naive_utc().date();
+        let symbols_count = sample_prices.len();
+        
+        for (symbol, price_str, _description) in &sample_prices {
+            let base_price = Decimal::from_str(price_str)
+                .map_err(|e| crate::error::CoreError::Generic(format!("Invalid price format: {}", e)))?;
+            
+            // Create price history for the last 30 days with some variation
+            for days_ago in (0..30).step_by(3) {
+                let price_date = today - Duration::days(days_ago);
+                
+                // Add some realistic price variation (±1.5%)
+                let variation = (days_ago as f64 * 0.0005) - 0.015; // Small daily variation
+                let price_multiplier = Decimal::from_f64(1.0 + variation).unwrap_or(Decimal::ONE);
+                let price = base_price * price_multiplier;
+                
+                sqlx::query(
+                    "INSERT INTO price_history (symbol, price, price_date, currency, source) 
+                     VALUES ($1, $2, $3, $4, $5) 
+                     ON CONFLICT (symbol, price_date) DO UPDATE SET 
+                     price = $2, currency = $4, source = $5",
+                )
+                .bind(symbol)
+                .bind(price)
+                .bind(price_date)
+                .bind("EUR")
+                .bind("sample_data")
+                .execute(self.db.pool())
+                .await?;
+            }
+        }
+
+        println!("✅ Sample price data created for {} symbols", symbols_count);
+        println!("   Data covers the last 30 days with 3-day intervals");
+        Ok(())
     }
 
     /// Remove all sample data (useful for cleanup)

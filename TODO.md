@@ -1,9 +1,8 @@
 # Actual Todo
 
-## Price history
+## Automated Price Feeds
 
-to be able to show the assets value change overtime, we need to track the price of assets overtime (for example the price of an AAPL share)
-Do we have that in place, and if not, let's see how to add it.
+Implement automated price feeds from financial APIs for real-time price updates instead of manual entry. This would allow the system to automatically fetch current market prices for tracked assets (stocks, ETFs, crypto) from sources like Yahoo Finance, Alpha Vantage, or similar APIs.
 
 ## Add github actions
 
@@ -12,6 +11,53 @@ Do we have that in place, and if not, let's see how to add it.
 the file service.rs in assets-core becomes quite large. Would it make sense to split it into several mods?
 
 # Done
+
+## ✅ Price History: Complete price tracking for investments - DONE
+
+**COMPLETED**: Implemented comprehensive price history tracking system for investment assets with CLI commands and market value calculations:
+
+**Database Infrastructure**:
+
+- ✅ Created `000005_price_history.up.sql` migration with `price_history` table
+- ✅ Table structure: symbol, price, price_date, currency, source with proper indexes
+- ✅ Unique constraint on (symbol, price_date) with UPSERT capability
+- ✅ Applied migration successfully (migrated from corrupted state)
+
+**Core Models & Services**:
+
+- ✅ Added `PriceHistory` and `NewPriceHistory` models to `models.rs`
+- ✅ Added `AccountWithMarketValue` model for market value calculations
+- ✅ Implemented `PriceHistoryService` in `services.rs` with complete CRUD operations:
+  - `add_price()` - Add/update price entries with UPSERT logic
+  - `get_latest_price()` - Get most recent price for a symbol
+  - `get_price_history()` - Get price history over date ranges
+  - `get_tracked_symbols()` - List all symbols with price data
+  - `get_account_with_market_value()` - Calculate market values for investment accounts
+
+**CLI Commands**:
+
+- ✅ Added `PriceCommands` enum with Add, History, Market subcommands
+- ✅ Added prices command to main CLI with proper routing
+- ✅ Implemented complete CLI functions:
+  - `add_price_interactive()` - Interactive price entry with validation
+  - `show_price_history()` - Display price history (all symbols or specific symbol)
+  - `show_market_values()` - Show investment portfolio performance with gains/losses
+- ✅ Fixed import issues and compilation errors
+
+**Sample Data & Testing**:
+
+- ✅ Added `create_sample_price_data()` method to `SampleDataService`
+- ✅ Creates 30-day price history for 9 symbols (AAPL, GOOGL, MSFT, TSLA, SPY, QQQ, VTI, BTC, ETH)
+- ✅ Added `demo create-sample-prices` CLI command for easy testing
+- ✅ Sample data includes realistic price variations over time
+
+**Verified Functionality**:
+
+- ✅ `cargo run -- prices history` - Shows all tracked symbols with latest prices
+- ✅ `cargo run -- prices history AAPL` - Shows detailed price history with percentage changes
+- ✅ `cargo run -- prices market` - Shows investment accounts with market values and gains/losses
+- ✅ Database contains 90 price records (9 symbols × 10 time points)
+- ✅ All commands work with proper formatting and helpful guidance
 
 ## ✅ Interactive Account Creation: Full account creation workflow - DONE
 

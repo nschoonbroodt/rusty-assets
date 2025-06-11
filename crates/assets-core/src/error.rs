@@ -17,9 +17,11 @@ pub enum CoreError {
 
     #[error("Not found: {0}")]
     NotFound(String),
-
     #[error("Transaction does not balance: expected {expected}, got {actual}")]
     UnbalancedTransaction { expected: Decimal, actual: Decimal },
+
+    #[error("Generic error: {0}")]
+    Generic(String),
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;

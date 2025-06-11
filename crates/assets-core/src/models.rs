@@ -285,3 +285,35 @@ pub struct NewAccount {
     pub currency: String,
     pub notes: Option<String>,
 }
+
+/// Price history for tracking asset values over time
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct PriceHistory {
+    pub id: Uuid,
+    pub symbol: String,
+    pub price: Decimal,
+    pub price_date: chrono::NaiveDate,
+    pub currency: String,
+    pub source: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+/// New price history entry for creation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewPriceHistory {
+    pub symbol: String,
+    pub price: Decimal,
+    pub price_date: chrono::NaiveDate,
+    pub currency: String,
+    pub source: Option<String>,
+}
+
+/// Account with market value calculation (for investments)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountWithMarketValue {
+    pub account: Account,
+    pub book_value: Decimal,                   // From journal entries
+    pub market_value: Option<Decimal>,         // quantity × latest price
+    pub unrealized_gain_loss: Option<Decimal>, // market_value - book_value
+    pub latest_price: Option<PriceHistory>,
+}

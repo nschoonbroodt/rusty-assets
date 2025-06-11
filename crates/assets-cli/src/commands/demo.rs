@@ -430,3 +430,27 @@ pub async fn create_deep_accounts() -> Result<()> {
 
     Ok(())
 }
+
+pub async fn create_sample_prices() -> Result<()> {
+    println!("📈 Creating Sample Price Data");
+    println!("=============================\n");
+
+    // Connect to database
+    let db = Database::from_env().await?;
+    println!("✅ Connected to database");
+
+    // Create sample data service
+    let sample_service = SampleDataService::new(db);
+
+    // Create sample price data
+    sample_service.create_sample_price_data().await?;
+
+    println!("\n🎉 Sample price data created!");
+    println!("\n💡 Try these commands to explore the price data:");
+    println!("   cargo run -- prices history          # Show all tracked symbols");
+    println!("   cargo run -- prices history AAPL     # Show AAPL price history");
+    println!("   cargo run -- prices add              # Add a new price entry");
+    println!("   cargo run -- prices market           # Show market values for investments");
+
+    Ok(())
+}
