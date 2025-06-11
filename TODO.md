@@ -54,6 +54,8 @@ Add ability to archive old accounts without deleting historical data (useful for
 
 # Medium term
 
+## Create a terminal user interface with ratatui
+
 ## Security
 Does the database needs to be crypted? Do we need auth? Row based access?
 
