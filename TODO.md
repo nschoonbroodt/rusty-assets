@@ -6,11 +6,19 @@ Implement automated price feeds from financial APIs for real-time price updates 
 
 ## Add github actions
 
-## service.rs
-
-the file service.rs in assets-core becomes quite large. Would it make sense to split it into several mods?
-
 # Done
+
+## ✅ Split services.rs into Modules - DONE
+
+**COMPLETED**: Restructured the `services.rs` file into separate modules for better organization:
+
+- ✅ Created a `services` directory with dedicated files for each service
+- ✅ Separated `TransactionService`, `AccountService`, `UserService`, `OwnershipService`, and `PriceHistoryService` into individual files
+- ✅ Created a `mod.rs` to re-export all services
+- ✅ Each service file now contains only related functionality
+- ✅ Improved code organization and maintainability
+- ✅ Fixed import statements and dependencies
+- ✅ Verified build and functionality after restructuring
 
 ## ✅ Price History: Complete price tracking for investments - DONE
 

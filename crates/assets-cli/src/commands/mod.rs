@@ -3,7 +3,5 @@ pub mod db;
 pub mod demo;
 pub mod prices;
 
-pub use accounts::*;
-pub use db::*;
-pub use demo::*;
-pub use prices::*;
+// Modules are exported but not their contents
+// Main.rs imports them directly with `use commands::{accounts::*, db::*, demo::*, prices};`
