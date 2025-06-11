@@ -1,4 +1,5 @@
 use anyhow::Result;
+use assets_core::{AccountSubtype, AccountType};
 use ratatui::prelude::*;
 use ratatui::widgets::*;
 
@@ -30,6 +31,7 @@ pub enum Action {
     ViewAccount(String),
     ViewTransaction(String),
     AddAccount,
+    CreateAccount(CreateAccountData),
     AddTransaction,
     EditAccount(String),
     EditTransaction(String),
@@ -38,6 +40,16 @@ pub enum Action {
     Refresh,
     Help,
     Error(String),
+}
+
+/// Data needed to create a new account
+#[derive(Debug, Clone)]
+pub struct CreateAccountData {
+    pub code: String,
+    pub name: String,
+    pub account_type: AccountType,
+    pub account_subtype: AccountSubtype,
+    pub currency: String,
 }
 
 /// The different screens in the application
@@ -70,13 +82,13 @@ impl App {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     pub async fn init(&self) -> anyhow::Result<()> {
         // Initialize database connection
         self.db.init().await?;
         Ok(())
     }
-    
+
     pub fn tick(&self) -> anyhow::Result<()> {
         Ok(())
     }
@@ -91,6 +103,7 @@ impl App {
             Action::ViewAccount(_)
             | Action::ViewTransaction(_)
             | Action::AddAccount
+            | Action::CreateAccount(_)
             | Action::AddTransaction
             | Action::EditAccount(_)
             | Action::EditTransaction(_)

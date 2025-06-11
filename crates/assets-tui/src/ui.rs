@@ -9,6 +9,7 @@ use ratatui::{
 
 use crate::component::{Action, Component, Screen};
 use crate::components::{
+    account_form::AccountFormComponent,
     accounts::AccountsComponent,
     reports::ReportsComponent,
     settings::SettingsComponent,
@@ -21,6 +22,7 @@ pub struct UI {
     transactions: TransactionsComponent,
     reports: ReportsComponent,
     settings: SettingsComponent,
+    account_form: AccountFormComponent,
     current_screen: Screen,
     db: Option<AppDatabase>,
 }
@@ -32,6 +34,7 @@ impl UI {
             transactions: TransactionsComponent::new(),
             reports: ReportsComponent::new(),
             settings: SettingsComponent::new(),
+            account_form: AccountFormComponent::new(),
             current_screen: Screen::Accounts,
             db: None,
         }
@@ -49,6 +52,7 @@ impl UI {
         // Initialize all components with database access
         self.accounts.init_with_db(db.clone())?;
         self.transactions.init_with_db(db.clone())?;
+        self.account_form.init_with_db(db.clone())?;
         self.reports.init()?;
         self.settings.init()?;
         
@@ -65,7 +69,13 @@ impl UI {
 }
 
 impl Component for UI {
-    fn handle_events(&mut self, event: crossterm::event::Event) -> Result<Option<Action>> {        // Handle tab navigation with numbers
+    fn handle_events(&mut self, event: crossterm::event::Event) -> Result<Option<Action>> {
+        // First, let the account form handle events if it's visible
+        if self.account_form.is_visible() {
+            return self.account_form.handle_events(event);
+        }
+        
+        // Handle tab navigation with numbers
         if let crossterm::event::Event::Key(key) = &event {
             if key.kind == crossterm::event::KeyEventKind::Press {
                 match key.code {
@@ -87,6 +97,11 @@ impl Component for UI {
                     }
                     crossterm::event::KeyCode::Char('r') => {
                         return Ok(Some(Action::Refresh));
+                    }
+                    crossterm::event::KeyCode::Char('a') => {
+                        if self.current_screen == Screen::Accounts {
+                            return Ok(Some(Action::AddAccount));
+                        }
                     }
                     _ => {}
                 }
@@ -110,16 +125,22 @@ impl Component for UI {
         
         // Render tabs
         let _ = self.render_tabs(frame, chunks[0]);
-        
-        // Render the active component
+          // Render the active component
         match self.current_screen {
             Screen::Accounts => self.accounts.render(frame, chunks[1])?,
             Screen::Transactions => self.transactions.render(frame, chunks[1])?,
             Screen::Reports => self.reports.render(frame, chunks[1])?,
             Screen::Settings => self.settings.render(frame, chunks[1])?,
-        }        // Render help text at bottom
+        }
+        
+        // Render account form on top if visible
+        if self.account_form.is_visible() {
+            self.account_form.render(frame, area)?;
+        }
+        
+        // Render help text at bottom
         let help_text = match self.current_screen {
-            Screen::Accounts => "↑↓: Navigate  Enter: View details  r: Refresh  q: Quit",
+            Screen::Accounts => "↑↓: Navigate  Enter: View details  a: Add Account  r: Refresh  q: Quit",
             Screen::Transactions => "↑↓: Navigate  Enter: View details  r: Refresh  q: Quit",
             Screen::Reports => "←→: Change report  r: Refresh  q: Quit",
             Screen::Settings => "↑↓: Navigate  q: Quit",
@@ -177,6 +198,19 @@ impl UI {
             self.transactions.load_transactions().await?;
         }
         
+        Ok(())
+    }
+}
+
+impl UI {
+    /// Handle actions from components
+    pub fn handle_action(&mut self, action: Action) -> Result<()> {
+        match action {
+            Action::AddAccount => {
+                self.account_form.show();
+            }
+            _ => {}
+        }
         Ok(())
     }
 }

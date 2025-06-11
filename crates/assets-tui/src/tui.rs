@@ -13,8 +13,9 @@ use std::{
     time::{Duration, Instant},
 };
 
-use crate::component::{Action, App, Component};
+use crate::component::{Action, App, Component, CreateAccountData};
 use crate::ui::UI;
+use assets_core::{AccountService, NewAccount};
 
 pub struct Tui {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
@@ -24,13 +25,14 @@ pub struct Tui {
     pub last_tick: Instant,
 }
 
-impl Tui {    pub async fn new() -> Result<Self> {
+impl Tui {
+    pub async fn new() -> Result<Self> {
         let backend = CrosstermBackend::new(io::stdout());
         let terminal = Terminal::new(backend)?;
-        
+
         // Create app
         let app = App::new();
-        
+
         // Initialize app with database connection
         app.init().await?;
 
@@ -57,7 +59,8 @@ impl Tui {    pub async fn new() -> Result<Self> {
         self.terminal.clear()?;
 
         Ok(())
-    }    pub async fn run(&mut self) -> Result<()> {
+    }
+    pub async fn run(&mut self) -> Result<()> {
         self.init().await?;
 
         // Main loop
@@ -82,7 +85,8 @@ impl Tui {    pub async fn new() -> Result<Self> {
         })?;
 
         Ok(())
-    }    pub async fn handle_events(&mut self) -> Result<()> {
+    }
+    pub async fn handle_events(&mut self) -> Result<()> {
         // Poll for events with a timeout
         if crossterm::event::poll(Duration::from_millis(50))? {
             match event::read()? {
@@ -92,7 +96,7 @@ impl Tui {    pub async fn new() -> Result<Self> {
                         KeyCode::Char('q') => {
                             self.app.handle_action(Action::Quit)?;
                             return Ok(());
-                        }                        
+                        }
                         _ => {
                             // Pass event to UI for component-specific handling
                             if let Some(action) = self.ui.handle_events(Event::Key(key))? {
@@ -101,14 +105,28 @@ impl Tui {    pub async fn new() -> Result<Self> {
                                         // Reload data from database
                                         self.ui.refresh_data().await?;
                                     }
+                                    Action::AddAccount => {
+                                        // Handle account creation
+                                        self.ui.handle_action(action.clone())?;
+                                    }
+                                    Action::CreateAccount(account_data) => {
+                                        // Create the account in the database
+                                        if let Err(e) = self.create_account(account_data).await {
+                                            eprintln!("Failed to create account: {}", e);
+                                        } else {
+                                            // Refresh the UI after successful creation
+                                            self.ui.refresh_data().await?;
+                                        }
+                                    }
                                     _ => {}
                                 }
-                                
+
                                 self.app.handle_action(action)?;
                             }
                         }
                     }
-                }                Event::Resize(_, _) => {
+                }
+                Event::Resize(_, _) => {
                     // Handle terminal resize
                     self.terminal.clear()?;
                 }
@@ -144,6 +162,32 @@ impl Tui {    pub async fn new() -> Result<Self> {
         )?;
         self.terminal.show_cursor()?;
 
+        Ok(())
+    }
+    async fn create_account(&mut self, account_data: &CreateAccountData) -> Result<()> {
+        // Get database connection from app
+        let db = self.app.db.get().await?;
+        let account_service = AccountService::new(db.pool().clone());
+
+        // Create the NewAccount struct
+        let new_account = NewAccount {
+            code: account_data.code.clone(),
+            name: account_data.name.clone(),
+            account_type: account_data.account_type.clone(),
+            account_subtype: account_data.account_subtype.clone(),
+            parent_id: None,
+            symbol: None,
+            quantity: None,
+            average_cost: None,
+            address: None,
+            purchase_date: None,
+            purchase_price: None,
+            currency: account_data.currency.clone(),
+            notes: None,
+        };
+
+        // Create the account
+        account_service.create_account(new_account).await?;
         Ok(())
     }
 }
