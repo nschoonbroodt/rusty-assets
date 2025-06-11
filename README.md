@@ -167,32 +167,32 @@ cargo run --bin assets-cli -- ownership
 
 RustyAssets uses **double-entry bookkeeping**, the same accounting system used by businesses and professional financial software. This provides:
 
-- **Complete audit trail** - see exactly where every dollar comes from and goes
+- **Complete audit trail** - see exactly where every euro comes from and goes
 - **Built-in validation** - all transactions must balance (debits = credits)
 - **Professional reporting** - can generate balance sheets, income statements, etc.
 - **Unified account system** - cash, investments, real estate are all accounts
 
 ### Double-Entry Examples
 
-**Getting paid $3,000 salary:**
+**Getting paid €3,000 salary:**
 
 ```
-Debit:  Checking Account (Asset)     +$3,000
-Credit: Salary Income               +$3,000
+Debit:  Checking Account (Asset)     +€3,000
+Credit: Salary Income               +€3,000
 ```
 
-**Buying $150 groceries with credit card:**
+**Buying €150 groceries with credit card:**
 
 ```
-Debit:  Groceries Expense           +$150
-Credit: Credit Card (Liability)     +$150
+Debit:  Groceries Expense           +€150
+Credit: Credit Card (Liability)     +€150
 ```
 
-**Purchasing $2,500 of AAPL stock:**
+**Purchasing €2,500 of AAPL stock:**
 
 ```
-Debit:  AAPL Stock (Asset)          +$2,500
-Credit: Checking Account (Asset)    -$2,500
+Debit:  AAPL Stock (Asset)          +€2,500
+Credit: Checking Account (Asset)    -€2,500
 ```
 
 ## Quick Demo

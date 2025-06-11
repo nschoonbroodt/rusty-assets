@@ -97,9 +97,8 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
                 if let Some(quantity) = account.quantity {
                     println!("   Quantity: {}", quantity);
                 }
-
                 if let Some(avg_cost) = account.average_cost {
-                    println!("   Average Cost: ${}", avg_cost);
+                    println!("   Average Cost: €{}", avg_cost);
                 }
 
                 // TODO: Calculate actual balance from journal entries

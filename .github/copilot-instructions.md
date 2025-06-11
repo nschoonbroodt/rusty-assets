@@ -10,3 +10,4 @@
 - Always use the non-macro version of SQLx queries (e.g., `sqlx::query()` instead of `sqlx::query!()`).
 - Future interfaces (GUI/web) should be easy to add as new crates.
 - When creating new crates with `cargo new`, always use `--vcs none` to avoid initializing git in subdirectories.
+- move completed tasks to the bottom of the list when todo are done

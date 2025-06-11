@@ -16,10 +16,8 @@ pub async fn demo_double_entry() -> Result<()> {
     println!("- Liabilities, Equity, and Income increase with credits (-)\n");
 
     // Example transactions
-    println!("📝 Example Transactions:\n");
-
-    // Example 1: Getting paid salary
-    println!("1. Salary Payment: $3,000");
+    println!("📝 Example Transactions:\n"); // Example 1: Getting paid salary
+    println!("1. Salary Payment: €3,000");
     let salary_transaction = TransactionService::create_simple_transaction(
         "Monthly salary payment".to_string(),
         Uuid::new_v4(), // Checking account (Asset)
@@ -30,19 +28,17 @@ pub async fn demo_double_entry() -> Result<()> {
         None, // No specific user for demo
     );
 
-    println!("   Debit:  Checking Account    +$3,000.00");
-    println!("   Credit: Salary Income       +$3,000.00");
+    println!("   Debit:  Checking Account    +€3,000.00");
+    println!("   Credit: Salary Income       +€3,000.00");
     println!(
-        "   Balance check: ${:.2} (should be 0.00) ✓\n",
+        "   Balance check: €{:.2} (should be 0.00) ✓\n",
         salary_transaction
             .entries
             .iter()
             .map(|e| e.amount)
             .sum::<Decimal>()
-    );
-
-    // Example 2: Buying groceries
-    println!("2. Grocery Purchase: $150");
+    ); // Example 2: Buying groceries
+    println!("2. Grocery Purchase: €150");
     let grocery_transaction = TransactionService::create_simple_transaction(
         "Weekly groceries".to_string(),
         Uuid::new_v4(), // Groceries expense account
@@ -53,24 +49,24 @@ pub async fn demo_double_entry() -> Result<()> {
         None, // No specific user for demo
     );
 
-    println!("   Debit:  Groceries Expense   +$150.00");
-    println!("   Credit: Credit Card         +$150.00 (liability)");
+    println!("   Debit:  Groceries Expense   +€150.00");
+    println!("   Credit: Credit Card         +€150.00 (liability)");
     println!(
-        "   Balance check: ${:.2} (should be 0.00) ✓\n",
+        "   Balance check: €{:.2} (should be 0.00) ✓\n",
         grocery_transaction
             .entries
             .iter()
             .map(|e| e.amount)
             .sum::<Decimal>()
-    );    // Example 3: Investment purchase with trading fee (3 journal entries)
-    println!("3. Stock Purchase with Trading Fee: $2,500 + $9.99 fee");
-    
+    ); // Example 3: Investment purchase with trading fee (3 journal entries)
+    println!("3. Stock Purchase with Trading Fee: €2,500 + €9.99 fee");
+
     // Create a transaction with multiple journal entries manually
-    use assets_core::{NewTransaction, NewJournalEntry};
+    use assets_core::{NewJournalEntry, NewTransaction};
     let stock_price = Decimal::from_str("2500.00")?;
     let trading_fee = Decimal::from_str("9.99")?;
     let total_cost = stock_price + trading_fee;
-    
+
     let investment_transaction = NewTransaction {
         description: "Purchase 15 shares of AAPL with trading fee".to_string(),
         reference: Some("TXN-20250611-001".to_string()),
@@ -80,35 +76,36 @@ pub async fn demo_double_entry() -> Result<()> {
             // Debit: AAPL Stock (Asset increases)
             NewJournalEntry {
                 account_id: Uuid::new_v4(), // AAPL stock account
-                amount: stock_price, // +$2,500.00
-                memo: Some("15 shares of AAPL @ $166.67".to_string()),
+                amount: stock_price,        // +€2,500.00
+                memo: Some("15 shares of AAPL @ €166.67".to_string()),
             },
             // Debit: Trading Fee Expense (Expense increases)
             NewJournalEntry {
                 account_id: Uuid::new_v4(), // Trading fees expense account
-                amount: trading_fee, // +$9.99
+                amount: trading_fee,        // +€9.99
                 memo: Some("Brokerage trading fee".to_string()),
             },
             // Credit: Checking Account (Asset decreases)
             NewJournalEntry {
                 account_id: Uuid::new_v4(), // Checking account
-                amount: -total_cost, // -$2,509.99
+                amount: -total_cost,        // -€2,509.99
                 memo: Some("Total payment for stock purchase".to_string()),
             },
         ],
     };
 
-    println!("   Debit:  AAPL Stock          +$2,500.00");
-    println!("   Debit:  Trading Fee Expense +$9.99");
-    println!("   Credit: Checking Account    -$2,509.99");
+    println!("   Debit:  AAPL Stock          +€2,500.00");
+    println!("   Debit:  Trading Fee Expense +€9.99");
+    println!("   Credit: Checking Account    -€2,509.99");
     println!(
-        "   Balance check: ${:.2} (should be 0.00) ✓\n",
+        "   Balance check: €{:.2} (should be 0.00) ✓\n",
         investment_transaction
             .entries
             .iter()
             .map(|e| e.amount)
             .sum::<Decimal>()
-    );    println!("🎯 Key Benefits:");
+    );
+    println!("🎯 Key Benefits:");
     println!("- Complete audit trail: see exactly where money comes from and goes");
     println!("- Built-in validation: transactions must balance");
     println!("- Multi-entry transactions: handle complex scenarios like fees, taxes, splits");
@@ -181,22 +178,20 @@ pub fn show_multi_user_examples() {
     println!("   --user you     → Show only your transactions and proportional balances");
     println!("   --user spouse  → Show only spouse's transactions and proportional balances");
     println!("   --user family  → Show all transactions and combined balances (default)\n");
-
     println!("💰 Example Shared Assets:");
-    println!("   Apartment: You 64%, Spouse 36% ($400k total)");
-    println!("   Mortgage:  You 50%, Spouse 50% ($200k debt)");
+    println!("   Apartment: You 64%, Spouse 36% (€400k total)");
+    println!("   Mortgage:  You 50%, Spouse 50% (€200k debt)");
     println!("   Checking:  You 100% (individual account)");
     println!("   Savings:   Spouse 100% (individual account)\n");
-
     println!("📊 Balance Views:");
-    println!("   Family View:  Apartment $400k, Mortgage -$200k = Net $200k");
-    println!("   Your View:    Apartment $256k, Mortgage -$100k = Net $156k");
-    println!("   Spouse View:  Apartment $144k, Mortgage -$100k = Net $44k\n");
+    println!("   Family View:  Apartment €400k, Mortgage -€200k = Net €200k");
+    println!("   Your View:    Apartment €256k, Mortgage -€100k = Net €156k");
+    println!("   Spouse View:  Apartment €144k, Mortgage -€100k = Net €44k\n");
 
     println!("🔄 Example Transaction Attribution:");
-    println!("   You buy groceries ($150) → Attributed to you");
-    println!("   Spouse pays utilities ($200) → Attributed to spouse");
-    println!("   Mortgage payment ($1500) → Could be split or attributed to one person\n");
+    println!("   You buy groceries (€150) → Attributed to you");
+    println!("   Spouse pays utilities (€200) → Attributed to spouse");
+    println!("   Mortgage payment (€1500) → Could be split or attributed to one person\n");
 
     println!("🎯 Benefits:");
     println!("- Fair ownership tracking without complex splitting");
@@ -211,34 +206,33 @@ pub fn show_ownership_examples() {
 
     println!("Real estate and large assets often have fractional ownership between");
     println!("partners. Our system tracks this precisely without complex calculations.\n");
-
     println!("📋 Example 1: Apartment Purchase");
-    println!("   Purchase Price: $400,000");
-    println!("   You contribute: $256,000 (64%)");
-    println!("   Spouse contributes: $144,000 (36%)");
+    println!("   Purchase Price: €400,000");
+    println!("   You contribute: €256,000 (64%)");
+    println!("   Spouse contributes: €144,000 (36%)");
     println!("   \n   Journal Entries:");
-    println!("   Debit:  Real Estate - Apartment    +$400,000");
-    println!("   Credit: Your Checking              -$256,000");
-    println!("   Credit: Spouse Checking            -$144,000");
+    println!("   Debit:  Real Estate - Apartment    +€400,000");
+    println!("   Credit: Your Checking              -€256,000");
+    println!("   Credit: Spouse Checking            -€144,000");
     println!("   \n   Ownership recorded: You 64%, Spouse 36%\n");
 
     println!("📋 Example 2: Mortgage (Shared Liability)");
-    println!("   Loan Amount: $200,000");
-    println!("   You responsible: $100,000 (50%)");
-    println!("   Spouse responsible: $100,000 (50%)");
+    println!("   Loan Amount: €200,000");
+    println!("   You responsible: €100,000 (50%)");
+    println!("   Spouse responsible: €100,000 (50%)");
     println!("   \n   Journal Entries:");
-    println!("   Debit:  Cash/Checking              +$200,000");
-    println!("   Credit: Mortgage Payable           -$200,000");
+    println!("   Debit:  Cash/Checking              +€200,000");
+    println!("   Credit: Mortgage Payable           -€200,000");
     println!("   \n   Ownership recorded: You 50%, Spouse 50%\n");
 
     println!("📋 Example 3: Monthly Mortgage Payment");
-    println!("   Payment: $1,500 ($1,200 principal + $300 interest)");
+    println!("   Payment: €1,500 (€1,200 principal + €300 interest)");
     println!("   Paid by: You (but affects both owners proportionally)");
     println!("   \n   Journal Entries:");
-    println!("   Debit:  Mortgage Payable           +$1,200 (reduces debt)");
-    println!("   Debit:  Interest Expense           +$300");
-    println!("   Credit: Your Checking              -$1,500");
-    println!("   \n   Effect: Your debt reduced by $600, Spouse's by $600\n");
+    println!("   Debit:  Mortgage Payable           +€1,200 (reduces debt)");
+    println!("   Debit:  Interest Expense           +€300");
+    println!("   Credit: Your Checking              -€1,500");
+    println!("   \n   Effect: Your debt reduced by €600, Spouse's by €600\n");
 
     println!("🎯 Key Features:");
     println!("- Ownership percentages stored once, applied automatically");
