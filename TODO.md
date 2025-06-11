@@ -6,6 +6,18 @@ Implement automated price feeds from financial APIs for real-time price updates 
 
 ## Add github actions
 
+## Real-world transaction import (CSV, QIF, OFX)
+
+Support importing transactions from common financial data formats (CSV, QIF, OFX) to make onboarding and data migration easier.
+
+## Web or GUI interface
+
+Develop a web or graphical user interface as an alternative to the CLI for broader accessibility and ease of use.
+
+## Reporting: balance sheets, income statements, net worth tracking
+
+Implement reporting features to generate balance sheets, income statements, and net worth tracking for comprehensive financial analysis.
+
 # Done
 
 ## ✅ Split services.rs into Modules - DONE
@@ -185,4 +197,4 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - ✅ Account 1425 created successfully with 80% ownership for Spouse
 - ✅ Correctly prevented exceeding 100% ownership during setup
 - ✅ Interrupted creation properly rolled back (no orphaned account 1426)
-- ✅ Transaction integrity maintained under
+- ✅ Transaction integrity maintained under all circumstances

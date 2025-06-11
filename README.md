@@ -17,14 +17,26 @@ This project is a Cargo workspace with all crates in the `crates/` directory:
 
 ## Features
 
-- Modular design for easy extension (e.g., add GUI/web interface as new crates)
-- PostgreSQL for persistent, reliable storage
-- Designed for future features like:
-  - Recurring transactions
-  - Budgeting
-  - Net worth calculation
-  - Multi-currency support
-  - Reporting and analytics
+- **Double-entry bookkeeping** with transaction validation
+- **Multi-user support** with fractional ownership percentages
+- **Hierarchical account structure** with unlimited nesting
+- **Investment tracking** with price history and market value calculations
+- **Interactive account creation** with type-specific fields
+- **Real-time balance calculation** from journal entries
+- **PostgreSQL** for persistent, reliable storage
+- **EUR (€) as default currency** for all transactions and accounts
+- **Database performance optimization** (uses 127.0.0.1 instead of localhost)
+- **Modular design** for easy extension (e.g., add GUI/web interface as new crates)
+
+### Planned Features
+
+- Recurring transactions
+- Budgeting
+- Net worth calculation
+- Real-world transaction import (CSV, QIF, OFX)
+- Automated price feeds from financial APIs
+- Reporting and analytics
+- Web or GUI interface
 
 ## Getting Started
 
@@ -72,8 +84,10 @@ When you're ready to connect to a database:
 2. Set your database URL:
 
    ```powershell
-   $env:DATABASE_URL="postgresql://rustyassets:rustyassets@localhost:5432/rustyassets"
+   $env:DATABASE_URL="postgresql://rustyassets:rustyassets@127.0.0.1:5432/rustyassets"
    ```
+
+   > **Performance Tip**: Using `127.0.0.1` instead of `localhost` can significantly improve connection speed on Windows (96.5% faster), avoiding DNS resolution delays.
 
 3. Run migrations:
 
@@ -96,15 +110,22 @@ When you're ready to connect to a database:
 - Core business logic services
 - CLI demo with interactive examples
 - Rust workspace structure with proper separation
+- Database connection and migration runner
+- CRUD operations for accounts and transactions
+- Investment price tracking and portfolio valuation
+- Balance calculation from journal entries
+- Price history tracking for investments
+- Multi-user ownership with percentage allocation
+- Deep account hierarchies with parent-child relationships
+- Interactive account creation workflow
 
 🔄 **Next Steps:**
 
-- ✅ Database connection and migration runner
-- CRUD operations for accounts and transactions
 - Real-world transaction import (CSV, QIF, OFX)
-- Investment price tracking and portfolio valuation
+- Automated price feeds from financial APIs
 - Web or GUI interface
 - Reporting: balance sheets, income statements, net worth tracking
+- GitHub Actions for CI/CD
 
 ## Database Setup
 
@@ -135,6 +156,12 @@ cargo run -- accounts tree              # Beautiful hierarchical chart of accoun
 cargo run -- accounts balance           # All account balances from real transactions
 cargo run -- demo create-deep-accounts  # Create realistic 4-level account hierarchy
 
+# 📈 Investment Tracking
+cargo run -- prices history             # View all tracked symbols with latest prices
+cargo run -- prices history AAPL        # Detailed price history with % changes for AAPL
+cargo run -- prices market              # Investment accounts with market values and gains/losses
+cargo run -- demo create-sample-prices  # Create 30-day price history for 9 symbols
+
 # 🎭 Learn Double-Entry Bookkeeping
 cargo run -- demo double-entry          # Interactive examples with €3,000 salary, €150 groceries
 cargo run -- demo account-types         # Understand debit/credit behavior by account type
@@ -150,8 +177,11 @@ cargo run -- demo create-deep-categories # Create Expense→Home→Deco→Furnit
 
 # 👤 User Context Switching
 cargo run --user you -- accounts balance    # Your perspective only
-cargo run --user spouse -- accounts balance # Spouse's perspective only  
+cargo run --user spouse -- accounts balance # Spouse's perspective only
 cargo run --user family -- accounts balance # Combined family view (default)
+
+# 🆕 Account Management
+cargo run -- accounts create            # Interactive account creation with 10-step workflow
 ```
 
 ### 🎯 Quick Test Sequence
@@ -166,10 +196,16 @@ cargo run -- accounts tree
 # 3. See real balances calculated from transactions
 cargo run -- accounts balance
 
-# 4. Learn the accounting principles
+# 4. Add price history for investment tracking
+cargo run -- demo create-sample-prices
+
+# 5. View investment portfolio performance
+cargo run -- prices market
+
+# 6. Learn the accounting principles
 cargo run -- demo double-entry
 
-# 5. Try different user perspectives
+# 7. Try different user perspectives
 cargo run --user you -- accounts balance
 ```
 
@@ -182,7 +218,9 @@ If you prefer to install PostgreSQL manually:
 createdb rustyassets
 
 # Update .env with your connection details
-# DATABASE_URL=postgresql://username:password@localhost:5432/rustyassets
+# DATABASE_URL=postgresql://username:password@127.0.0.1:5432/rustyassets
+
+# Note: Using 127.0.0.1 instead of localhost improves performance significantly on Windows
 
 # Run migrations
 cargo run --bin assets-cli -- init-db
@@ -190,22 +228,31 @@ cargo run --bin assets-cli -- init-db
 
 ### Database Commands
 
+````powershell
+### Database Commands
+
 ```powershell
 # Initialize database and run migrations
-cargo run --bin assets-cli -- init-db
+cargo run -- db init
 
 # Check connection and migration status
-cargo run --bin assets-cli -- db-status
+cargo run -- db status
 
 # Create sample users and accounts
-cargo run --bin assets-cli -- create-sample
+cargo run -- demo create-sample
+
+# Create sample price history data
+cargo run -- demo create-sample-prices
+
+# Create deep account hierarchy
+cargo run -- demo create-deep-accounts
 
 # View multi-user examples
-cargo run --bin assets-cli -- multi-user
+cargo run -- demo multi-user
 
 # View fractional ownership examples
-cargo run --bin assets-cli -- ownership
-```
+cargo run -- demo ownership
+````
 
 ## Architecture
 
@@ -244,23 +291,39 @@ Credit: Checking Account (Asset)    -€2,500
 Try the built-in demo to see double-entry bookkeeping in action:
 
 ```powershell
+# Create sample data with accounts and transactions
+cargo run -- demo create-sample
+
 # See interactive examples
-cargo run -p assets-cli -- demo
+cargo run -- demo
+
+# View account hierarchy as a tree
+cargo run -- accounts tree
+
+# Check account balances
+cargo run -- accounts balance
+
+# Investment tracking
+cargo run -- prices market
+cargo run -- prices history AAPL
 
 # Learn about account types
-cargo run -p assets-cli -- account-types
+cargo run -- demo account-types
 
 # Multi-user and ownership examples
-cargo run -p assets-cli -- multi-user
-cargo run -p assets-cli -- ownership
+cargo run -- demo multi-user
+cargo run -- demo ownership
 
 # Try user context switching
-cargo run -p assets-cli -- --user you demo
-cargo run -p assets-cli -- --user spouse demo
-cargo run -p assets-cli -- --user family demo
+cargo run --user you -- accounts balance
+cargo run --user spouse -- accounts balance
+cargo run --user family -- accounts balance
+
+# Create a new account interactively
+cargo run -- accounts create
 
 # See all commands
-cargo run -p assets-cli -- --help
+cargo run -- --help
 ```
 
 ## Contributing
