@@ -3,8 +3,8 @@
 use crate::error::Result;
 use crate::models::{
     Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership,
-    AccountWithOwnershipAndUsers, JournalEntry, NewJournalEntry, NewTransaction, Transaction,
-    TransactionWithEntries, User,
+    AccountWithOwnershipAndUsers, JournalEntry, NewAccount, NewJournalEntry, NewTransaction,
+    Transaction, TransactionWithEntries, User,
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -292,6 +292,139 @@ impl AccountService {
             user_balance: None,
             user_percentage: None,
         }))
+    }
+    /// Create a new account
+    pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            INSERT INTO accounts (
+                code, name, account_type, account_subtype, parent_id,
+                symbol, quantity, average_cost, address, purchase_date, 
+                purchase_price, currency, notes
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING 
+                id, code, name, account_type, account_subtype, parent_id,
+                symbol, quantity, average_cost, address, purchase_date,
+                purchase_price, currency, is_active, notes, created_at, updated_at
+            "#,
+        )
+        .bind(&new_account.code)
+        .bind(&new_account.name)
+        .bind(&new_account.account_type)
+        .bind(&new_account.account_subtype)
+        .bind(new_account.parent_id)
+        .bind(&new_account.symbol)
+        .bind(new_account.quantity)
+        .bind(new_account.average_cost)
+        .bind(&new_account.address)
+        .bind(new_account.purchase_date)
+        .bind(new_account.purchase_price)
+        .bind(&new_account.currency)
+        .bind(&new_account.notes)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(account)
+    }
+
+    /// Generate the next available account code for a given account type
+    pub async fn generate_account_code(&self, account_type: AccountType) -> Result<String> {
+        // Account code ranges by type (following standard chart of accounts)
+        let (prefix, start_range) = match account_type {
+            AccountType::Asset => ("1", 1000),
+            AccountType::Liability => ("2", 2000),
+            AccountType::Equity => ("3", 3000),
+            AccountType::Income => ("4", 4000),
+            AccountType::Expense => ("5", 5000),
+        };
+
+        // Find the highest existing code in this range
+        let max_code: Option<String> = sqlx::query_scalar(
+            "SELECT code FROM accounts WHERE code LIKE $1 ORDER BY code DESC LIMIT 1",
+        )
+        .bind(format!("{}%", prefix))
+        .fetch_optional(&self.pool)
+        .await?;
+
+        let next_number = if let Some(code) = max_code {
+            // Parse the numeric part and increment
+            if let Ok(num) = code.parse::<i32>() {
+                num + 1
+            } else {
+                start_range
+            }
+        } else {
+            start_range
+        };
+
+        Ok(next_number.to_string())
+    }
+
+    /// Create a new account with ownership in a single transaction
+    /// This ensures that if ownership setup fails, the account creation is rolled back
+    pub async fn create_account_with_ownership(
+        &self,
+        new_account: NewAccount,
+        ownership: Vec<(Uuid, Decimal)>,
+    ) -> Result<Account> {
+        // Validate that percentages sum to 100 or less
+        let total: Decimal = ownership.iter().map(|(_, pct)| pct).sum();
+        if total > Decimal::from(1) {
+            return Err(crate::error::CoreError::InvalidInput(
+                "Total ownership percentage cannot exceed 100%".to_string(),
+            ));
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        // Create the account
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            INSERT INTO accounts (
+                code, name, account_type, account_subtype, parent_id,
+                symbol, quantity, average_cost, address, purchase_date, 
+                purchase_price, currency, notes
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            RETURNING 
+                id, code, name, account_type, account_subtype, parent_id,
+                symbol, quantity, average_cost, address, purchase_date,
+                purchase_price, currency, is_active, notes, created_at, updated_at
+            "#,
+        )
+        .bind(&new_account.code)
+        .bind(&new_account.name)
+        .bind(&new_account.account_type)
+        .bind(&new_account.account_subtype)
+        .bind(new_account.parent_id)
+        .bind(&new_account.symbol)
+        .bind(new_account.quantity)
+        .bind(new_account.average_cost)
+        .bind(&new_account.address)
+        .bind(new_account.purchase_date)
+        .bind(new_account.purchase_price)
+        .bind(&new_account.currency)
+        .bind(&new_account.notes)
+        .fetch_one(&mut *tx)
+        .await?;
+
+        // Set up ownership if provided
+        if !ownership.is_empty() {
+            for (user_id, percentage) in ownership {
+                sqlx::query(
+                    "INSERT INTO account_ownership (user_id, account_id, ownership_percentage) VALUES ($1, $2, $3)"
+                )
+                .bind(user_id)
+                .bind(account.id)
+                .bind(percentage)
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        tx.commit().await?;
+        Ok(account)
     }
 }
 

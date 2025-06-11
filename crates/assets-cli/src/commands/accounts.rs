@@ -1,5 +1,7 @@
 use anyhow::Result;
-use assets_core::{AccountService, AccountType, Database};
+use assets_core::{AccountService, AccountSubtype, AccountType, Database, NewAccount, UserService};
+use rust_decimal::Decimal;
+use std::io::{self, Write};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -223,18 +225,115 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
 
 pub async fn create_account_interactive() -> Result<()> {
     println!("🏗️  Create New Account");
-    println!("=====================\n");
+    println!("=====================\n"); // Connect to database
+    let db = Database::from_env().await?;
+    let account_service = AccountService::new(db.pool().clone());
+    let user_service = UserService::new(db.pool().clone());
 
-    println!("This interactive account creation is coming soon!");
-    println!("For now, you can create sample accounts with:");
-    println!("cargo run -- demo create-sample\n");
+    // Step 1: Select account type
+    let account_type = prompt_account_type()?;
 
-    println!("🎯 Planned Features:");
-    println!("   • Interactive prompts for account details");
-    println!("   • Account type and subtype selection");
-    println!("   • Automatic code generation");
-    println!("   • Parent account selection for hierarchies");
-    println!("   • Validation and confirmation");
+    // Step 2: Select account subtype
+    let account_subtype = prompt_account_subtype(&account_type)?;
+
+    // Step 3: Generate or enter account code
+    let suggested_code = account_service
+        .generate_account_code(account_type.clone())
+        .await?;
+    let code = prompt_account_code(&suggested_code)?;
+
+    // Step 4: Enter account name
+    let name = prompt_account_name()?;
+
+    // Step 5: Select parent account (optional)
+    let parent_id = prompt_parent_account(&account_service, &account_type).await?;
+
+    // Step 6: Enter additional fields based on account type
+    let (symbol, quantity, average_cost, address, purchase_date, purchase_price) =
+        prompt_additional_fields(&account_type, &account_subtype)?;
+
+    // Step 7: Enter notes (optional)
+    let notes = prompt_notes()?;
+
+    // Step 8: Show summary and confirm
+    println!("\n📋 Account Summary:");
+    println!("==================");
+    println!("Code: {}", code);
+    println!("Name: {}", name);
+    println!("Type: {:?} ({:?})", account_type, account_subtype);
+    if let Some(parent) = parent_id {
+        if let Ok(Some(parent_account)) = account_service.get_account(parent).await {
+            println!("Parent: {} - {}", parent_account.code, parent_account.name);
+        }
+    }
+    if let Some(ref symbol) = symbol {
+        println!("Symbol: {}", symbol);
+    }
+    if let Some(ref address) = address {
+        println!("Address: {}", address);
+    }
+    if let Some(ref notes) = notes {
+        println!("Notes: {}", notes);
+    }
+
+    if !confirm_creation()? {
+        println!("❌ Account creation cancelled.");
+        return Ok(());
+    }
+
+    // Step 9: Create the account
+    let new_account = NewAccount {
+        code: code.clone(),
+        name: name.clone(),
+        account_type: account_type.clone(),
+        account_subtype,
+        parent_id,
+        symbol,
+        quantity,
+        average_cost,
+        address,
+        purchase_date,
+        purchase_price,
+        currency: "EUR".to_string(),
+        notes,
+    };
+    println!("\n🔄 Creating account...");
+
+    // Step 9: Set up ownership data before creating account (if requested)
+    let ownership_data = if prompt_setup_ownership()? {
+        prompt_account_ownership(&user_service).await?
+    } else {
+        Vec::new()
+    };
+
+    // Step 10: Create account with ownership in a single transaction
+    match account_service
+        .create_account_with_ownership(new_account, ownership_data)
+        .await
+    {
+        Ok(account) => {
+            println!("✅ Account created successfully!");
+            println!("   ID: {}", account.id);
+            println!("   Code: {}", account.code);
+            println!("   Name: {}", account.name);
+
+            println!("\n🎉 Account setup complete!");
+            println!("\n💡 Next steps:");
+            println!(
+                "   • View with: cargo run -- accounts balance --id {}",
+                code
+            );
+            println!("   • See tree: cargo run -- accounts tree");
+            println!("   • Create transactions involving this account");
+        }
+        Err(e) => {
+            println!("❌ Failed to create account: {}", e);
+            println!("💡 This could be due to:");
+            println!("   • Account code already exists");
+            println!("   • Invalid ownership percentages");
+            println!("   • Database connection issues");
+        }
+    }
 
     Ok(())
 }
@@ -407,4 +506,353 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+// Helper functions for interactive account creation
+
+fn prompt_input(prompt: &str) -> Result<String> {
+    print!("{}", prompt);
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().to_string())
+}
+
+fn prompt_account_type() -> Result<AccountType> {
+    println!("📊 Select Account Type:");
+    println!("1. Asset (Cash, investments, property, etc.)");
+    println!("2. Liability (Credit cards, loans, mortgages)");
+    println!("3. Equity (Owner's equity, retained earnings)");
+    println!("4. Income (Salary, dividends, capital gains)");
+    println!("5. Expense (Food, utilities, taxes, etc.)");
+
+    loop {
+        let input = prompt_input("\nEnter choice (1-5): ")?;
+        match input.as_str() {
+            "1" => return Ok(AccountType::Asset),
+            "2" => return Ok(AccountType::Liability),
+            "3" => return Ok(AccountType::Equity),
+            "4" => return Ok(AccountType::Income),
+            "5" => return Ok(AccountType::Expense),
+            _ => println!("❌ Invalid choice. Please enter 1-5."),
+        }
+    }
+}
+
+fn prompt_account_subtype(account_type: &AccountType) -> Result<AccountSubtype> {
+    println!("\n📋 Select Account Subtype for {:?}:", account_type);
+
+    let options = match account_type {
+        AccountType::Asset => vec![
+            (AccountSubtype::Cash, "Cash"),
+            (AccountSubtype::Checking, "Checking Account"),
+            (AccountSubtype::Savings, "Savings Account"),
+            (AccountSubtype::InvestmentAccount, "Investment Account"),
+            (AccountSubtype::Stocks, "Individual Stocks"),
+            (AccountSubtype::Etf, "ETFs"),
+            (AccountSubtype::Bonds, "Bonds"),
+            (AccountSubtype::MutualFund, "Mutual Funds"),
+            (AccountSubtype::Crypto, "Cryptocurrency"),
+            (AccountSubtype::RealEstate, "Real Estate"),
+            (AccountSubtype::Equipment, "Equipment"),
+            (AccountSubtype::OtherAsset, "Other Asset"),
+        ],
+        AccountType::Liability => vec![
+            (AccountSubtype::CreditCard, "Credit Card"),
+            (AccountSubtype::Loan, "Personal Loan"),
+            (AccountSubtype::Mortgage, "Mortgage"),
+            (AccountSubtype::OtherLiability, "Other Liability"),
+        ],
+        AccountType::Equity => vec![
+            (AccountSubtype::OpeningBalance, "Opening Balance Equity"),
+            (AccountSubtype::RetainedEarnings, "Retained Earnings"),
+            (AccountSubtype::OwnerEquity, "Owner's Equity"),
+        ],
+        AccountType::Income => vec![
+            (AccountSubtype::Salary, "Salary"),
+            (AccountSubtype::Bonus, "Bonus"),
+            (AccountSubtype::Dividend, "Dividends"),
+            (AccountSubtype::Interest, "Interest Income"),
+            (AccountSubtype::Investment, "Investment Income"),
+            (AccountSubtype::Rental, "Rental Income"),
+            (AccountSubtype::CapitalGains, "Capital Gains"),
+            (AccountSubtype::OtherIncome, "Other Income"),
+        ],
+        AccountType::Expense => vec![
+            (AccountSubtype::Food, "Food & Dining"),
+            (AccountSubtype::Housing, "Housing"),
+            (AccountSubtype::Transportation, "Transportation"),
+            (AccountSubtype::Utilities, "Utilities"),
+            (AccountSubtype::Communication, "Phone & Internet"),
+            (AccountSubtype::Entertainment, "Entertainment"),
+            (AccountSubtype::Personal, "Personal Care"),
+            (AccountSubtype::Healthcare, "Healthcare"),
+            (AccountSubtype::Taxes, "Taxes"),
+            (AccountSubtype::Fees, "Bank Fees"),
+            (AccountSubtype::OtherExpense, "Other Expense"),
+        ],
+    };
+
+    for (i, (_, name)) in options.iter().enumerate() {
+        println!("{}. {}", i + 1, name);
+    }
+
+    loop {
+        let input = prompt_input(&format!("\nEnter choice (1-{}): ", options.len()))?;
+        if let Ok(choice) = input.parse::<usize>() {
+            if choice >= 1 && choice <= options.len() {
+                return Ok(options[choice - 1].0.clone());
+            }
+        }
+        println!(
+            "❌ Invalid choice. Please enter a number between 1 and {}.",
+            options.len()
+        );
+    }
+}
+
+fn prompt_account_code(suggested_code: &str) -> Result<String> {
+    println!("\n🔢 Account Code:");
+    println!("Suggested: {}", suggested_code);
+    let input = prompt_input("Enter code (or press Enter to use suggested): ")?;
+
+    if input.is_empty() {
+        Ok(suggested_code.to_string())
+    } else {
+        // Validate the code format
+        if input.chars().all(|c| c.is_ascii_alphanumeric()) {
+            Ok(input.to_uppercase())
+        } else {
+            println!("❌ Account code should contain only letters and numbers.");
+            prompt_account_code(suggested_code)
+        }
+    }
+}
+
+fn prompt_account_name() -> Result<String> {
+    loop {
+        let name = prompt_input("\n💼 Account Name: ")?;
+        if !name.is_empty() && name.len() <= 255 {
+            return Ok(name);
+        }
+        println!("❌ Account name is required and must be 255 characters or less.");
+    }
+}
+
+async fn prompt_parent_account(
+    account_service: &AccountService,
+    account_type: &AccountType,
+) -> Result<Option<Uuid>> {
+    println!("\n🌳 Parent Account (for account hierarchy):");
+    println!("Leave empty for top-level account");
+
+    // Get existing accounts of the same type that could be parents
+    let existing_accounts = account_service
+        .get_accounts_by_type(account_type.clone())
+        .await?;
+
+    if existing_accounts.is_empty() {
+        println!(
+            "No existing {:?} accounts found. This will be a top-level account.",
+            account_type
+        );
+        return Ok(None);
+    }
+
+    println!("Existing {:?} accounts:", account_type);
+    for (i, account) in existing_accounts.iter().enumerate() {
+        println!("{}. {} - {}", i + 1, account.code, account.name);
+    }
+
+    let input = prompt_input(&format!(
+        "\nEnter choice (1-{}, or Enter for none): ",
+        existing_accounts.len()
+    ))?;
+
+    if input.is_empty() {
+        return Ok(None);
+    }
+
+    if let Ok(choice) = input.parse::<usize>() {
+        if choice >= 1 && choice <= existing_accounts.len() {
+            return Ok(Some(existing_accounts[choice - 1].id));
+        }
+    }
+
+    println!("❌ Invalid choice. No parent account selected.");
+    Ok(None)
+}
+
+fn prompt_additional_fields(
+    account_type: &AccountType,
+    account_subtype: &AccountSubtype,
+) -> Result<(
+    Option<String>,
+    Option<Decimal>,
+    Option<Decimal>,
+    Option<String>,
+    Option<chrono::DateTime<chrono::Utc>>,
+    Option<Decimal>,
+)> {
+    let mut symbol = None;
+    let mut quantity = None;
+    let mut average_cost = None;
+    let mut address = None;
+    let purchase_date = None;
+    let mut purchase_price = None;
+
+    // Asset-specific fields
+    if *account_type == AccountType::Asset {
+        match account_subtype {
+            AccountSubtype::Stocks | AccountSubtype::Etf | AccountSubtype::Crypto => {
+                println!("\n📈 Investment Details:");
+                let input = prompt_input("Symbol (e.g., AAPL, BTC): ")?;
+                if !input.is_empty() {
+                    symbol = Some(input.to_uppercase());
+                }
+
+                let input = prompt_input("Quantity owned (optional): ")?;
+                if !input.is_empty() {
+                    if let Ok(qty) = Decimal::from_str(&input) {
+                        quantity = Some(qty);
+                    }
+                }
+
+                let input = prompt_input("Average cost per unit in EUR (optional): ")?;
+                if !input.is_empty() {
+                    if let Ok(cost) = Decimal::from_str(&input) {
+                        average_cost = Some(cost);
+                    }
+                }
+            }
+            AccountSubtype::RealEstate => {
+                println!("\n🏠 Real Estate Details:");
+                let input = prompt_input("Address: ")?;
+                if !input.is_empty() {
+                    address = Some(input);
+                }
+
+                let input = prompt_input("Purchase price in EUR (optional): ")?;
+                if !input.is_empty() {
+                    if let Ok(price) = Decimal::from_str(&input) {
+                        purchase_price = Some(price);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+
+    Ok((
+        symbol,
+        quantity,
+        average_cost,
+        address,
+        purchase_date,
+        purchase_price,
+    ))
+}
+
+fn prompt_notes() -> Result<Option<String>> {
+    let input = prompt_input("\n📝 Notes (optional): ")?;
+    if input.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(input))
+    }
+}
+
+fn confirm_creation() -> Result<bool> {
+    loop {
+        let input = prompt_input("\n✅ Create this account? (y/n): ")?;
+        match input.to_lowercase().as_str() {
+            "y" | "yes" => return Ok(true),
+            "n" | "no" => return Ok(false),
+            _ => println!("Please enter 'y' for yes or 'n' for no."),
+        }
+    }
+}
+
+fn prompt_setup_ownership() -> Result<bool> {
+    loop {
+        let input = prompt_input("\n👥 Set up account ownership (multi-user)? (y/n): ")?;
+        match input.to_lowercase().as_str() {
+            "y" | "yes" => return Ok(true),
+            "n" | "no" => return Ok(false),
+            _ => println!("Please enter 'y' for yes or 'n' for no."),
+        }
+    }
+}
+
+async fn prompt_account_ownership(user_service: &UserService) -> Result<Vec<(Uuid, Decimal)>> {
+    println!("\n👥 Account Ownership Setup");
+    println!("=========================");
+
+    // Get all users
+    let users = user_service.get_all_users().await?;
+
+    if users.is_empty() {
+        println!("❌ No users found. Create users first with sample data.");
+        return Ok(Vec::new());
+    }
+
+    println!("Available users:");
+    for (i, user) in users.iter().enumerate() {
+        println!("{}. {} ({})", i + 1, user.display_name, user.name);
+    }
+
+    let mut ownership_data = Vec::new();
+    let mut total_percentage = Decimal::from(0);
+
+    loop {
+        let input = prompt_input(&format!(
+            "\nSelect user (1-{}, or Enter to finish): ",
+            users.len()
+        ))?;
+
+        if input.is_empty() {
+            break;
+        }
+
+        if let Ok(choice) = input.parse::<usize>() {
+            if choice >= 1 && choice <= users.len() {
+                let user = &users[choice - 1];
+                let percentage_input = prompt_input(&format!(
+                    "Ownership percentage for {} (0-100): ",
+                    user.display_name
+                ))?;
+                if let Ok(percentage) = Decimal::from_str(&percentage_input) {
+                    if percentage >= Decimal::from(0) && percentage <= Decimal::from(100) {
+                        let decimal_percentage = percentage / Decimal::from(100); // Convert percentage to decimal
+                        if total_percentage + decimal_percentage <= Decimal::from(1) {
+                            ownership_data.push((user.id, decimal_percentage));
+                            total_percentage += decimal_percentage;
+                            println!(
+                                "✅ Added {}% ownership for {}",
+                                percentage, user.display_name
+                            );
+
+                            if total_percentage == Decimal::from(1) {
+                                println!("💯 Total ownership is now 100%");
+                                break;
+                            }
+                        } else {
+                            println!(
+                                "❌ Total ownership cannot exceed 100%. Current total: {}%",
+                                total_percentage * Decimal::from(100)
+                            );
+                        }
+                    } else {
+                        println!("❌ Percentage must be between 0 and 100.");
+                    }
+                } else {
+                    println!("❌ Invalid percentage format.");
+                }
+            } else {
+                println!("❌ Invalid user choice.");
+            }
+        }
+    }
+
+    Ok(ownership_data)
 }

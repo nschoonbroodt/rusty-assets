@@ -14,3 +14,4 @@
 - move completed tasks to the bottom of the list when todo are done
 - suggest to commit when tasks are done and it make sense to do so
 - don't mention the TODO.md file in the commits
+- try to avoid clone when possible, use references instead

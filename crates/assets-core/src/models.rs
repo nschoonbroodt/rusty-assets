@@ -262,15 +262,26 @@ pub enum UserContext {
     Family,     // Combined family view
 }
 
-impl UserContext {
-    pub fn is_family(&self) -> bool {
-        matches!(self, UserContext::Family)
-    }
+/// New account data for creation
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NewAccount {
+    pub code: String,
+    pub name: String,
+    pub account_type: AccountType,
+    pub account_subtype: AccountSubtype,
+    pub parent_id: Option<Uuid>,
 
-    pub fn user_id(&self) -> Option<Uuid> {
-        match self {
-            UserContext::User(id) => Some(*id),
-            UserContext::Family => None,
-        }
-    }
+    // Asset-specific fields (optional)
+    pub symbol: Option<String>,
+    pub quantity: Option<Decimal>,
+    pub average_cost: Option<Decimal>,
+
+    // Real estate specific (optional)
+    pub address: Option<String>,
+    pub purchase_date: Option<DateTime<Utc>>,
+    pub purchase_price: Option<Decimal>,
+
+    // General fields
+    pub currency: String,
+    pub notes: Option<String>,
 }

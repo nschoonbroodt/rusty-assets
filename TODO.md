@@ -1,14 +1,37 @@
 # Actual Todo
 
-Next Steps Available:
-🔄 Interactive Account Creation: Build the full account creation workflow
-
 ## Price history
 
 to be able to show the assets value change overtime, we need to track the price of assets overtime (for example the price of an AAPL share)
 Do we have that in place, and if not, let's see how to add it.
 
+## Add github actions
+
+## service.rs
+
+the file service.rs in assets-core becomes quite large. Would it make sense to split it into several mods?
+
 # Done
+
+## ✅ Interactive Account Creation: Full account creation workflow - DONE
+
+**COMPLETED**: Implemented comprehensive interactive account creation interface replacing placeholder functionality:
+
+- ✅ Added `NewAccount` model with all optional fields (symbol, quantity, avg_cost, address, purchase_price)
+- ✅ Implemented `create_account()` method in `AccountService` with full SQL insertion
+- ✅ Added `generate_account_code()` method for automatic code generation by account type ranges
+- ✅ Built complete interactive CLI workflow with 10 comprehensive steps
+- ✅ Account type selection (Asset, Liability, Equity, Income, Expense)
+- ✅ Account subtype selection with type-specific options (12 Asset subtypes, 4 Liability subtypes, etc.)
+- ✅ Automatic account code generation with manual override capability
+- ✅ Parent account selection with hierarchical tree display
+- ✅ Investment-specific fields (symbol, quantity, average cost for stocks/ETFs/crypto)
+- ✅ Real estate fields (address, purchase price)
+- ✅ Multi-user ownership setup with percentage validation and decimal conversion
+- ✅ Account creation confirmation and summary display
+- ✅ Post-creation guidance with suggested next steps
+- ✅ Tested successfully: created accounts with codes 1423, 2004, 2005, 1424
+- ✅ Verified hierarchical placement and ownership setup functionality
 
 ## ✅ Sample commands: Enhanced testing command suggestions - DONE
 
@@ -83,3 +106,29 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - ✅ README examples: Changed from $ to € in double-entry examples
 - ✅ Account balance display: Shows € symbol for average cost
 - ✅ All monetary examples: €3,000 salary, €150 groceries, €2,500 stock purchase, etc.
+
+## ✅ Transaction Fix for Account Creation - DONE
+
+**COMPLETED**: Fixed critical transaction issue where failed account ownership setup could leave orphaned accounts in the database.
+
+**Problem Solved**:
+
+- Account creation and ownership setup were separate operations
+- If ownership setup failed, account remained in database without proper rollback
+- Could result in accounts with incorrect or missing ownership data
+
+**Implementation**:
+
+- ✅ Added `create_account_with_ownership()` method in `AccountService`
+- ✅ Wraps account creation and ownership setup in single database transaction
+- ✅ Pre-validates ownership percentages (≤100%) before starting transaction
+- ✅ Updated CLI to collect ownership data before account creation
+- ✅ Ensures atomic operation: both succeed or both fail together
+- ✅ Improved error messages with multiple failure scenarios
+
+**Testing Verified**:
+
+- ✅ Account 1425 created successfully with 80% ownership for Spouse
+- ✅ Correctly prevented exceeding 100% ownership during setup
+- ✅ Interrupted creation properly rolled back (no orphaned account 1426)
+- ✅ Transaction integrity maintained under
