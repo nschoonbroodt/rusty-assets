@@ -221,11 +221,35 @@ pub struct AccountOwnership {
     pub created_at: DateTime<Utc>,
 }
 
+/// Account ownership with user information - avoids multiple database round trips
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AccountOwnershipWithUser {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub account_id: Uuid,
+    pub ownership_percentage: Decimal,
+    pub created_at: DateTime<Utc>,
+
+    // User information from JOIN
+    pub user_name: String,
+    pub user_display_name: String,
+    pub user_is_active: bool,
+}
+
 /// Enhanced account with ownership information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccountWithOwnership {
     pub account: Account,
     pub ownership: Vec<AccountOwnership>,
+    pub user_balance: Option<Decimal>, // User's portion of the balance
+    pub user_percentage: Option<Decimal>, // User's ownership percentage
+}
+
+/// Enhanced account with ownership information including user details
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountWithOwnershipAndUsers {
+    pub account: Account,
+    pub ownership: Vec<AccountOwnershipWithUser>,
     pub user_balance: Option<Decimal>, // User's portion of the balance
     pub user_percentage: Option<Decimal>, // User's ownership percentage
 }

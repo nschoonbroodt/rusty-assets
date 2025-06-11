@@ -2,7 +2,8 @@
 
 use crate::error::Result;
 use crate::models::{
-    Account, AccountOwnership, AccountType, AccountWithOwnership, JournalEntry, NewJournalEntry,
+    Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership, 
+    AccountWithOwnershipAndUsers, JournalEntry, NewJournalEntry,
     NewTransaction, Transaction, TransactionWithEntries, User,
 };
 use chrono::{DateTime, Utc};
@@ -245,6 +246,47 @@ impl AccountService {
         .await?;
 
         Ok(Some(AccountWithOwnership {
+            account,
+            ownership: ownerships,
+            user_balance: None,
+            user_percentage: None,
+        }))
+    }
+
+    /// Get account with ownership information including user details - avoids multiple database round trips
+    pub async fn get_account_with_ownership_and_users(
+        &self,
+        account_id: Uuid,
+    ) -> Result<Option<AccountWithOwnershipAndUsers>> {
+        // Get the account first
+        let account = match self.get_account(account_id).await? {
+            Some(account) => account,
+            None => return Ok(None),
+        };
+
+        // Get ownership information with user details in a single query
+        let ownerships = sqlx::query_as::<_, AccountOwnershipWithUser>(
+            r#"
+            SELECT 
+                ao.id, 
+                ao.user_id, 
+                ao.account_id, 
+                ao.ownership_percentage, 
+                ao.created_at,
+                u.name as user_name,
+                u.display_name as user_display_name,
+                u.is_active as user_is_active
+            FROM account_ownership ao
+            JOIN users u ON ao.user_id = u.id
+            WHERE ao.account_id = $1
+            ORDER BY ao.ownership_percentage DESC
+            "#,
+        )
+        .bind(account_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(Some(AccountWithOwnershipAndUsers {
             account,
             ownership: ownerships,
             user_balance: None,

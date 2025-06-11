@@ -266,19 +266,17 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
 
     // Connect to database
     let db = Database::from_env().await?;
-    let account_service = AccountService::new(db.pool().clone());
-
-    // Try to find account by code first, then by UUID
+    let account_service = AccountService::new(db.pool().clone());    // Try to find account by code first, then by UUID
     let account_with_ownership = if let Ok(account_uuid) = Uuid::from_str(account_id) {
         // It's a valid UUID
         account_service
-            .get_account_with_ownership(account_uuid)
+            .get_account_with_ownership_and_users(account_uuid)
             .await?
     } else {
         // Try as account code - first get the account, then get ownership
         if let Some(account) = account_service.get_account_by_code(account_id).await? {
             account_service
-                .get_account_with_ownership(account.id)
+                .get_account_with_ownership_and_users(account.id)
                 .await?
         } else {
             None
@@ -299,8 +297,7 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
             if account_with_ownership.ownership.is_empty() {
                 println!("🏦 Ownership: 100% Unassigned (no specific owners)");
                 println!("   This account has no fractional ownership setup.");
-            } else {
-                println!("👥 Ownership Distribution:");
+            } else {                println!("👥 Ownership Distribution:");
                 for ownership in &account_with_ownership.ownership {
                     let percentage = ownership
                         .ownership_percentage
@@ -308,8 +305,8 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
                         .parse::<f64>()
                         .unwrap_or(0.0);
                     println!(
-                        "   • User ID {}: {:.1}%",
-                        ownership.user_id,
+                        "   • {}: {:.1}%",
+                        ownership.user_display_name,
                         percentage * 100.0
                     );
                 }

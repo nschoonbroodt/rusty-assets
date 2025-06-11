@@ -13,17 +13,24 @@ Assets -> Bank1 -> Brokerage --> MSFT
 
 The "assets-cli accounts balance" command says "Balance" calculation coming soon
 
-## ownership command show user id. Please show the username or displayname or whatever is available
-
 ## account create don't create right now
 
 Next Steps Available:
 🔄 Balance Calculation: Implement actual balance calculation from journal entries
 🔄 Interactive Account Creation: Build the full account creation workflow
 🔄 Enhanced Tree View: Add support for deeper account hierarchies
-🔄 User-Friendly Ownership Display: Show user names instead of UUIDs
 
 # Done
+
+## ✅ User-Friendly Ownership Display: Show user names instead of UUIDs - DONE
+
+**COMPLETED**: Updated ownership display to show user display names instead of UUIDs using a single database query with JOIN:
+- ✅ Added `AccountOwnershipWithUser` model to include user information
+- ✅ Added `AccountWithOwnershipAndUsers` model for the complete structure
+- ✅ Added `get_account_with_ownership_and_users()` method that JOINs account_ownership with users table
+- ✅ Updated CLI ownership command to display user display names
+- ✅ Follows coding instruction to avoid multiple database round trips by using JOIN instead of separate queries
+- ✅ Tested with joint accounts (shows "You: 50.0%, Spouse: 50.0%") and individual accounts (shows "You: 100.0%")
 
 ## ✅ Database access problem - SOLVED
 
