@@ -10,6 +10,17 @@ Implement automated price feeds from financial APIs for real-time price updates 
 
 Support importing transactions from common financial data formats (CSV, QIF, OFX) to make onboarding and data migration easier.
 
+## Complete TUI component implementations
+
+The base structure for the Terminal User Interface (TUI) has been created, but these specific components and features still need implementation:
+
+- Connect TUI to actual database instead of dummy data
+- Add functionality to add/edit/delete accounts and transactions
+- Implement data validation in input forms
+- Add confirmation dialogs for destructive actions
+- Create more detailed reports with actual visualizations (charts, graphs)
+- Add keyboard shortcuts help screen
+
 ## Web or GUI interface
 
 Develop a web or graphical user interface as an alternative to the CLI for broader accessibility and ease of use.
@@ -54,8 +65,6 @@ Add ability to archive old accounts without deleting historical data (useful for
 
 # Medium term
 
-## Create a terminal user interface with ratatui
-
 ## Security
 Does the database needs to be crypted? Do we need auth? Row based access?
 
@@ -85,6 +94,20 @@ such as share prices, crypto
 
 
 # Done
+
+## ✅ Create a terminal user interface with ratatui - DONE
+
+**COMPLETED**: Created a component-based Terminal User Interface (TUI) for RustyAssets:
+
+- ✅ Set up a new assets-tui crate in the workspace
+- ✅ Implemented a component-based architecture for modularity
+- ✅ Created a core Component trait with init, handle_events, update, and render methods
+- ✅ Implemented the main application loop with event handling and rendering
+- ✅ Added tab-based navigation between different screens
+- ✅ Created components for Accounts, Transactions, Reports, and Settings
+- ✅ Added styled rendering with colors and highlighting
+- ✅ Implemented basic keyboard navigation
+- ✅ Added run script and documentation
 
 ## ✅ Split services.rs into Modules - DONE
 
