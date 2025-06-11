@@ -99,12 +99,69 @@ When you're ready to connect to a database:
 
 🔄 **Next Steps:**
 
-- Database connection and migration runner
+- ✅ Database connection and migration runner
 - CRUD operations for accounts and transactions
 - Real-world transaction import (CSV, QIF, OFX)
 - Investment price tracking and portfolio valuation
 - Web or GUI interface
 - Reporting: balance sheets, income statements, net worth tracking
+
+## Database Setup
+
+RustyAssets uses PostgreSQL for data persistence. You can run it locally with Docker:
+
+### Quick Start with Docker
+
+```powershell
+# Start PostgreSQL in Docker
+docker-compose up -d
+
+# Copy environment template
+copy .env.example .env
+
+# Initialize database and run migrations
+cargo run --bin assets-cli -- init-db
+
+# Check database status
+cargo run --bin assets-cli -- db-status
+
+# Create sample data
+cargo run --bin assets-cli -- create-sample
+```
+
+### Manual PostgreSQL Setup
+
+If you prefer to install PostgreSQL manually:
+
+```powershell
+# Install PostgreSQL and create database
+createdb rustyassets
+
+# Update .env with your connection details
+# DATABASE_URL=postgresql://username:password@localhost:5432/rustyassets
+
+# Run migrations
+cargo run --bin assets-cli -- init-db
+```
+
+### Database Commands
+
+```powershell
+# Initialize database and run migrations
+cargo run --bin assets-cli -- init-db
+
+# Check connection and migration status
+cargo run --bin assets-cli -- db-status
+
+# Create sample users and accounts
+cargo run --bin assets-cli -- create-sample
+
+# View multi-user examples
+cargo run --bin assets-cli -- multi-user
+
+# View fractional ownership examples
+cargo run --bin assets-cli -- ownership
+```
 
 ## Architecture
 
@@ -148,6 +205,15 @@ cargo run -p assets-cli -- demo
 
 # Learn about account types
 cargo run -p assets-cli -- account-types
+
+# Multi-user and ownership examples
+cargo run -p assets-cli -- multi-user
+cargo run -p assets-cli -- ownership
+
+# Try user context switching
+cargo run -p assets-cli -- --user you demo
+cargo run -p assets-cli -- --user spouse demo
+cargo run -p assets-cli -- --user family demo
 
 # See all commands
 cargo run -p assets-cli -- --help

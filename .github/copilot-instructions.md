@@ -7,5 +7,6 @@
 - Use idiomatic Rust, modular design, and best practices for workspace organization.
 - Core logic and DB in `assets-core`, CLI in `assets-cli`.
 - PostgreSQL is the target database.
+- Always use the non-macro version of SQLx queries (e.g., `sqlx::query()` instead of `sqlx::query!()`).
 - Future interfaces (GUI/web) should be easy to add as new crates.
 - When creating new crates with `cargo new`, always use `--vcs none` to avoid initializing git in subdirectories.

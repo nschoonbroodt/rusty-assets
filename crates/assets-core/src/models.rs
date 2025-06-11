@@ -96,6 +96,7 @@ pub struct Transaction {
     pub description: String,
     pub reference: Option<String>, // Check number, transfer ID, etc.
     pub transaction_date: DateTime<Utc>,
+    pub created_by: Option<Uuid>, // User who created the transaction
     pub created_at: DateTime<Utc>,
 }
 
@@ -123,6 +124,7 @@ pub struct NewTransaction {
     pub description: String,
     pub reference: Option<String>,
     pub transaction_date: DateTime<Utc>,
+    pub created_by: Option<Uuid>, // User creating the transaction
     pub entries: Vec<NewJournalEntry>,
 }
 
@@ -192,6 +194,56 @@ impl Account {
             1
         } else {
             -1
+        }
+    }
+}
+
+/// User entity for multi-user support
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct User {
+    pub id: Uuid,
+    pub name: String,
+    pub display_name: String,
+    pub is_active: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+/// Account ownership for fractional ownership support
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct AccountOwnership {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub account_id: Uuid,
+    pub ownership_percentage: Decimal,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// Enhanced account with ownership information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountWithOwnership {
+    pub account: Account,
+    pub ownership: Vec<AccountOwnership>,
+    pub user_balance: Option<Decimal>, // User's portion of the balance
+    pub user_percentage: Option<Decimal>, // User's ownership percentage
+}
+
+/// User context for filtering operations
+#[derive(Debug, Clone, PartialEq)]
+pub enum UserContext {
+    User(Uuid), // Specific user view
+    Family,     // Combined family view
+}
+
+impl UserContext {
+    pub fn is_family(&self) -> bool {
+        matches!(self, UserContext::Family)
+    }
+
+    pub fn user_id(&self) -> Option<Uuid> {
+        match self {
+            UserContext::User(id) => Some(*id),
+            UserContext::Family => None,
         }
     }
 }

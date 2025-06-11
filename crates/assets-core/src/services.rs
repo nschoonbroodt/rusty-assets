@@ -1,7 +1,10 @@
-//! Business logic and services for financial operations
+//use crate::models::{Account, AccountType, Transaction, JournalEntry, NewTransaction, NewJournalEntry, TransactionWithEntries, User, AccountOwnership, AccountOwnershipView}; Business logic and services for financial operations
 
-use crate::models::{Account, AccountType, Transaction, JournalEntry, NewTransaction, NewJournalEntry, TransactionWithEntries};
 use crate::error::Result;
+use crate::models::{
+    Account, AccountOwnership, AccountType, AccountWithOwnership, JournalEntry, NewJournalEntry,
+    NewTransaction, Transaction, TransactionWithEntries, User,
+};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -18,7 +21,10 @@ impl TransactionService {
 
     /// Create a new transaction with journal entries
     /// Validates that the transaction balances before inserting
-    pub async fn create_transaction(&self, new_transaction: NewTransaction) -> Result<TransactionWithEntries> {
+    pub async fn create_transaction(
+        &self,
+        new_transaction: NewTransaction,
+    ) -> Result<TransactionWithEntries> {
         if !new_transaction.is_balanced() {
             return Err(crate::error::CoreError::UnbalancedTransaction {
                 expected: Decimal::ZERO,
@@ -26,21 +32,22 @@ impl TransactionService {
             });
         }
 
-        let mut tx = self.pool.begin().await?;        // Insert transaction header
+        let mut tx = self.pool.begin().await?; // Insert transaction header
         let transaction_id = Uuid::new_v4();
         let transaction = sqlx::query_as::<_, Transaction>(
             r#"
-            INSERT INTO transactions (id, description, reference, transaction_date)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, description, reference, transaction_date, created_at
+            INSERT INTO transactions (id, description, reference, transaction_date, created_by)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, description, reference, transaction_date, created_by, created_at
             "#,
         )
         .bind(transaction_id)
         .bind(&new_transaction.description)
         .bind(&new_transaction.reference)
         .bind(new_transaction.transaction_date)
+        .bind(new_transaction.created_by)
         .fetch_one(&mut *tx)
-        .await?;        // Insert journal entries
+        .await?; // Insert journal entries
         let mut entries = Vec::new();
         for entry in new_transaction.entries {
             let journal_entry = sqlx::query_as::<_, JournalEntry>(
@@ -65,10 +72,14 @@ impl TransactionService {
             transaction,
             entries,
         })
-    }    /// Get a transaction with all its journal entries
-    pub async fn get_transaction(&self, transaction_id: Uuid) -> Result<Option<TransactionWithEntries>> {
+    }
+    /// Get a transaction with all its journal entries
+    pub async fn get_transaction(
+        &self,
+        transaction_id: Uuid,
+    ) -> Result<Option<TransactionWithEntries>> {
         let transaction = sqlx::query_as::<_, Transaction>(
-            "SELECT id, description, reference, transaction_date, created_at FROM transactions WHERE id = $1",
+            "SELECT id, description, reference, transaction_date, created_by, created_at FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
         .fetch_optional(&self.pool)
@@ -90,7 +101,6 @@ impl TransactionService {
             entries,
         }))
     }
-
     /// Helper: Create a simple two-account transaction (most common case)
     pub fn create_simple_transaction(
         description: String,
@@ -99,11 +109,13 @@ impl TransactionService {
         amount: Decimal,
         transaction_date: DateTime<Utc>,
         reference: Option<String>,
+        created_by: Option<Uuid>,
     ) -> NewTransaction {
         NewTransaction {
             description,
             reference,
             transaction_date,
+            created_by,
             entries: vec![
                 NewJournalEntry {
                     account_id: debit_account_id,
@@ -127,7 +139,8 @@ pub struct AccountService {
 impl AccountService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }    /// Get all accounts
+    }
+    /// Get all accounts
     pub async fn get_all_accounts(&self) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
@@ -140,13 +153,14 @@ impl AccountService {
             FROM accounts 
             WHERE is_active = true 
             ORDER BY code
-            "#
+            "#,
         )
         .fetch_all(&self.pool)
         .await?;
 
         Ok(accounts)
-    }    /// Get accounts by type
+    }
+    /// Get accounts by type
     pub async fn get_accounts_by_type(&self, account_type: AccountType) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
@@ -166,7 +180,8 @@ impl AccountService {
         .await?;
 
         Ok(accounts)
-    }    /// Get account by code
+    }
+    /// Get account by code
     pub async fn get_account_by_code(&self, code: &str) -> Result<Option<Account>> {
         let account = sqlx::query_as::<_, Account>(
             r#"
@@ -185,5 +200,166 @@ impl AccountService {
         .await?;
 
         Ok(account)
+    }
+}
+
+pub struct UserService {
+    pool: PgPool,
+}
+
+impl UserService {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// Get all users
+    pub async fn get_all_users(&self) -> Result<Vec<User>> {
+        let users = sqlx::query_as::<_, User>(
+            "SELECT id, name, display_name, is_active, created_at FROM users WHERE is_active = true ORDER BY name"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(users)
+    }
+
+    /// Get user by name
+    pub async fn get_user_by_name(&self, name: &str) -> Result<Option<User>> {
+        let user = sqlx::query_as::<_, User>(
+            "SELECT id, name, display_name, is_active, created_at FROM users WHERE name = $1",
+        )
+        .bind(name)
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
+    /// Create a new user
+    pub async fn create_user(&self, name: String, display_name: String) -> Result<User> {
+        let user = sqlx::query_as::<_, User>(
+            r#"
+            INSERT INTO users (name, display_name)
+            VALUES ($1, $2)
+            RETURNING id, name, display_name, is_active, created_at
+            "#,
+        )
+        .bind(&name)
+        .bind(&display_name)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+}
+
+pub struct OwnershipService {
+    pool: PgPool,
+}
+
+impl OwnershipService {
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
+    }
+
+    /// Get ownership for a specific account
+    pub async fn get_account_ownership(&self, account_id: Uuid) -> Result<Vec<AccountOwnership>> {
+        let ownership = sqlx::query_as::<_, AccountOwnership>(
+            r#"
+            SELECT id, user_id, account_id, ownership_percentage, created_at, updated_at
+            FROM account_ownership
+            WHERE account_id = $1
+            ORDER BY ownership_percentage DESC
+            "#,
+        )
+        .bind(account_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(ownership)
+    }
+    /// Get all accounts owned by a user (with ownership percentage)
+    pub async fn get_user_accounts(&self, user_id: Uuid) -> Result<Vec<AccountWithOwnership>> {
+        // For now, we'll use a simpler approach that doesn't rely on compile-time query validation
+        let ownership_records = sqlx::query_as::<_, AccountOwnership>(
+            "SELECT id, user_id, account_id, ownership_percentage, created_at, updated_at FROM account_ownership WHERE user_id = $1"
+        )
+        .bind(user_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        let mut result = Vec::new();
+        for ownership in ownership_records {
+            // Get the account details
+            if let Ok(Some(account)) = sqlx::query_as::<_, Account>(
+                r#"
+                SELECT 
+                    id, code, name, account_type, account_subtype,
+                    parent_id, symbol, quantity, average_cost, address,
+                    purchase_date, purchase_price, currency, is_active,
+                    notes, created_at, updated_at
+                FROM accounts WHERE id = $1 AND is_active = true
+                "#,
+            )
+            .bind(ownership.account_id)
+            .fetch_optional(&self.pool)
+            .await
+            {
+                // Get full ownership info for this account
+                let all_ownership = self.get_account_ownership(ownership.account_id).await?;
+
+                // Calculate user's balance
+                let total_balance = account.calculate_balance(&self.pool).await?;
+                let user_balance =
+                    total_balance * ownership.ownership_percentage / Decimal::from(100);
+
+                result.push(AccountWithOwnership {
+                    account,
+                    ownership: all_ownership,
+                    user_balance: Some(user_balance),
+                    user_percentage: Some(ownership.ownership_percentage),
+                });
+            }
+        }
+
+        Ok(result)
+    }
+
+    /// Set ownership for an account (replaces existing ownership)
+    pub async fn set_account_ownership(
+        &self,
+        account_id: Uuid,
+        ownership: Vec<(Uuid, Decimal)>,
+    ) -> Result<()> {
+        // Validate that percentages sum to 100 or less
+        let total: Decimal = ownership.iter().map(|(_, pct)| pct).sum();
+        if total > Decimal::from(100) {
+            return Err(crate::error::CoreError::InvalidInput(
+                "Total ownership percentage cannot exceed 100%".to_string(),
+            ));
+        }
+
+        let mut tx = self.pool.begin().await?;
+
+        // Delete existing ownership
+        sqlx::query("DELETE FROM account_ownership WHERE account_id = $1")
+            .bind(account_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // Insert new ownership
+        for (user_id, percentage) in ownership {
+            sqlx::query(
+                "INSERT INTO account_ownership (user_id, account_id, ownership_percentage) VALUES ($1, $2, $3)"
+            )
+            .bind(user_id)
+            .bind(account_id)
+            .bind(percentage)
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 }
