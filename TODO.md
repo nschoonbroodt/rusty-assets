@@ -43,6 +43,18 @@ All of these for entire familly and by user
 - csv or other
 - automatic spending classification (based on rule, machine learning?)
 
+## Error handling improvements
+Add proper error handling and user-friendly error messages throughout the CLI, especially for database operations and user input validation.
+
+## Transaction search and filtering
+Add commands to search/filter transactions by date range, account, amount, or description to make the system more useful with real data.
+
+## Backup and restore functionality
+Add commands to export/import the entire database for backup purposes, especially important for personal finance data.
+
+## Account archiving/deactivation
+Add ability to archive old accounts without deleting historical data (useful for closed bank accounts, sold investments, etc.).
+
 # Medium term
 
 ## Security
@@ -253,3 +265,5 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - ✅ Correctly prevented exceeding 100% ownership during setup
 - ✅ Interrupted creation properly rolled back (no orphaned account 1426)
 - ✅ Transaction integrity maintained under all circumstances
+
+
