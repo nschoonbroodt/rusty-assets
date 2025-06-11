@@ -18,6 +18,61 @@ Develop a web or graphical user interface as an alternative to the CLI for broad
 
 Implement reporting features to generate balance sheets, income statements, and net worth tracking for comprehensive financial analysis.
 
+## Docker instruction in README.txt are all over the place
+- no need to install postgres
+- don't start the container manually, use docker compose
+- copy the .env from the .env.example
+
+## remove the account code
+the display of the account count, in most place, is not very interesting.
+Also people may think that they should keep the numbering like in the demo, where there is some structure
+
+## Create reporting command
+
+- general balance
+- income vs expense
+- performance of assets
+- allocation
+- net worth summary
+
+
+All of these for entire familly and by user
+
+
+## import bank statement
+- csv or other
+- automatic spending classification (based on rule, machine learning?)
+
+# Medium term
+
+## Security
+Does the database needs to be crypted? Do we need auth? Row based access?
+
+## Auto update prices
+such as share prices, crypto
+
+# Long term - to be sorted
+
+## UI using a rust framework
+
+## UI using tauri
+
+## possible web api 
+
+## possible mobile app
+
+## possible web app (but local)
+
+## budget goal tracking
+
+## automatic loan prediction?
+
+## future tax estimation
+
+## multi "main currency" support?
+
+
+
 # Done
 
 ## ✅ Split services.rs into Modules - DONE
