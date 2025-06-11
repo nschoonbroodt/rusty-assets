@@ -45,9 +45,8 @@ pub async fn list_accounts() -> Result<()> {
                     AccountType::Liability | AccountType::Equity | AccountType::Income => "💳",
                 };
                 println!(
-                    "   {} {} - {} ({})",
+                    "   {} {} ({})",
                     balance_indicator,
-                    account.code,
                     account.name,
                     format!("{:?}", account.account_subtype)
                 );
@@ -85,7 +84,7 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
 
         match account {
             Some(account) => {
-                println!("📊 Account: {} - {}", account.code, account.name);
+                println!("📊 Account: {}", account.name);
                 println!(
                     "   Type: {:?} ({:?})",
                     account.account_type, account.account_subtype
@@ -181,10 +180,7 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
             if !type_accounts.is_empty() {
                 println!("📊 {:?} Accounts:", account_type);
                 for account in type_accounts {
-                    println!(
-                        "   {} - {} (ID: {})",
-                        account.code, account.name, account.id
-                    );
+                    println!("   {} (ID: {})", account.name, account.id);
 
                     // Calculate actual balance from journal entries
                     match account.calculate_balance(db.pool()).await {
@@ -263,7 +259,7 @@ pub async fn create_account_interactive() -> Result<()> {
     println!("Type: {:?} ({:?})", account_type, account_subtype);
     if let Some(parent) = parent_id {
         if let Ok(Some(parent_account)) = account_service.get_account(parent).await {
-            println!("Parent: {} - {}", parent_account.code, parent_account.name);
+            println!("Parent: {}", parent_account.name);
         }
     }
     if let Some(ref symbol) = symbol {
@@ -409,10 +405,7 @@ fn print_account_tree_node(
 ) {
     // Print current account
     let connector = if is_last { "└── " } else { "├── " };
-    println!(
-        "{}{}💼 {} - {}",
-        prefix, connector, account.code, account.name
-    );
+    println!("{}{}💼 {}", prefix, connector, account.name);
 
     // Find children
     let children: Vec<_> = all_accounts
@@ -455,7 +448,7 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
         Some(account_with_ownership) => {
             let account = &account_with_ownership.account;
 
-            println!("📊 Account: {} - {}", account.code, account.name);
+            println!("📊 Account: {}", account.name);
             println!(
                 "   Type: {:?} ({:?})",
                 account.account_type, account.account_subtype
@@ -661,7 +654,7 @@ async fn prompt_parent_account(
 
     println!("Existing {:?} accounts:", account_type);
     for (i, account) in existing_accounts.iter().enumerate() {
-        println!("{}. {} - {}", i + 1, account.code, account.name);
+        println!("{}. {}", i + 1, account.name);
     }
 
     let input = prompt_input(&format!(

@@ -23,9 +23,6 @@ Implement reporting features to generate balance sheets, income statements, and 
 - don't start the container manually, use docker compose
 - copy the .env from the .env.example
 
-## remove the account code
-the display of the account count, in most place, is not very interesting.
-Also people may think that they should keep the numbering like in the demo, where there is some structure
 
 ## Create reporting command
 
@@ -267,3 +264,17 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - ✅ Transaction integrity maintained under all circumstances
 
 
+## ✅ Remove Account Code Display - DONE
+
+**COMPLETED**: Removed account codes from display areas where they were cluttering the interface:
+
+- ✅ Removed codes from list accounts command to simplify output
+- ✅ Removed codes from account tree view for cleaner hierarchy display
+- ✅ Removed codes from account balance displays to focus on names
+- ✅ Removed codes from ownership display for better readability
+- ✅ Removed codes from parent account selection during account creation
+- ✅ Kept codes in creation confirmation where they're useful for reference
+- ✅ Maintained backend account code generation and functionality
+- ✅ Users can still reference accounts by code in commands
+- ✅ Improved visual clarity and reduced confusion
+- ✅ Prevents users from thinking they need to follow demo numbering structure

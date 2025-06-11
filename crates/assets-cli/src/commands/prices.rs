@@ -1,5 +1,5 @@
 use anyhow::Result;
-use assets_core::{Database, PriceHistoryService, AccountService, NewPriceHistory};
+use assets_core::{AccountService, Database, NewPriceHistory, PriceHistoryService};
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use std::io::{self, Write};
@@ -14,11 +14,11 @@ pub async fn add_price_interactive() -> Result<()> {
 
     // Get symbol
     let symbol = prompt_input("Symbol (e.g., AAPL, SPY, BTC): ")?.to_uppercase();
-    
+
     // Get price
     let price_input = prompt_input("Price in EUR: ")?;
-    let price = Decimal::from_str(&price_input)
-        .map_err(|_| anyhow::anyhow!("Invalid price format"))?;
+    let price =
+        Decimal::from_str(&price_input).map_err(|_| anyhow::anyhow!("Invalid price format"))?;
 
     // Get date (default to today)
     let date_input = prompt_input("Date (YYYY-MM-DD, or Enter for today): ")?;
@@ -31,10 +31,10 @@ pub async fn add_price_interactive() -> Result<()> {
 
     // Get source (optional)
     let source = prompt_input("Source (optional, e.g., 'manual', 'yahoo_finance'): ")?;
-    let source = if source.is_empty() { 
-        Some("manual".to_string()) 
-    } else { 
-        Some(source) 
+    let source = if source.is_empty() {
+        Some("manual".to_string())
+    } else {
+        Some(source)
     };
 
     println!("\n📋 Price Entry Summary:");
@@ -85,7 +85,7 @@ pub async fn show_price_history(symbol: Option<&str>) -> Result<()> {
     if let Some(symbol) = symbol {
         // Show history for specific symbol
         let prices = price_service.get_price_history(symbol, None, None).await?;
-        
+
         if prices.is_empty() {
             println!("❌ No price history found for symbol: {}", symbol);
             println!("💡 Add prices with: cargo run -- prices add");
@@ -111,22 +111,27 @@ pub async fn show_price_history(symbol: Option<&str>) -> Result<()> {
             let last_price = &prices[prices.len() - 1];
             let change = last_price.price - first_price.price;
             let change_percent = (change / first_price.price) * Decimal::from(100);
-            
+
             println!("\n📊 Price Change:");
-            println!("   From: €{} ({})", first_price.price, first_price.price_date);
+            println!(
+                "   From: €{} ({})",
+                first_price.price, first_price.price_date
+            );
             println!("   To:   €{} ({})", last_price.price, last_price.price_date);
             println!("   Change: €{} ({:.2}%)", change, change_percent);
         }
 
         // Show latest price prominently
         if let Some(latest) = prices.last() {
-            println!("\n💰 Latest Price: €{} ({})", latest.price, latest.price_date);
+            println!(
+                "\n💰 Latest Price: €{} ({})",
+                latest.price, latest.price_date
+            );
         }
-
     } else {
         // Show all tracked symbols with latest prices
         let symbols = price_service.get_tracked_symbols().await?;
-        
+
         if symbols.is_empty() {
             println!("❌ No price history found.");
             println!("💡 Add prices with: cargo run -- prices add");
@@ -176,49 +181,59 @@ pub async fn show_market_values() -> Result<()> {
     }
 
     println!("📈 Investment Accounts with Market Values:\n");
-    println!("Code | Name                | Symbol | Quantity | Book Value | Market Value | Gain/Loss");
-    println!("-----|---------------------|--------|----------|------------|--------------|----------");
+    println!("Name                | Symbol | Quantity | Book Value | Market Value | Gain/Loss");
+    println!("---------------------|--------|----------|------------|--------------|----------");
 
     let mut total_book_value = Decimal::ZERO;
     let mut total_market_value = Decimal::ZERO;
 
     for account in investment_accounts {
         let account_with_market = price_service.get_account_with_market_value(account).await?;
-        
+
         total_book_value += account_with_market.book_value;
-        
-        let (market_val_str, gain_loss_str) = if let Some(market_value) = account_with_market.market_value {
-            total_market_value += market_value;
-            let gain_loss = account_with_market.unrealized_gain_loss.unwrap_or(Decimal::ZERO);
-            let gain_loss_sign = if gain_loss >= Decimal::ZERO { "+" } else { "" };
-            (
-                format!("€{:.2}", market_value),
-                format!("{}€{:.2}", gain_loss_sign, gain_loss)
-            )
-        } else {
-            ("No price".to_string(), "N/A".to_string())
-        };
+
+        let (market_val_str, gain_loss_str) =
+            if let Some(market_value) = account_with_market.market_value {
+                total_market_value += market_value;
+                let gain_loss = account_with_market
+                    .unrealized_gain_loss
+                    .unwrap_or(Decimal::ZERO);
+                let gain_loss_sign = if gain_loss >= Decimal::ZERO { "+" } else { "" };
+                (
+                    format!("€{:.2}", market_value),
+                    format!("{}€{:.2}", gain_loss_sign, gain_loss),
+                )
+            } else {
+                ("No price".to_string(), "N/A".to_string())
+            };
 
         println!(
             "{:4} | {:19} | {:6} | {:8} | €{:9.2} | {:12} | {}",
-            account_with_market.account.code,
+            "",
             if account_with_market.account.name.len() > 19 {
                 format!("{}...", &account_with_market.account.name[..16])
             } else {
                 account_with_market.account.name.clone()
             },
             account_with_market.account.symbol.as_deref().unwrap_or(""),
-            account_with_market.account.quantity.map(|q| format!("{:.2}", q)).unwrap_or_default(),
+            account_with_market
+                .account
+                .quantity
+                .map(|q| format!("{:.2}", q))
+                .unwrap_or_default(),
             account_with_market.book_value,
             market_val_str,
             gain_loss_str
         );
     }
-
-    println!("-----|---------------------|--------|----------|------------|--------------|----------");
+    println!("---------------------|--------|----------|------------|--------------|----------");
     let total_gain_loss = total_market_value - total_book_value;
-    let total_gain_loss_sign = if total_gain_loss >= Decimal::ZERO { "+" } else { "" };
-    
+    let total_gain_loss_sign = if total_gain_loss >= Decimal::ZERO {
+        "+"
+    } else {
+        ""
+    };
+
     println!(
         "     | {:19} | {:6} | {:8} | €{:9.2} | €{:10.2} | {}€{:.2}",
         "TOTAL",
@@ -233,7 +248,10 @@ pub async fn show_market_values() -> Result<()> {
     if total_book_value > Decimal::ZERO {
         let total_return_percent = (total_gain_loss / total_book_value) * Decimal::from(100);
         println!("\n📊 Total Portfolio Performance:");
-        println!("   Total Return: {}€{:.2} ({:.2}%)", total_gain_loss_sign, total_gain_loss, total_return_percent);
+        println!(
+            "   Total Return: {}€{:.2} ({:.2}%)",
+            total_gain_loss_sign, total_gain_loss, total_return_percent
+        );
     }
 
     println!("\n💡 Use 'cargo run -- prices add' to update asset prices");
