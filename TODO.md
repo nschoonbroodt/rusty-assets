@@ -14,7 +14,6 @@ Support importing transactions from common financial data formats (CSV, QIF, OFX
 
 The base structure for the Terminal User Interface (TUI) has been created, but these specific components and features still need implementation:
 
-- Connect TUI to actual database instead of dummy data
 - Add functionality to add/edit/delete accounts and transactions
 - Implement data validation in input forms
 - Add confirmation dialogs for destructive actions

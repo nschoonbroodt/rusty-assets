@@ -148,9 +148,11 @@ dependencies = [
  "chrono",
  "clap",
  "crossterm",
+ "dotenv",
  "ratatui",
  "rust_decimal",
  "tokio",
+ "uuid",
 ]
 
 [[package]]

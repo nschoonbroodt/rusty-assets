@@ -7,6 +7,16 @@ use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
 
+/// View model for transaction displays with account information
+#[derive(Debug, Clone)]
+pub struct TransactionWithAccountView {
+    pub id: Uuid,
+    pub description: String,
+    pub transaction_date: DateTime<Utc>,
+    pub amount: Decimal,
+    pub account_name: String,
+}
+
 pub struct TransactionService {
     pool: PgPool,
 }
@@ -128,5 +138,45 @@ impl TransactionService {
                 },
             ],
         }
+    }
+
+    /// Get recent transactions with account information for display purposes
+    pub async fn get_recent_transactions_with_accounts(&self, limit: i64) -> Result<Vec<TransactionWithAccountView>> {
+        let rows = sqlx::query!(
+            r#"
+            SELECT 
+                t.id, 
+                t.description, 
+                t.transaction_date, 
+                je.amount,
+                a.name as account_name
+            FROM 
+                transactions t
+            INNER JOIN 
+                journal_entries je ON t.id = je.transaction_id
+            INNER JOIN
+                accounts a ON je.account_id = a.id
+            ORDER BY 
+                t.transaction_date DESC, t.created_at DESC
+            LIMIT $1
+            "#,
+            limit
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        let mut transaction_views = Vec::with_capacity(rows.len());
+        
+        for row in rows {
+            transaction_views.push(TransactionWithAccountView {
+                id: row.id,
+                description: row.description,
+                transaction_date: row.transaction_date,
+                amount: row.amount,
+                account_name: row.account_name,
+            });
+        }
+        
+        Ok(transaction_views)
     }
 }

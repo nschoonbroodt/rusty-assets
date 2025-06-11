@@ -1,23 +1,28 @@
 use anyhow::Result;
 use ratatui::{
-    layout::{Constraint, Direction, Layout, Rect},
+    layout::{Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, List, ListItem, ListState, Paragraph},
     Frame,
 };
 
 use crate::component::{Action, Component};
+use crate::database::AppDatabase;
+use assets_core::services::TransactionService;
+use rust_decimal::Decimal;
+use uuid::Uuid;
 
 pub struct TransactionsComponent {
     transactions: Vec<TransactionItem>,
     state: ListState,
+    db: Option<AppDatabase>,
 }
 
 pub struct TransactionItem {
     id: String,
     date: String,
     description: String,
-    amount: rust_decimal::Decimal,
+    amount: Decimal,
     account: String,
 }
 
@@ -26,7 +31,69 @@ impl TransactionsComponent {
         Self {
             transactions: Vec::new(),
             state: ListState::default().with_selected(Some(0)),
+            db: None,
         }
+    }
+    
+    pub fn init_with_db(&mut self, db: AppDatabase) -> Result<()> {
+        self.db = Some(db);
+        Ok(())
+    }    pub async fn load_transactions(&mut self) -> Result<()> {
+        if let Some(db) = &self.db {
+            let db_conn = db.get().await?;
+            let pool = db_conn.pool().clone();
+            
+            // Use the TransactionService to get recent transactions with account information
+            let transaction_service = TransactionService::new(pool.clone());
+            
+            // Get the 30 most recent transactions from the database with account info
+            let transactions = transaction_service.get_recent_transactions_with_accounts(30).await?;
+            
+            // Convert to TransactionItems
+            self.transactions.clear();
+            
+            for transaction in transactions {
+                self.transactions.push(TransactionItem {
+                    id: transaction.id.to_string(),
+                    date: transaction.transaction_date.format("%Y-%m-%d").to_string(),
+                    description: transaction.description,
+                    amount: transaction.amount,
+                    account: transaction.account_name,
+                });
+            }
+            
+            // Reset selection
+            if !self.transactions.is_empty() {
+                self.state = ListState::default().with_selected(Some(0));
+            }
+        } else {
+            // Fallback to dummy data if no database is available
+            self.transactions = vec![
+                TransactionItem {
+                    id: Uuid::new_v4().to_string(),
+                    date: "2025-06-01".to_string(),
+                    description: "Grocery Shopping".to_string(),
+                    amount: Decimal::new(-7850, 2),
+                    account: "Checking Account".to_string(),
+                },
+                TransactionItem {
+                    id: Uuid::new_v4().to_string(),
+                    date: "2025-06-05".to_string(),
+                    description: "Salary".to_string(),
+                    amount: Decimal::new(250000, 2),
+                    account: "Checking Account".to_string(),
+                },
+                TransactionItem {
+                    id: Uuid::new_v4().to_string(),
+                    date: "2025-06-07".to_string(),
+                    description: "Utilities".to_string(),
+                    amount: Decimal::new(-12500, 2),
+                    account: "Credit Card".to_string(),
+                },
+            ];
+        }
+        
+        Ok(())
     }
     
     pub fn next(&mut self) {
@@ -64,30 +131,7 @@ impl TransactionsComponent {
 
 impl Component for TransactionsComponent {
     fn init(&mut self) -> Result<()> {
-        // Sample data for demonstration
-        self.transactions = vec![
-            TransactionItem {
-                id: "t001".to_string(),
-                date: "2025-06-01".to_string(),
-                description: "Grocery Shopping".to_string(),
-                amount: rust_decimal::Decimal::new(-7850, 2),
-                account: "Checking Account".to_string(),
-            },
-            TransactionItem {
-                id: "t002".to_string(),
-                date: "2025-06-05".to_string(),
-                description: "Salary".to_string(),
-                amount: rust_decimal::Decimal::new(250000, 2),
-                account: "Checking Account".to_string(),
-            },
-            TransactionItem {
-                id: "t003".to_string(),
-                date: "2025-06-07".to_string(),
-                description: "Utilities".to_string(),
-                amount: rust_decimal::Decimal::new(-12500, 2),
-                account: "Credit Card".to_string(),
-            },
-        ];
+        // We'll load data asynchronously later
         Ok(())
     }
     
@@ -147,9 +191,7 @@ impl Component for TransactionsComponent {
                 
                 ListItem::new(line).style(style)
             })
-            .collect();
-        
-        // Create the list
+            .collect();            // Create the list
         let list = List::new(items)
             .block(block)
             .highlight_style(

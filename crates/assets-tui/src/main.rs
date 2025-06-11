@@ -4,6 +4,7 @@ use std::panic;
 
 mod component;
 mod components;
+mod database;
 mod tui;
 mod ui;
 
@@ -26,10 +27,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Initialize the TUI
     let mut tui = tui::Tui::new()
+        .await
         .context("Failed to initialize TUI")?;
     
     // Run the application
     tui.run()
+        .await
         .context("Error while running the application")?;
     
     Ok(())

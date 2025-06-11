@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::models::{
     Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership,
-    AccountWithOwnershipAndUsers, NewAccount,
+    AccountWithOwnershipAndUsers, NewAccount, AccountSummary,
 };
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -303,5 +303,43 @@ impl AccountService {
 
         tx.commit().await?;
         Ok(account)
+    }
+
+    /// Get account summaries with balance for UI display
+    pub async fn get_account_summaries(&self) -> Result<Vec<AccountSummary>> {
+        // This method gets all accounts and their balances in a single query
+        let summaries = sqlx::query!(
+            r#"
+            SELECT 
+                a.id,
+                a.name,
+                a.account_type as "account_type: AccountType",
+                COALESCE(SUM(je.amount), 0) as "balance: Decimal"
+            FROM 
+                accounts a
+            LEFT JOIN 
+                journal_entries je ON a.id = je.account_id
+            WHERE 
+                a.is_active = true
+            GROUP BY 
+                a.id, a.name, a.account_type, a.code
+            ORDER BY 
+                a.code
+            "#
+        )
+        .fetch_all(&self.pool)
+        .await?;
+        
+        let mut account_summaries = Vec::with_capacity(summaries.len());
+        
+        for summary in summaries {            account_summaries.push(AccountSummary {
+                id: summary.id,
+                name: summary.name,
+                account_type: summary.account_type,
+                balance: summary.balance.unwrap_or_default(),
+            });
+        }
+        
+        Ok(account_summaries)
     }
 }

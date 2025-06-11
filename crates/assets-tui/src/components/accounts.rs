@@ -8,19 +8,22 @@ use ratatui::{
 };
 
 use crate::component::{Action, Component};
+use crate::database::AppDatabase;
 use assets_core::AccountType;
 use rust_decimal::Decimal;
+use uuid::Uuid;
 
 pub struct AccountsComponent {
     accounts: Vec<AccountItem>,
     state: ListState,
+    db: Option<AppDatabase>,
 }
 
 pub struct AccountItem {
-    id: String,
-    name: String,
-    account_type: AccountType,
-    balance: Decimal,
+    pub id: String,
+    pub name: String,
+    pub account_type: AccountType,
+    pub balance: Decimal,
 }
 
 impl AccountsComponent {
@@ -28,22 +31,16 @@ impl AccountsComponent {
         Self {
             accounts: Vec::new(),
             state: ListState::default().with_selected(Some(0)),
+            db: None,
         }
     }
     
-    // This would connect to the database in a real implementation
-    pub async fn load_real_accounts(&mut self) -> Result<()> {
-        // In a real implementation, this would connect to the database
-        // Example of how it might look:
-        // let pool = assets_core::database::connect().await?;
-        // let accounts = assets_core::services::AccountService::list_all(&pool).await?;
-        // self.accounts = accounts.into_iter().map(|a| AccountItem {
-        //     id: a.id.to_string(),
-        //     name: a.name,
-        //     account_type: a.account_type,
-        //     balance: a.balance,
-        // }).collect();
-        Ok(())
+    pub fn set_accounts(&mut self, accounts: Vec<AccountItem>) {
+        self.accounts = accounts;
+        // Reset selection if needed
+        if !self.accounts.is_empty() {
+            self.state = ListState::default().with_selected(Some(0));
+        }
     }
     
     pub fn next(&mut self) {
@@ -77,32 +74,66 @@ impl AccountsComponent {
     pub fn selected_account(&self) -> Option<&AccountItem> {
         self.state.selected().and_then(|i| self.accounts.get(i))
     }
+    
+    pub fn init_with_db(&mut self, db: AppDatabase) -> Result<()> {
+        self.db = Some(db);
+        Ok(())
+    }
+      pub async fn load_accounts(&mut self) -> Result<()> {
+        if let Some(db) = &self.db {
+            let db_conn = db.get().await?;
+            let pool = db_conn.pool().clone();
+            
+            // Use the AccountService to get account summaries with balances
+            let account_service = assets_core::services::AccountService::new(pool.clone());
+            let account_summaries = account_service.get_account_summaries().await?;
+            
+            // Convert to AccountItems and update the component
+            let mut account_items = Vec::with_capacity(account_summaries.len());
+            
+            for summary in account_summaries {
+                account_items.push(AccountItem {
+                    id: summary.id.to_string(),
+                    name: summary.name,
+                    account_type: summary.account_type,
+                    balance: summary.balance,
+                });
+            }
+            
+            // Update the accounts
+            self.set_accounts(account_items);
+        } else {
+            // Fallback to dummy data if no database is available
+            self.accounts = vec![
+                AccountItem {
+                    id: "1001".to_string(),
+                    name: "Checking Account".to_string(),
+                    account_type: AccountType::Asset,
+                    balance: Decimal::new(1250, 0),
+                },
+                AccountItem {
+                    id: "1002".to_string(),
+                    name: "Savings Account".to_string(),
+                    account_type: AccountType::Asset,
+                    balance: Decimal::new(5000, 0),
+                },
+                AccountItem {
+                    id: "2001".to_string(),
+                    name: "Credit Card".to_string(),
+                    account_type: AccountType::Liability,
+                    balance: Decimal::new(-500, 0),
+                },
+            ];
+        }
+        
+        Ok(())
+    }
 }
 
 impl Component for AccountsComponent {
     fn init(&mut self) -> Result<()> {
-        // Load dummy data synchronously for now
-        // In a real implementation, we'd have a separate async function to load from DB
-        self.accounts = vec![
-            AccountItem {
-                id: "1001".to_string(),
-                name: "Checking Account".to_string(),
-                account_type: AccountType::Asset,
-                balance: Decimal::new(1250, 0),
-            },
-            AccountItem {
-                id: "1002".to_string(),
-                name: "Savings Account".to_string(),
-                account_type: AccountType::Asset,
-                balance: Decimal::new(5000, 0),
-            },
-            AccountItem {
-                id: "2001".to_string(),
-                name: "Credit Card".to_string(),
-                account_type: AccountType::Liability,
-                balance: Decimal::new(-500, 0),
-            },
-        ];
+        // We'll load the data in an async context later
+        // This is just initial setup for non-async parts
         Ok(())
     }
     

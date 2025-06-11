@@ -317,3 +317,12 @@ pub struct AccountWithMarketValue {
     pub unrealized_gain_loss: Option<Decimal>, // market_value - book_value
     pub latest_price: Option<PriceHistory>,
 }
+
+/// Account summary for UI display
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AccountSummary {
+    pub id: Uuid,
+    pub name: String,
+    pub account_type: AccountType,
+    pub balance: Decimal,
+}

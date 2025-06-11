@@ -14,6 +14,7 @@ use crate::components::{
     settings::SettingsComponent,
     transactions::TransactionsComponent,
 };
+use crate::database::AppDatabase;
 
 pub struct UI {
     accounts: AccountsComponent,
@@ -21,6 +22,7 @@ pub struct UI {
     reports: ReportsComponent,
     settings: SettingsComponent,
     current_screen: Screen,
+    db: Option<AppDatabase>,
 }
 
 impl UI {
@@ -31,6 +33,7 @@ impl UI {
             reports: ReportsComponent::new(),
             settings: SettingsComponent::new(),
             current_screen: Screen::Accounts,
+            db: None,
         }
     }
     
@@ -40,6 +43,20 @@ impl UI {
         self.reports.init()?;
         self.settings.init()?;
         Ok(())
+    }    pub async fn init_with_db(&mut self, db: AppDatabase) -> Result<()> {
+        self.db = Some(db.clone());
+        
+        // Initialize all components with database access
+        self.accounts.init_with_db(db.clone())?;
+        self.transactions.init_with_db(db.clone())?;
+        self.reports.init()?;
+        self.settings.init()?;
+        
+        // Load data for components from database
+        self.accounts.load_accounts().await?;
+        self.transactions.load_transactions().await?;
+        
+        Ok(())
     }
     
     pub fn set_screen(&mut self, screen: Screen) {
@@ -48,8 +65,7 @@ impl UI {
 }
 
 impl Component for UI {
-    fn handle_events(&mut self, event: crossterm::event::Event) -> Result<Option<Action>> {
-        // Handle tab navigation with numbers
+    fn handle_events(&mut self, event: crossterm::event::Event) -> Result<Option<Action>> {        // Handle tab navigation with numbers
         if let crossterm::event::Event::Key(key) = &event {
             if key.kind == crossterm::event::KeyEventKind::Press {
                 match key.code {
@@ -68,6 +84,9 @@ impl Component for UI {
                     crossterm::event::KeyCode::Char('4') => {
                         self.current_screen = Screen::Settings;
                         return Ok(Some(Action::Navigate(Screen::Settings)));
+                    }
+                    crossterm::event::KeyCode::Char('r') => {
+                        return Ok(Some(Action::Refresh));
                     }
                     _ => {}
                 }
@@ -98,13 +117,11 @@ impl Component for UI {
             Screen::Transactions => self.transactions.render(frame, chunks[1])?,
             Screen::Reports => self.reports.render(frame, chunks[1])?,
             Screen::Settings => self.settings.render(frame, chunks[1])?,
-        }
-        
-        // Render help text at bottom
+        }        // Render help text at bottom
         let help_text = match self.current_screen {
-            Screen::Accounts => "↑↓: Navigate  Enter: View details  q: Quit",
-            Screen::Transactions => "↑↓: Navigate  Enter: View details  q: Quit",
-            Screen::Reports => "←→: Change report  q: Quit",
+            Screen::Accounts => "↑↓: Navigate  Enter: View details  r: Refresh  q: Quit",
+            Screen::Transactions => "↑↓: Navigate  Enter: View details  r: Refresh  q: Quit",
+            Screen::Reports => "←→: Change report  r: Refresh  q: Quit",
             Screen::Settings => "↑↓: Navigate  q: Quit",
         };
         
@@ -145,6 +162,21 @@ impl UI {
         );
         
         frame.render_widget(tabs, area);
+        Ok(())
+    }
+}
+
+impl UI {
+    pub async fn refresh_data(&mut self) -> Result<()> {
+        // Reload data for all components that use database
+        if let Some(db) = &self.db {
+            // Reload accounts data
+            self.accounts.load_accounts().await?;
+            
+            // Reload transactions data
+            self.transactions.load_transactions().await?;
+        }
+        
         Ok(())
     }
 }
