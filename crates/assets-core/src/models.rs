@@ -26,6 +26,7 @@ pub enum AccountSubtype {
     Stocks,
     Etf,
     Bonds,
+    MutualFund,
     Crypto,
     RealEstate,
     Equipment,

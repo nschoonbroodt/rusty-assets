@@ -256,7 +256,7 @@ impl SampleDataService {
     pub async fn create_sample_transactions(&self) -> Result<()> {
         println!("💸 Creating sample transactions...");
 
-        use crate::models::{NewTransaction, NewJournalEntry};
+        use crate::models::{NewJournalEntry, NewTransaction};
         use crate::services::TransactionService;
         use chrono::Utc;
         use rust_decimal::Decimal;
@@ -267,11 +267,12 @@ impl SampleDataService {
         // Get account IDs by code
         let mut account_ids = std::collections::HashMap::new();
         for code in ["1001", "1003", "2001", "4001", "5001", "5002", "5003"] {
-            let account_id: Option<uuid::Uuid> = sqlx::query("SELECT id FROM accounts WHERE code = $1")
-                .bind(code)
-                .fetch_optional(self.db.pool())
-                .await?
-                .map(|row| row.get("id"));
+            let account_id: Option<uuid::Uuid> =
+                sqlx::query("SELECT id FROM accounts WHERE code = $1")
+                    .bind(code)
+                    .fetch_optional(self.db.pool())
+                    .await?
+                    .map(|row| row.get("id"));
             if let Some(id) = account_id {
                 account_ids.insert(code, id);
             }
@@ -285,7 +286,8 @@ impl SampleDataService {
                 reference: Some("PAY-2025-01".to_string()),
                 transaction_date: Utc::now(),
                 created_by: None,
-                entries: vec![                    NewJournalEntry {
+                entries: vec![
+                    NewJournalEntry {
                         account_id: account_ids["1001"], // Joint Checking
                         amount: Decimal::from_str("3000.00").unwrap(),
                         memo: Some("Salary deposit".to_string()),
@@ -303,7 +305,8 @@ impl SampleDataService {
                 reference: None,
                 transaction_date: Utc::now(),
                 created_by: None,
-                entries: vec![                    NewJournalEntry {
+                entries: vec![
+                    NewJournalEntry {
                         account_id: account_ids["5001"], // Groceries Expense
                         amount: Decimal::from_str("150.00").unwrap(),
                         memo: Some("Weekly shopping".to_string()),
@@ -321,7 +324,8 @@ impl SampleDataService {
                 reference: None,
                 transaction_date: Utc::now(),
                 created_by: None,
-                entries: vec![                    NewJournalEntry {
+                entries: vec![
+                    NewJournalEntry {
                         account_id: account_ids["5002"], // Restaurant Expense
                         amount: Decimal::from_str("80.00").unwrap(),
                         memo: Some("Family dinner".to_string()),
@@ -339,7 +343,8 @@ impl SampleDataService {
                 reference: None,
                 transaction_date: Utc::now(),
                 created_by: None,
-                entries: vec![                    NewJournalEntry {
+                entries: vec![
+                    NewJournalEntry {
                         account_id: account_ids["5003"], // Gas Expense
                         amount: Decimal::from_str("65.00").unwrap(),
                         memo: Some("Fuel for car".to_string()),
@@ -351,7 +356,7 @@ impl SampleDataService {
                     },
                 ],
             },
-        ];        // Create each transaction
+        ]; // Create each transaction
         for transaction in transactions {
             let description = transaction.description.clone();
             match transaction_service.create_transaction(transaction).await {
@@ -367,7 +372,8 @@ impl SampleDataService {
     /// Create a complete sample dataset (all of the above)
     pub async fn create_full_sample_dataset(&self) -> Result<()> {
         println!("🎯 Creating complete sample dataset...");
-        println!("====================================\n");        self.create_sample_categories().await?;
+        println!("====================================\n");
+        self.create_sample_categories().await?;
         self.create_sample_accounts().await?;
         self.create_sample_users().await?;
         self.create_sample_ownership().await?;
@@ -460,6 +466,89 @@ impl SampleDataService {
         }
 
         println!("✅ Deep category hierarchies created!");
+        Ok(())
+    }
+
+    /// Create deep account hierarchies with realistic nested structures
+    pub async fn create_deep_account_hierarchy(&self) -> Result<()> {
+        println!("🏦 Creating deep account hierarchy example...");
+
+        // First, create the hierarchical structure similar to your example:
+        // Assets -> Bank1 -> Cash, Savings, Brokerage
+        // Assets -> Bank1 -> Brokerage -> AAPL, MSFT
+        
+        let account_hierarchy = vec![
+            // Level 1: Root accounts  
+            ("1000", "Assets", "asset", "other_asset", None),
+            
+            // Level 2: Bank groups under Assets
+            ("1100", "Bank1", "asset", "other_asset", Some("1000")),
+            ("1200", "Bank2", "asset", "other_asset", Some("1000")),
+            ("1300", "Investment Accounts", "asset", "investment_account", Some("1000")),
+            
+            // Level 3: Account types under Bank1
+            ("1110", "Cash", "asset", "cash", Some("1100")),
+            ("1120", "Savings", "asset", "savings", Some("1100")),
+            ("1130", "Brokerage", "asset", "investment_account", Some("1100")),
+            
+            // Level 3: Account types under Bank2
+            ("1210", "Checking", "asset", "checking", Some("1200")),
+            ("1220", "Money Market", "asset", "savings", Some("1200")),
+            
+            // Level 4: Individual stocks under Brokerage
+            ("1131", "AAPL", "asset", "stocks", Some("1130")),
+            ("1132", "MSFT", "asset", "stocks", Some("1130")),
+            ("1133", "GOOGL", "asset", "stocks", Some("1130")),
+            ("1134", "SPY", "asset", "etf", Some("1130")),
+            
+            // Level 3: More investment accounts
+            ("1310", "401k", "asset", "investment_account", Some("1300")),
+            ("1320", "IRA", "asset", "investment_account", Some("1300")),
+            
+            // Level 4: Holdings in 401k
+            ("1311", "401k Bond Fund", "asset", "bonds", Some("1310")),
+            ("1312", "401k Stock Fund", "asset", "mutual_fund", Some("1310")),
+            
+            // Real Estate hierarchy
+            ("1400", "Real Estate", "asset", "real_estate", Some("1000")),
+            ("1410", "Primary Residence", "asset", "real_estate", Some("1400")),
+            ("1420", "Investment Properties", "asset", "real_estate", Some("1400")),
+            ("1421", "Rental Property 1", "asset", "real_estate", Some("1420")),
+            ("1422", "Rental Property 2", "asset", "real_estate", Some("1420")),
+        ];
+
+        // Create accounts with hierarchy
+        for (code, name, account_type, account_subtype, parent_code) in account_hierarchy {
+            // Get parent ID if specified
+            let parent_id: Option<uuid::Uuid> = if let Some(parent) = parent_code {
+                sqlx::query("SELECT id FROM accounts WHERE code = $1")
+                    .bind(parent)
+                    .fetch_optional(self.db.pool())
+                    .await?
+                    .map(|row| row.get("id"))
+            } else {
+                None
+            };
+
+            sqlx::query(
+                "INSERT INTO accounts (code, name, account_type, account_subtype, parent_id) 
+                 VALUES ($1, $2, $3::account_type, $4::account_subtype, $5) 
+                 ON CONFLICT (code) DO UPDATE SET 
+                 name = EXCLUDED.name,
+                 parent_id = EXCLUDED.parent_id",
+            )
+            .bind(code)
+            .bind(name)
+            .bind(account_type)
+            .bind(account_subtype)
+            .bind(parent_id)
+            .execute(self.db.pool())
+            .await?;
+
+            println!("   ✅ Created: {} - {}", code, name);
+        }
+
+        println!("✅ Deep account hierarchies created!");
         Ok(())
     }
 

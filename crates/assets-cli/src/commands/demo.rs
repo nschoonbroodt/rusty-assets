@@ -400,3 +400,33 @@ pub async fn create_deep_categories() -> Result<()> {
 
     Ok(())
 }
+
+pub async fn create_deep_accounts() -> Result<()> {
+    println!("🏦 Creating Deep Account Hierarchies");
+    println!("=====================================\n");
+
+    // Connect to database
+    let db = Database::from_env().await?;
+    println!("✅ Connected to database");
+
+    // Create sample data service
+    let sample_service = SampleDataService::new(db);
+
+    // Create deep account hierarchies
+    sample_service.create_deep_account_hierarchy().await?;
+
+    println!("\n🎉 Deep account hierarchies created!");
+    println!("\n📋 What was created:");
+    println!("   • Assets → Bank1 → Cash, Savings, Brokerage");
+    println!("   • Assets → Bank1 → Brokerage → AAPL, MSFT, GOOGL, SPY");
+    println!("   • Assets → Bank2 → Checking, Money Market");
+    println!("   • Assets → Investment Accounts → 401k, IRA");
+    println!("   • Assets → Investment Accounts → 401k → Bond Fund, Stock Fund");
+    println!("   • Assets → Real Estate → Primary Residence, Investment Properties");
+    println!("   • Assets → Real Estate → Investment Properties → Rental Property 1, 2");
+    println!("\n💡 Try viewing the tree structure:");
+    println!("   cargo run -- accounts tree");
+    println!("   -- This will show the nested hierarchy with proper indentation");
+
+    Ok(())
+}

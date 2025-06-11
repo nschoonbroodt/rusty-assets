@@ -1,23 +1,37 @@
 # Actual Todo
 
-## Example data: include account tree with deeper nesting
-
-For example:
-Assets -> Bank1 -> Cash
-Assets -> Bank1 -> Saving
-Assets -> Bank1 -> Brokerage
-Assets -> Bank1 -> Brokerage --> AAPL
-Assets -> Bank1 -> Brokerage --> MSFT
-
 Next Steps Available:
 🔄 Interactive Account Creation: Build the full account creation workflow
 🔄 Enhanced Tree View: Add support for deeper account hierarchies
 
+## sample commands
+
+create-sample suggest a few commands to test. Could we add more?
+
 # Done
+
+## ✅ Example data: include account tree with deeper nesting - DONE
+
+**COMPLETED**: Implemented deep account hierarchy creation with comprehensive 4-level nested structures:
+
+- ✅ Added `create_deep_account_hierarchy()` method to `SampleDataService` with realistic banking structure
+- ✅ Created CLI command `demo create-deep-accounts` to generate sample nested accounts
+- ✅ Implemented hierarchy structure:
+  - Level 1: Assets (root)
+  - Level 2: Bank1, Bank2, Investment Accounts, Real Estate
+  - Level 3: Cash, Savings, Brokerage under Bank1; Checking under Bank2; 401k, IRA under Investment Accounts
+  - Level 4: Individual stocks (AAPL, MSFT, GOOGL, SPY) under Brokerage; Bond/Stock funds under 401k; Rental properties
+- ✅ Updated CLI enum and match handling for new command
+- ✅ Fixed `MutualFund` enum value in Rust models to match database schema
+- ✅ Tested tree view display showing proper hierarchical structure with Unicode tree characters
+- ✅ Sample structure: Assets → Bank1 → Brokerage → AAPL, MSFT (exactly as requested)
+- ✅ Database INSERT with ON CONFLICT UPDATE to handle existing accounts gracefully
+- ✅ 25+ hierarchical accounts with proper parent-child relationships using `parent_id` references
 
 ## ✅ Balance Calculation: Implement actual balance calculation from journal entries - DONE
 
 **COMPLETED**: Implemented real-time balance calculation from journal entries with proper accounting logic:
+
 - ✅ Added `create_sample_transactions()` method to create test transactions with journal entries
 - ✅ Updated CLI balance command to show actual calculated balances instead of placeholders
 - ✅ Proper formatting for different account types (debit vs credit accounts)

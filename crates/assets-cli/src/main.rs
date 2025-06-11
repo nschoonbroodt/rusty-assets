@@ -80,6 +80,8 @@ enum DemoCommands {
     CreateSample,
     /// Create deep category hierarchy examples in database
     CreateDeepCategories,
+    /// Create deep account hierarchy examples in database
+    CreateDeepAccounts,
 }
 
 #[tokio::main]
@@ -87,7 +89,8 @@ async fn main() -> Result<()> {
     // Load environment variables
     dotenv::dotenv().ok();
 
-    let cli = Cli::parse();    match cli.command {
+    let cli = Cli::parse();
+    match cli.command {
         Commands::Db { action } => match action {
             DbCommands::Init => init_database().await?,
             DbCommands::Status => show_db_status().await?,
@@ -97,7 +100,9 @@ async fn main() -> Result<()> {
             AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
             AccountCommands::Create => create_account_interactive().await?,
             AccountCommands::Tree => show_accounts_tree().await?,
-            AccountCommands::Ownership { account_id } => show_account_ownership(&account_id).await?,
+            AccountCommands::Ownership { account_id } => {
+                show_account_ownership(&account_id).await?
+            }
         },
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,
@@ -107,6 +112,7 @@ async fn main() -> Result<()> {
             DemoCommands::Categories => show_category_examples().await?,
             DemoCommands::CreateSample => create_sample_data(&cli.user).await?,
             DemoCommands::CreateDeepCategories => create_deep_categories().await?,
+            DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
         },
     }
     Ok(())
