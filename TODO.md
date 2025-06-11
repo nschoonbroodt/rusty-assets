@@ -2,13 +2,26 @@
 
 Next Steps Available:
 🔄 Interactive Account Creation: Build the full account creation workflow
-🔄 Enhanced Tree View: Add support for deeper account hierarchies
 
-## sample commands
+## Price history
 
-create-sample suggest a few commands to test. Could we add more?
+to be able to show the assets value change overtime, we need to track the price of assets overtime (for example the price of an AAPL share)
+Do we have that in place, and if not, let's see how to add it.
 
 # Done
+
+## ✅ Sample commands: Enhanced testing command suggestions - DONE
+
+**COMPLETED**: Significantly enhanced command suggestions after `create-sample` with comprehensive testing guide:
+
+- ✅ Added 15+ suggested testing commands with clear categorization
+- ✅ Enhanced `create_full_sample_dataset()` output with detailed command suggestions
+- ✅ Added comprehensive testing guide to README.md with categorized commands
+- ✅ Included quick test sequence for new users
+- ✅ Commands cover: account viewing, balance calculation, demos, user contexts, hierarchy creation
+- ✅ Clear categorization: Account & Balance Commands, Demo & Educational, Data Creation, User Context, Database
+- ✅ Real-world examples: "cargo run -- accounts tree", "cargo run --user you -- accounts balance"
+- ✅ Educational focus: double-entry bookkeeping, multi-user scenarios, ownership examples
 
 ## ✅ Example data: include account tree with deeper nesting - DONE
 

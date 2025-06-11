@@ -116,17 +116,61 @@ RustyAssets uses PostgreSQL for data persistence. You can run it locally with Do
 # Start PostgreSQL in Docker
 docker-compose up -d
 
-# Copy environment template
-copy .env.example .env
-
 # Initialize database and run migrations
-cargo run --bin assets-cli -- init-db
-
-# Check database status
-cargo run --bin assets-cli -- db-status
+cargo run -- db init
 
 # Create sample data
-cargo run --bin assets-cli -- create-sample
+cargo run -- demo create-sample
+```
+
+## Testing Guide
+
+After setting up the database and creating sample data, explore RustyAssets with these commands:
+
+### 🧪 Essential Testing Commands
+
+```powershell
+# 📊 View Your Data
+cargo run -- accounts tree              # Beautiful hierarchical chart of accounts
+cargo run -- accounts balance           # All account balances from real transactions
+cargo run -- demo create-deep-accounts  # Create realistic 4-level account hierarchy
+
+# 🎭 Learn Double-Entry Bookkeeping
+cargo run -- demo double-entry          # Interactive examples with €3,000 salary, €150 groceries
+cargo run -- demo account-types         # Understand debit/credit behavior by account type
+
+# 👥 Multi-User Finance
+cargo run -- demo multi-user            # Learn about shared ownership scenarios
+cargo run -- demo ownership             # See fractional ownership examples
+cargo run -- accounts ownership 1001    # Show ownership details for joint checking account
+
+# 🗂️ Categories & Organization
+cargo run -- demo categories            # Unlimited nesting category examples
+cargo run -- demo create-deep-categories # Create Expense→Home→Deco→Furniture→Sofa
+
+# 👤 User Context Switching
+cargo run --user you -- accounts balance    # Your perspective only
+cargo run --user spouse -- accounts balance # Spouse's perspective only  
+cargo run --user family -- accounts balance # Combined family view (default)
+```
+
+### 🎯 Quick Test Sequence
+
+```powershell
+# 1. Create deep hierarchical data
+cargo run -- demo create-deep-accounts
+
+# 2. View the beautiful tree structure
+cargo run -- accounts tree
+
+# 3. See real balances calculated from transactions
+cargo run -- accounts balance
+
+# 4. Learn the accounting principles
+cargo run -- demo double-entry
+
+# 5. Try different user perspectives
+cargo run --user you -- accounts balance
 ```
 
 ### Manual PostgreSQL Setup

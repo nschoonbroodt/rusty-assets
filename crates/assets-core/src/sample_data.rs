@@ -378,19 +378,41 @@ impl SampleDataService {
         self.create_sample_users().await?;
         self.create_sample_ownership().await?;
         self.create_sample_transactions().await?;
-        self.create_sample_transactions().await?;
-
-        println!("\n🎉 Complete sample dataset created successfully!");
+        self.create_sample_transactions().await?;        println!("\n🎉 Complete sample dataset created successfully!");
         println!("\n📋 What was created:");
         println!("   • Sample categories and subcategories");
         println!("   • Chart of accounts (Assets, Liabilities, Equity, Income, Expenses)");
         println!("   • Sample users (You, Spouse)");
         println!("   • Ownership relationships (joint and individual accounts)");
         println!("   • Sample transactions with journal entries");
-        println!("\n💡 Try these commands:");
-        println!("   cargo run --bin assets-cli -- multi-user");
-        println!("   cargo run --bin assets-cli -- ownership");
-        println!("   cargo run --bin assets-cli -- categories");
+        println!("\n🧪 **TESTING COMMANDS** - Try these to explore the system:");
+        println!("\n📊 **Account & Balance Commands:**");
+        println!("   cargo run -- accounts tree              # Beautiful hierarchical chart of accounts");
+        println!("   cargo run -- accounts list              # Flat account list");
+        println!("   cargo run -- accounts balance           # All account balances from transactions");
+        println!("   cargo run -- accounts ownership 1001    # Show joint account ownership");
+        println!("\n🎭 **Demo & Educational Commands:**");
+        println!("   cargo run -- demo double-entry          # Learn double-entry bookkeeping");
+        println!("   cargo run -- demo account-types         # Understand debit/credit behavior");
+        println!("   cargo run -- demo multi-user            # Multi-user finance examples");
+        println!("   cargo run -- demo ownership             # Ownership split scenarios");
+        println!("   cargo run -- demo categories            # Category hierarchy examples");
+        println!("\n🏗️  **Data Creation Commands:**");
+        println!("   cargo run -- demo create-deep-accounts  # Create 4-level account hierarchy");
+        println!("   cargo run -- demo create-deep-categories # Create nested category examples");
+        println!("\n👥 **User Context Commands:**");
+        println!("   cargo run --user you -- accounts balance    # Your perspective only");
+        println!("   cargo run --user spouse -- accounts balance # Spouse's perspective only");
+        println!("   cargo run --user family -- accounts balance # Combined family view (default)");
+        println!("\n🗄️  **Database Commands:**");
+        println!("   cargo run -- db status                  # Check database connection");
+        println!("   cargo run -- db init                    # Reinitialize database");
+        println!("\n🎯 **Quick Test Sequence:**");
+        println!("   1. cargo run -- demo create-deep-accounts");
+        println!("   2. cargo run -- accounts tree");
+        println!("   3. cargo run -- accounts balance");
+        println!("   4. cargo run -- demo double-entry");
+        println!("   5. cargo run --user you -- accounts balance");
 
         Ok(())
     }
