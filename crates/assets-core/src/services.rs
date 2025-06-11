@@ -2,9 +2,9 @@
 
 use crate::error::Result;
 use crate::models::{
-    Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership, 
-    AccountWithOwnershipAndUsers, JournalEntry, NewJournalEntry,
-    NewTransaction, Transaction, TransactionWithEntries, User,
+    Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership,
+    AccountWithOwnershipAndUsers, JournalEntry, NewJournalEntry, NewTransaction, Transaction,
+    TransactionWithEntries, User,
 };
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;

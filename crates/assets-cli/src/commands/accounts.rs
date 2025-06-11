@@ -96,13 +96,45 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
 
                 if let Some(quantity) = account.quantity {
                     println!("   Quantity: {}", quantity);
-                }
-                if let Some(avg_cost) = account.average_cost {
+                }                if let Some(avg_cost) = account.average_cost {
                     println!("   Average Cost: €{}", avg_cost);
                 }
 
-                // TODO: Calculate actual balance from journal entries
-                println!("\n💡 Balance calculation from journal entries coming soon!");
+                // Calculate actual balance from journal entries
+                println!();
+                match account.calculate_balance(db.pool()).await {
+                    Ok(balance) => {
+                        // Format balance according to account type
+                        let formatted_balance = if account.account_type == AccountType::Liability 
+                            || account.account_type == AccountType::Equity 
+                            || account.account_type == AccountType::Income {
+                            // For credit accounts, show positive balance as the normal balance
+                            format!("€{:.2}", -balance)
+                        } else {
+                            // For debit accounts (Assets, Expenses), show balance as-is
+                            format!("€{:.2}", balance)
+                        };
+                        
+                        let balance_type = if account.account_type.increases_with_debit() {
+                            "Debit balance"
+                        } else {
+                            "Credit balance"
+                        };
+                        
+                        println!("💰 Current Balance: {} ({})", formatted_balance, balance_type);
+                        
+                        if balance == rust_decimal::Decimal::ZERO {
+                            println!("   Account has no activity or transactions cancel out");
+                        } else if balance > rust_decimal::Decimal::ZERO && account.account_type.increases_with_debit() {
+                            println!("   Positive balance - normal for {:?} accounts", account.account_type);
+                        } else if balance < rust_decimal::Decimal::ZERO && account.account_type.increases_with_credit() {
+                            println!("   Normal balance for {:?} accounts", account.account_type);
+                        }
+                    }
+                    Err(e) => {
+                        println!("❌ Error calculating balance: {}", e);
+                    }
+                }
             }
             None => {
                 println!("❌ Account not found: {}", id_str);
@@ -132,15 +164,37 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
                 .filter(|a| a.account_type == account_type)
                 .collect();
 
-            if !type_accounts.is_empty() {
-                println!("📊 {:?} Accounts:", account_type);
+            if !type_accounts.is_empty() {                println!("📊 {:?} Accounts:", account_type);
                 for account in type_accounts {
                     println!(
                         "   {} - {} (ID: {})",
                         account.code, account.name, account.id
                     );
-                    // TODO: Show actual calculated balance
-                    println!("      Balance: [Calculation coming soon]");
+                    
+                    // Calculate actual balance from journal entries
+                    match account.calculate_balance(db.pool()).await {
+                        Ok(balance) => {
+                            // Format balance according to account type
+                            let formatted_balance = if account.account_type == AccountType::Liability 
+                                || account.account_type == AccountType::Equity 
+                                || account.account_type == AccountType::Income {
+                                // For credit accounts, show positive balance as the normal balance
+                                format!("€{:.2}", -balance)
+                            } else {
+                                // For debit accounts (Assets, Expenses), show balance as-is
+                                format!("€{:.2}", balance)
+                            };
+                            
+                            if balance == rust_decimal::Decimal::ZERO {
+                                println!("      Balance: {} (zero)", formatted_balance);
+                            } else {
+                                println!("      Balance: {}", formatted_balance);
+                            }
+                        }
+                        Err(e) => {
+                            println!("      Balance: [Error calculating: {}]", e);
+                        }
+                    }
                 }
                 println!();
             }
@@ -266,7 +320,7 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
 
     // Connect to database
     let db = Database::from_env().await?;
-    let account_service = AccountService::new(db.pool().clone());    // Try to find account by code first, then by UUID
+    let account_service = AccountService::new(db.pool().clone()); // Try to find account by code first, then by UUID
     let account_with_ownership = if let Ok(account_uuid) = Uuid::from_str(account_id) {
         // It's a valid UUID
         account_service
@@ -297,7 +351,8 @@ pub async fn show_account_ownership(account_id: &str) -> Result<()> {
             if account_with_ownership.ownership.is_empty() {
                 println!("🏦 Ownership: 100% Unassigned (no specific owners)");
                 println!("   This account has no fractional ownership setup.");
-            } else {                println!("👥 Ownership Distribution:");
+            } else {
+                println!("👥 Ownership Distribution:");
                 for ownership in &account_with_ownership.ownership {
                     let percentage = ownership
                         .ownership_percentage

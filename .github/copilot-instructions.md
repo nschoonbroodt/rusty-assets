@@ -13,3 +13,4 @@
 - When creating new crates with `cargo new`, always use `--vcs none` to avoid initializing git in subdirectories.
 - move completed tasks to the bottom of the list when todo are done
 - suggest to commit when tasks are done and it make sense to do so
+- don't mention the TODO.md file in the commits

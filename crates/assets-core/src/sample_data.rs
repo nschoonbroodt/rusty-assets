@@ -252,15 +252,127 @@ impl SampleDataService {
         Ok(())
     }
 
+    /// Create sample transactions with journal entries
+    pub async fn create_sample_transactions(&self) -> Result<()> {
+        println!("💸 Creating sample transactions...");
+
+        use crate::models::{NewTransaction, NewJournalEntry};
+        use crate::services::TransactionService;
+        use chrono::Utc;
+        use rust_decimal::Decimal;
+        use std::str::FromStr;
+
+        let transaction_service = TransactionService::new(self.db.pool().clone());
+
+        // Get account IDs by code
+        let mut account_ids = std::collections::HashMap::new();
+        for code in ["1001", "1003", "2001", "4001", "5001", "5002", "5003"] {
+            let account_id: Option<uuid::Uuid> = sqlx::query("SELECT id FROM accounts WHERE code = $1")
+                .bind(code)
+                .fetch_optional(self.db.pool())
+                .await?
+                .map(|row| row.get("id"));
+            if let Some(id) = account_id {
+                account_ids.insert(code, id);
+            }
+        }
+
+        // Sample transactions
+        let transactions = vec![
+            // 1. Salary payment
+            NewTransaction {
+                description: "Monthly salary payment".to_string(),
+                reference: Some("PAY-2025-01".to_string()),
+                transaction_date: Utc::now(),
+                created_by: None,
+                entries: vec![                    NewJournalEntry {
+                        account_id: account_ids["1001"], // Joint Checking
+                        amount: Decimal::from_str("3000.00").unwrap(),
+                        memo: Some("Salary deposit".to_string()),
+                    },
+                    NewJournalEntry {
+                        account_id: account_ids["4001"], // Salary Income
+                        amount: Decimal::from_str("-3000.00").unwrap(),
+                        memo: Some("Monthly salary".to_string()),
+                    },
+                ],
+            },
+            // 2. Grocery purchase
+            NewTransaction {
+                description: "Weekly groceries".to_string(),
+                reference: None,
+                transaction_date: Utc::now(),
+                created_by: None,
+                entries: vec![                    NewJournalEntry {
+                        account_id: account_ids["5001"], // Groceries Expense
+                        amount: Decimal::from_str("150.00").unwrap(),
+                        memo: Some("Weekly shopping".to_string()),
+                    },
+                    NewJournalEntry {
+                        account_id: account_ids["2001"], // Credit Card
+                        amount: Decimal::from_str("-150.00").unwrap(),
+                        memo: Some("Grocery payment".to_string()),
+                    },
+                ],
+            },
+            // 3. Restaurant meal
+            NewTransaction {
+                description: "Dinner at restaurant".to_string(),
+                reference: None,
+                transaction_date: Utc::now(),
+                created_by: None,
+                entries: vec![                    NewJournalEntry {
+                        account_id: account_ids["5002"], // Restaurant Expense
+                        amount: Decimal::from_str("80.00").unwrap(),
+                        memo: Some("Family dinner".to_string()),
+                    },
+                    NewJournalEntry {
+                        account_id: account_ids["1003"], // Personal Checking
+                        amount: Decimal::from_str("-80.00").unwrap(),
+                        memo: Some("Restaurant payment".to_string()),
+                    },
+                ],
+            },
+            // 4. Gas purchase
+            NewTransaction {
+                description: "Gas station fill-up".to_string(),
+                reference: None,
+                transaction_date: Utc::now(),
+                created_by: None,
+                entries: vec![                    NewJournalEntry {
+                        account_id: account_ids["5003"], // Gas Expense
+                        amount: Decimal::from_str("65.00").unwrap(),
+                        memo: Some("Fuel for car".to_string()),
+                    },
+                    NewJournalEntry {
+                        account_id: account_ids["2001"], // Credit Card
+                        amount: Decimal::from_str("-65.00").unwrap(),
+                        memo: Some("Gas payment".to_string()),
+                    },
+                ],
+            },
+        ];        // Create each transaction
+        for transaction in transactions {
+            let description = transaction.description.clone();
+            match transaction_service.create_transaction(transaction).await {
+                Ok(_) => println!("   ✅ Created transaction: {}", description),
+                Err(e) => println!("   ❌ Failed to create transaction: {}", e),
+            }
+        }
+
+        println!("✅ Sample transactions created");
+        Ok(())
+    }
+
     /// Create a complete sample dataset (all of the above)
     pub async fn create_full_sample_dataset(&self) -> Result<()> {
         println!("🎯 Creating complete sample dataset...");
-        println!("====================================\n");
-
-        self.create_sample_categories().await?;
+        println!("====================================\n");        self.create_sample_categories().await?;
         self.create_sample_accounts().await?;
         self.create_sample_users().await?;
         self.create_sample_ownership().await?;
+        self.create_sample_transactions().await?;
+        self.create_sample_transactions().await?;
 
         println!("\n🎉 Complete sample dataset created successfully!");
         println!("\n📋 What was created:");
@@ -268,6 +380,7 @@ impl SampleDataService {
         println!("   • Chart of accounts (Assets, Liabilities, Equity, Income, Expenses)");
         println!("   • Sample users (You, Spouse)");
         println!("   • Ownership relationships (joint and individual accounts)");
+        println!("   • Sample transactions with journal entries");
         println!("\n💡 Try these commands:");
         println!("   cargo run --bin assets-cli -- multi-user");
         println!("   cargo run --bin assets-cli -- ownership");

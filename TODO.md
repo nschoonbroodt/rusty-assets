@@ -9,22 +9,29 @@ Assets -> Bank1 -> Brokerage
 Assets -> Bank1 -> Brokerage --> AAPL
 Assets -> Bank1 -> Brokerage --> MSFT
 
-## Actually display account balance
-
-The "assets-cli accounts balance" command says "Balance" calculation coming soon
-
-## account create don't create right now
-
 Next Steps Available:
-🔄 Balance Calculation: Implement actual balance calculation from journal entries
 🔄 Interactive Account Creation: Build the full account creation workflow
 🔄 Enhanced Tree View: Add support for deeper account hierarchies
 
 # Done
 
+## ✅ Balance Calculation: Implement actual balance calculation from journal entries - DONE
+
+**COMPLETED**: Implemented real-time balance calculation from journal entries with proper accounting logic:
+- ✅ Added `create_sample_transactions()` method to create test transactions with journal entries
+- ✅ Updated CLI balance command to show actual calculated balances instead of placeholders
+- ✅ Proper formatting for different account types (debit vs credit accounts)
+- ✅ Individual account balance display with detailed information
+- ✅ Summary view showing all account balances at once
+- ✅ Correctly handles double-entry bookkeeping (Assets/Expenses: positive debits, Liabilities/Equity/Income: positive credits)
+- ✅ Shows balance type indicators (Debit balance/Credit balance)
+- ✅ Sample transactions: €3,000 salary, €150 groceries, €80 restaurant, €65 gas
+- ✅ Tested with Asset (€6,000 checking), Liability (€430 credit card), and Expense (€300 groceries) accounts
+
 ## ✅ User-Friendly Ownership Display: Show user names instead of UUIDs - DONE
 
 **COMPLETED**: Updated ownership display to show user display names instead of UUIDs using a single database query with JOIN:
+
 - ✅ Added `AccountOwnershipWithUser` model to include user information
 - ✅ Added `AccountWithOwnershipAndUsers` model for the complete structure
 - ✅ Added `get_account_with_ownership_and_users()` method that JOINs account_ownership with users table
