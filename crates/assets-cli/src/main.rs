@@ -23,6 +23,11 @@ enum Commands {
         #[command(subcommand)]
         action: DbCommands,
     },
+    /// Account management and chart of accounts
+    Accounts {
+        #[command(subcommand)]
+        action: AccountCommands,
+    },
     /// Demo and examples
     Demo {
         #[command(subcommand)]
@@ -36,6 +41,27 @@ enum DbCommands {
     Init,
     /// Show database status and connection info
     Status,
+}
+
+#[derive(Subcommand)]
+enum AccountCommands {
+    /// List all accounts in a tree structure
+    List,
+    /// Show account balance and ownership details
+    Balance {
+        /// Account ID to show balance for
+        #[arg(long)]
+        id: Option<String>,
+    },
+    /// Create a new account interactively
+    Create,
+    /// Show chart of accounts as a tree
+    Tree,
+    /// Show account ownership details
+    Ownership {
+        /// Account ID to show ownership for
+        account_id: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -61,12 +87,17 @@ async fn main() -> Result<()> {
     // Load environment variables
     dotenv::dotenv().ok();
 
-    let cli = Cli::parse();
-
-    match cli.command {
+    let cli = Cli::parse();    match cli.command {
         Commands::Db { action } => match action {
             DbCommands::Init => init_database().await?,
             DbCommands::Status => show_db_status().await?,
+        },
+        Commands::Accounts { action } => match action {
+            AccountCommands::List => list_accounts().await?,
+            AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
+            AccountCommands::Create => create_account_interactive().await?,
+            AccountCommands::Tree => show_accounts_tree().await?,
+            AccountCommands::Ownership { account_id } => show_account_ownership(&account_id).await?,
         },
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,

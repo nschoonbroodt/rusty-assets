@@ -16,7 +16,7 @@ pub enum AccountType {
 
 /// Account subtypes for more specific categorization
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
-#[sqlx(type_name = "account_subtype", rename_all = "lowercase")]
+#[sqlx(type_name = "account_subtype", rename_all = "snake_case")]
 pub enum AccountSubtype {
     // Asset subtypes
     Cash,
@@ -40,12 +40,13 @@ pub enum AccountSubtype {
     // Equity subtypes
     OpeningBalance,
     RetainedEarnings,
-    OwnerEquity,
-
-    // Income subtypes
+    OwnerEquity, // Income subtypes
     Salary,
+    Bonus,
     Dividend,
     Interest,
+    Investment,
+    Rental,
     CapitalGains,
     OtherIncome,
 
@@ -53,8 +54,10 @@ pub enum AccountSubtype {
     Food,
     Housing,
     Transportation,
-    Utilities,
+    Communication,
     Entertainment,
+    Personal,
+    Utilities,
     Healthcare,
     Taxes,
     Fees,
@@ -216,7 +219,6 @@ pub struct AccountOwnership {
     pub account_id: Uuid,
     pub ownership_percentage: Decimal,
     pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
 }
 
 /// Enhanced account with ownership information

@@ -198,8 +198,58 @@ impl AccountService {
         .bind(code)
         .fetch_optional(&self.pool)
         .await?;
+        Ok(account)
+    }
+
+    /// Get account by ID
+    pub async fn get_account(&self, account_id: Uuid) -> Result<Option<Account>> {
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            SELECT 
+                id, code, name, 
+                account_type, account_subtype,
+                parent_id, symbol, quantity, average_cost, address, 
+                purchase_date, purchase_price, currency, is_active, 
+                notes, created_at, updated_at
+            FROM accounts 
+            WHERE id = $1
+            "#,
+        )
+        .bind(account_id)
+        .fetch_optional(&self.pool)
+        .await?;
 
         Ok(account)
+    }
+
+    /// Get account with ownership information
+    pub async fn get_account_with_ownership(
+        &self,
+        account_id: Uuid,
+    ) -> Result<Option<AccountWithOwnership>> {
+        // Get the account first
+        let account = match self.get_account(account_id).await? {
+            Some(account) => account,
+            None => return Ok(None),
+        }; // Get ownership information
+        let ownerships = sqlx::query_as::<_, AccountOwnership>(
+            r#"
+            SELECT id, user_id, account_id, ownership_percentage, created_at
+            FROM account_ownership
+            WHERE account_id = $1
+            ORDER BY ownership_percentage DESC
+            "#,
+        )
+        .bind(account_id)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(Some(AccountWithOwnership {
+            account,
+            ownership: ownerships,
+            user_balance: None,
+            user_percentage: None,
+        }))
     }
 }
 
@@ -261,12 +311,11 @@ impl OwnershipService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
     /// Get ownership for a specific account
     pub async fn get_account_ownership(&self, account_id: Uuid) -> Result<Vec<AccountOwnership>> {
         let ownership = sqlx::query_as::<_, AccountOwnership>(
             r#"
-            SELECT id, user_id, account_id, ownership_percentage, created_at, updated_at
+            SELECT id, user_id, account_id, ownership_percentage, created_at
             FROM account_ownership
             WHERE account_id = $1
             ORDER BY ownership_percentage DESC
@@ -282,7 +331,7 @@ impl OwnershipService {
     pub async fn get_user_accounts(&self, user_id: Uuid) -> Result<Vec<AccountWithOwnership>> {
         // For now, we'll use a simpler approach that doesn't rely on compile-time query validation
         let ownership_records = sqlx::query_as::<_, AccountOwnership>(
-            "SELECT id, user_id, account_id, ownership_percentage, created_at, updated_at FROM account_ownership WHERE user_id = $1"
+            "SELECT id, user_id, account_id, ownership_percentage, created_at FROM account_ownership WHERE user_id = $1"
         )
         .bind(user_id)
         .fetch_all(&self.pool)
