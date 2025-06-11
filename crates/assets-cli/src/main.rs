@@ -34,6 +34,10 @@ enum Commands {
     CreateSample,
     /// Show database status and connection info
     DbStatus,
+    /// Demonstrate nested category hierarchies
+    Categories,
+    /// Create deep category hierarchy examples in database
+    CreateDeepCategories,
 }
 
 #[tokio::main]
@@ -51,6 +55,8 @@ async fn main() -> Result<()> {
         Commands::InitDb => init_database().await?,
         Commands::CreateSample => create_sample_data(&cli.user).await?,
         Commands::DbStatus => show_db_status().await?,
+        Commands::Categories => show_category_examples().await?,
+        Commands::CreateDeepCategories => create_deep_categories().await?,
     }
 
     Ok(())
@@ -394,6 +400,146 @@ async fn show_db_status() -> Result<()> {
             println!("\n💡 Please create a .env file with your database connection");
         }
     }
+
+    Ok(())
+}
+
+async fn show_category_examples() -> Result<()> {
+    println!("🗂️  Category Hierarchy Examples");
+    println!("===============================\n");
+
+    println!("📁 The category system supports UNLIMITED nesting levels!");
+    println!("Each category can have a parent_id pointing to another category.\n");
+
+    println!("🏠 Example: Home Expenses Hierarchy");
+    println!("├── Home & Living");
+    println!("│   ├── Utilities");
+    println!("│   │   ├── Electricity");
+    println!("│   │   ├── Gas");
+    println!("│   │   ├── Water");
+    println!("│   │   └── Internet");
+    println!("│   ├── Maintenance");
+    println!("│   │   ├── Plumbing");
+    println!("│   │   ├── Electrical");
+    println!("│   │   └── HVAC");
+    println!("│   └── Decoration");
+    println!("│       ├── Furniture");
+    println!("│       │   ├── Living Room");
+    println!("│       │   │   ├── Sofa");
+    println!("│       │   │   ├── Coffee Table");
+    println!("│       │   │   └── TV Stand");
+    println!("│       │   ├── Bedroom");
+    println!("│       │   │   ├── Bed Frame");
+    println!("│       │   │   ├── Mattress");
+    println!("│       │   │   └── Dresser");
+    println!("│       │   └── Kitchen");
+    println!("│       │       ├── Bar Stools");
+    println!("│       │       └── Kitchen Island");
+    println!("│       ├── Lighting");
+    println!("│       │   ├── Ceiling Fixtures");
+    println!("│       │   ├── Table Lamps");
+    println!("│       │   └── Floor Lamps");
+    println!("│       └── Artwork");
+    println!("│           ├── Paintings");
+    println!("│           ├── Sculptures");
+    println!("│           └── Photography\n");
+
+    println!("🚗 Example: Transportation Hierarchy");
+    println!("├── Transportation");
+    println!("│   ├── Vehicle Expenses");
+    println!("│   │   ├── Fuel");
+    println!("│   │   │   ├── Gasoline");
+    println!("│   │   │   ├── Diesel");
+    println!("│   │   │   └── Electric Charging");
+    println!("│   │   ├── Maintenance");
+    println!("│   │   │   ├── Oil Changes");
+    println!("│   │   │   ├── Tire Replacement");
+    println!("│   │   │   ├── Brake Service");
+    println!("│   │   │   └── Inspections");
+    println!("│   │   └── Insurance");
+    println!("│   │       ├── Liability");
+    println!("│   │       ├── Comprehensive");
+    println!("│   │       └── Collision");
+    println!("│   └── Public Transport");
+    println!("│       ├── Subway/Metro");
+    println!("│       ├── Bus");
+    println!("│       ├── Train");
+    println!("│       └── Rideshare");
+    println!("│           ├── Uber");
+    println!("│           ├── Lyft");
+    println!("│           └── Taxi\n");
+
+    println!("💡 How to create nested categories:");
+    println!("1. Create the top-level category (parent_id = NULL)");
+    println!("2. Create subcategories with parent_id pointing to the parent");
+    println!("3. Create sub-subcategories with parent_id pointing to the subcategory");
+    println!("4. Continue nesting as deep as needed!\n");
+
+    println!("📝 SQL Example for 'Expense->Home->Deco->Furniture->Sofa':");
+    println!("```sql");
+    println!("-- 1. Create top level");
+    println!("INSERT INTO categories (name) VALUES ('Expense');");
+    println!("");
+    println!("-- 2. Create Home under Expense"); 
+    println!("INSERT INTO categories (name, parent_id) ");
+    println!("VALUES ('Home', (SELECT id FROM categories WHERE name = 'Expense'));");
+    println!("");
+    println!("-- 3. Create Deco under Home");
+    println!("INSERT INTO categories (name, parent_id)");
+    println!("VALUES ('Deco', (SELECT id FROM categories WHERE name = 'Home'));");
+    println!("");
+    println!("-- 4. Create Furniture under Deco");
+    println!("INSERT INTO categories (name, parent_id)");
+    println!("VALUES ('Furniture', (SELECT id FROM categories WHERE name = 'Deco'));");
+    println!("");
+    println!("-- 5. Create Sofa under Furniture");
+    println!("INSERT INTO categories (name, parent_id)");
+    println!("VALUES ('Sofa', (SELECT id FROM categories WHERE name = 'Furniture'));");
+    println!("```\n");
+
+    println!("🎯 Benefits of Deep Hierarchies:");
+    println!("- Precise expense tracking (know exactly what you spent on)");
+    println!("- Flexible reporting (can roll up to any level)");
+    println!("- Easy filtering (show all furniture expenses, or just sofas)");
+    println!("- Inheritance (subcategories can inherit colors from parents)");
+    println!("- Future-proof (add new levels without changing the structure)\n");
+
+    println!("🔍 Querying Hierarchies:");
+    println!("- Direct children: WHERE parent_id = <category_id>");
+    println!("- All descendants: Use recursive CTE (Common Table Expression)");
+    println!("- Full path: Join categories to itself multiple times");
+    println!("- Breadcrumb navigation: Walk up the parent_id chain\n");
+
+    println!("💼 Real-world use cases:");
+    println!("- Business: Department -> Team -> Project -> Task -> Subtask");
+    println!("- Shopping: Store -> Department -> Category -> Brand -> Product");
+    println!("- Taxes: Tax Year -> Form -> Schedule -> Line Item -> Deduction");
+    println!("- Investments: Portfolio -> Asset Class -> Sector -> Company -> Security");
+
+    Ok(())
+}
+
+async fn create_deep_categories() -> Result<()> {
+    println!("🗂️  Creating Deep Category Hierarchies");
+    println!("======================================\n");
+
+    // Connect to database
+    let db = Database::from_env().await?;
+    println!("✅ Connected to database");
+
+    // Create sample data service
+    let sample_service = SampleDataService::new(db);
+    
+    // Create deep hierarchies
+    sample_service.create_deep_category_hierarchy().await?;
+
+    println!("\n🎉 Deep category hierarchies created!");
+    println!("\n📋 What was created:");
+    println!("   • Expense → Home → Deco → Furniture → Sofa (5 levels deep)");
+    println!("   • Transportation → Vehicle Expenses → Fuel → Gasoline → Premium Gas");
+    println!("\n💡 Try querying with SQL:");
+    println!("   SELECT name, parent_id FROM categories WHERE name = 'Sofa';");
+    println!("   -- This will show that Sofa has Furniture as its parent");
 
     Ok(())
 }

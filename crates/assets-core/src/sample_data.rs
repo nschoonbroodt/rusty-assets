@@ -265,7 +265,80 @@ impl SampleDataService {
         println!("\n💡 Try these commands:");
         println!("   cargo run --bin assets-cli -- multi-user");
         println!("   cargo run --bin assets-cli -- ownership");
+        println!("   cargo run --bin assets-cli -- categories");
 
+        Ok(())
+    }
+
+    /// Create deep category hierarchies to demonstrate unlimited nesting
+    pub async fn create_deep_category_hierarchy(&self) -> Result<()> {
+        println!("🗂️  Creating deep category hierarchy example...");
+
+        // Create the deep hierarchy: Expense->Home->Deco->Furniture->Sofa
+        let hierarchy = vec![
+            ("Expense", None),
+            ("Home", Some("Expense")),
+            ("Deco", Some("Home")),
+            ("Furniture", Some("Deco")),
+            ("Sofa", Some("Furniture")),
+        ];        for (name, parent_name) in hierarchy {
+            let parent_id: Option<Uuid> = if let Some(parent) = parent_name {
+                sqlx::query("SELECT id FROM categories WHERE name = $1")
+                    .bind(parent)
+                    .fetch_optional(self.db.pool())
+                    .await?
+                    .map(|row| row.get("id"))
+            } else {
+                None
+            };
+
+            sqlx::query(
+                "INSERT INTO categories (name, parent_id, color, is_active) 
+                 VALUES ($1, $2, $3, $4) 
+                 ON CONFLICT (name) DO NOTHING"
+            )
+            .bind(name)
+            .bind(parent_id)
+            .bind("#FF6B6B") // Red for expenses
+            .bind(true)
+            .execute(self.db.pool())
+            .await?;
+
+            println!("   ✅ Created: {}", name);
+        }
+
+        // Create transportation hierarchy
+        let transport_hierarchy = vec![
+            ("Transportation", None),
+            ("Vehicle Expenses", Some("Transportation")),
+            ("Fuel", Some("Vehicle Expenses")),
+            ("Gasoline", Some("Fuel")),
+            ("Premium Gas", Some("Gasoline")),
+        ];        for (name, parent_name) in transport_hierarchy {
+            let parent_id: Option<Uuid> = if let Some(parent) = parent_name {
+                sqlx::query("SELECT id FROM categories WHERE name = $1")
+                    .bind(parent)
+                    .fetch_optional(self.db.pool())
+                    .await?
+                    .map(|row| row.get("id"))
+            } else {
+                None
+            };
+
+            sqlx::query(
+                "INSERT INTO categories (name, parent_id, color, is_active) 
+                 VALUES ($1, $2, $3, $4) 
+                 ON CONFLICT (name) DO NOTHING"
+            )
+            .bind(name)
+            .bind(parent_id)
+            .bind("#4ECDC4") // Teal for transportation
+            .bind(true)
+            .execute(self.db.pool())
+            .await?;
+        }
+
+        println!("✅ Deep category hierarchies created!");
         Ok(())
     }
 
