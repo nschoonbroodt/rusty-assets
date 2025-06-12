@@ -23,4 +23,4 @@ rust_decimal = { version = "1.0", features = ["serde"] }
 
 # Error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
