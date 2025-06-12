@@ -21,8 +21,9 @@ Implement the actual reporting logic behind the CLI commands to generate meaning
 ## Implement reporting database views
 
 Create SQL views for common reporting queries to optimize performance and avoid code duplication:
+
 - Balance sheet view with account hierarchies
-- Income statement view with revenue/expense categorization  
+- Income statement view with revenue/expense categorization
 - Cash flow view with operating/investing/financing activities
 - Trial balance view with current balances by account
 
@@ -33,6 +34,7 @@ Extend the reporting commands to actually export data in CSV and JSON formats as
 ## Add date range validation and defaults
 
 Implement proper date handling in reports:
+
 - Default date ranges (current month, year, etc.)
 - Validation of start/end date relationships
 - Support for relative dates (last month, YTD, etc.)
@@ -40,7 +42,7 @@ Implement proper date handling in reports:
 ## Create reporting command - ✅ DONE
 
 - general balance ✅
-- income vs expense ✅  
+- income vs expense ✅
 - performance of assets ✅
 - allocation ✅
 - net worth summary ✅
