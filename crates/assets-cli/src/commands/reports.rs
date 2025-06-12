@@ -1,10 +1,52 @@
 use anyhow::Result;
+use assets_core::{Database, ReportService};
 use chrono::NaiveDate;
 use clap::Args;
 
 /// Generate balance sheet report
 pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
-    todo!("Generate balance sheet report for date: {:?}", params.date);
+    let db = Database::from_env().await?;
+    let price_service = ReportService::new(db.pool().clone());
+
+    let report_date = params
+        .date
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    let balance_sheet = price_service.balance_sheet(report_date).await?;
+    println!("📊 Balance Sheet Report for {}", report_date);
+    println!("=====================================");
+    println!("Assets:");
+    for asset in balance_sheet.assets {
+        println!(
+            "{}: {} ({} - Level {})",
+            asset.name, asset.balance, asset.full_path, asset.level
+        );
+    }
+    println!("Total Assets: {}", balance_sheet.total_assets);
+    println!("Liabilities:");
+    for liability in balance_sheet.liabilities {
+        println!(
+            "{}: {} ({} - Level {})",
+            liability.name, liability.balance, liability.full_path, liability.level
+        );
+    }
+    println!("Total Liabilities: {}", balance_sheet.total_liabilities);
+    println!("Equity:");
+    for equity in balance_sheet.equity {
+        println!(
+            "{}: {} ({} - Level {})",
+            equity.name, equity.balance, equity.full_path, equity.level
+        );
+    }
+    println!("Total Equity: {}", balance_sheet.total_equity);
+    println!("Report Date: {}", balance_sheet.report_date);
+    println!("=====================================");
+    if params.include_zero {
+        println!("Note: Zero balances are included in this report.");
+    } else {
+        println!("Note: Zero balances are excluded from this report.");
+    }
+
+    Ok(())
 }
 
 /// Generate income statement report

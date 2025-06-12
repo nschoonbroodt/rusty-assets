@@ -32,7 +32,7 @@ CREATE OR REPLACE FUNCTION balance_sheet_data(report_date DATE) RETURNS TABLE (
                 ab.account_type,
                 ab.parent_id,
                 ab.account_balance,
-                ab.name as full_path,
+                ab.name::TEXT as full_path,
                 0 as level
             FROM account_balances ab
             WHERE ab.parent_id IS NULL
