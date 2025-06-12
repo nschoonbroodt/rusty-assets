@@ -1,5 +1,6 @@
 use crate::error::Result;
-use crate::models::{Account, AccountWithMarketValue, NewPriceHistory, PriceHistory};
+use crate::models::{Account, AccountWithMarketValue, NewPriceHistory, PriceHistory, JournalEntry};
+use rust_decimal::Decimal;
 use sqlx::PgPool;
 
 pub struct PriceHistoryService {
@@ -47,7 +48,7 @@ impl PriceHistoryService {
             SELECT id, symbol, price, price_date, currency, source, created_at
             FROM price_history
             WHERE symbol = $1
-            ORDER BY price_date DESC
+            ORDER BY price_date DESC, created_at DESC -- Ensure consistent ordering
             LIMIT 1
             "#,
         )
@@ -104,27 +105,59 @@ impl PriceHistoryService {
     }
 
     /// Calculate market value for an account with investments
+    /// This function is now simplified by using the `latest_account_market_values` view.
     pub async fn get_account_with_market_value(
         &self,
         account: Account,
     ) -> Result<AccountWithMarketValue> {
-        // Calculate book value from journal entries
-        let book_value = account.calculate_balance(&self.pool).await
-            .map_err(|e| crate::error::CoreError::Database(e))?;
+        // Book value still needs to be calculated from journal entries,
+        // as the view `latest_account_market_values` only provides market value.
+        let book_value_result: Option<Decimal> = sqlx::query_scalar(
+            "SELECT COALESCE(SUM(amount), 0) FROM journal_entries WHERE account_id = $1",
+        )
+        .bind(account.id)
+        .fetch_one(&self.pool)
+        .await?;
+        let book_value = book_value_result.unwrap_or_default();
 
-        let mut market_value = None;
-        let mut unrealized_gain_loss = None;
-        let mut latest_price = None;
+        // Fetch market data from the new view
+        let market_data_row = sqlx::query!(
+            r#"
+            SELECT
+                asset_symbol,
+                quantity,
+                value_date,
+                price_per_unit,
+                value_currency,
+                market_value,
+                price_history_id,
+                price_source,
+                price_created_at
+            FROM latest_account_market_values
+            WHERE account_id = $1
+            "#,
+            account.id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
 
-        // For investment accounts with symbol and quantity, calculate market value
-        if let (Some(symbol), Some(quantity)) = (&account.symbol, account.quantity) {
-            if let Ok(Some(price)) = self.get_latest_price(symbol).await {
-                let current_market_value = quantity * price.price;
-                market_value = Some(current_market_value);
-                unrealized_gain_loss = Some(current_market_value - book_value);
-                latest_price = Some(price);
-            }
-        }
+        let (market_value, unrealized_gain_loss, latest_price) = if let Some(row) = market_data_row {
+            let price_history = PriceHistory {
+                id: row.price_history_id.unwrap_or_else(uuid::Uuid::new_v4), // Handle potential NULL if view is not populated
+                symbol: row.asset_symbol.unwrap_or_default(), // Handle potential NULL
+                price: row.price_per_unit.unwrap_or_default(), // Handle potential NULL
+                price_date: row.value_date.unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()), // Handle potential NULL
+                currency: row.value_currency.unwrap_or_default(), // Handle potential NULL
+                source: row.price_source,
+                created_at: row.price_created_at.unwrap_or_else(chrono::Utc::now), // Handle potential NULL
+            };
+            let mv = row.market_value;
+            let ugl = mv.map(|m| m - book_value);
+            (mv, ugl, Some(price_history))
+        } else {
+            // If no market data found (e.g., no price history for the symbol)
+            (None, None, None)
+        };
 
         Ok(AccountWithMarketValue {
             account,

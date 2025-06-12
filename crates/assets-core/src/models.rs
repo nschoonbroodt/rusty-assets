@@ -183,14 +183,24 @@ impl AccountType {
 impl Account {
     /// Calculate the current balance of this account from journal entries
     pub async fn calculate_balance(&self, pool: &sqlx::PgPool) -> Result<Decimal, sqlx::Error> {
+        // This now queries the `account_running_balances` view for the latest balance.
+        // It assumes that the view provides the most up-to-date balance.
+        // If an account has no transactions, it won't appear in `account_running_balances`,
+        // so we COALESCE to 0.00 in that case.
         let result: Option<Decimal> = sqlx::query_scalar(
-            "SELECT COALESCE(SUM(amount), 0) FROM journal_entries WHERE account_id = $1",
+            r#"
+            SELECT running_balance
+            FROM account_running_balances
+            WHERE account_id = $1
+            ORDER BY balance_day DESC
+            LIMIT 1
+            "#,
         )
         .bind(self.id)
-        .fetch_one(pool)
+        .fetch_optional(pool) // Use fetch_optional as an account might not have any balance entries yet
         .await?;
 
-        Ok(result.unwrap_or(Decimal::ZERO))
+        Ok(result.unwrap_or(Decimal::ZERO)) // Return 0 if no balance record is found
     }
     /// Get the account's normal balance sign (positive for debit accounts, negative for credit accounts)
     pub fn normal_balance_sign(&self) -> i32 {
