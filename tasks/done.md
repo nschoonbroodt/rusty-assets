@@ -193,3 +193,9 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - ✅ Users can still reference accounts by code in commands
 - ✅ Improved visual clarity and reduced confusion
 - ✅ Prevents users from thinking they need to follow demo numbering structure
+
+## Docker instruction in README.txt are all over the place
+
+- no need to install postgres
+- don't start the container manually, use docker compose
+- copy the .env from the .env.example

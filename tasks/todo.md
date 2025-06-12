@@ -22,12 +22,6 @@ Develop a web or graphical user interface as an alternative to the CLI for broad
 
 Implement reporting features to generate balance sheets, income statements, and net worth tracking for comprehensive financial analysis.
 
-## Docker instruction in README.txt are all over the place
-
-- no need to install postgres
-- don't start the container manually, use docker compose
-- copy the .env from the .env.example
-
 ## Create reporting command
 
 - general balance

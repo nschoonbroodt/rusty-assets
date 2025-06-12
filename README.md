@@ -38,36 +38,103 @@ This project is a Cargo workspace with all crates in the `crates/` directory:
 - Reporting and analytics
 - Web or GUI interface
 
-## Getting Started
+## Getting Started with Docker (Recommended)
 
-1. Install [Rust](https://www.rust-lang.org/tools/install) and [PostgreSQL](https://www.postgresql.org/download/).
-2. Clone this repository.
-3. Build the workspace:
-   ```powershell
-   cargo build --workspace
-   ```
-4. Run the CLI:
-   ```powershell
-   cargo run -p assets-cli
-   ```
+This is the recommended way to get RustyAssets up and running quickly.
 
-## Using PostgreSQL with Docker
+1.  **Prerequisites**:
 
-The easiest way to run a local PostgreSQL instance is with Docker:
+    - Install [Rust](https://www.rust-lang.org/tools/install).
+    - Install [Docker Desktop](https://www.docker.com/products/docker-desktop/) (which includes Docker Compose).
 
-```powershell
-docker run --name rustyassets-postgres -e POSTGRES_PASSWORD=rustyassets -e POSTGRES_USER=rustyassets -e POSTGRES_DB=rustyassets -p 5432:5432 -d postgres:16
-```
+2.  **Clone the Repository**:
 
-- This will start a PostgreSQL 16 container with user, password, and database all set to `rustyassets`.
-- You can change these values as needed.
-- To stop and remove the container:
+    ```powershell
+    git clone https://github.com/nschoonbroodt/rusty-assets/
+    cd rustyassets
+    ```
+
+3.  **Configure Environment**:
+
+    - Copy the example environment file:
+      ```powershell
+      Copy-Item .env.example .env
+      ```
+    - Open the newly created `.env` file and verify the `DATABASE_URL`. It should match the credentials in `docker-compose.yml` (default: `postgresql://rustyassets:rustyassets@127.0.0.1:5432/rustyassets`).
+      > **Performance Tip**: Using `127.0.0.1` instead of `localhost` for the database host can significantly improve connection speed on Windows.
+
+4.  **Start PostgreSQL using Docker Compose**:
+
+    ```powershell
+    docker-compose up -d
+    ```
+
+    This command will:
+
+    - Download the `postgres:15` image if you don't have it.
+    - Start a PostgreSQL container named `rustyassets-postgres`.
+    - Create a user `rustyassets` with password `rustyassets`.
+    - Create a database named `rustyassets`.
+    - Persist data in a Docker volume named `rustyassets_postgres_data`.
+
+5.  **Run Database Migrations**:
+
+    - Install SQLx CLI (if you haven't already):
+      ```powershell
+      cargo install sqlx-cli --no-default-features --features rustls,postgres
+      ```
+    - Run the migrations:
+      ```powershell
+      sqlx migrate run --source crates/assets-core/migrations
+      ```
+      _(Ensure your `DATABASE_URL` in `.env` is correctly set for this step)._
+      Alternatively, you can use the built-in CLI command (if available and configured to use the .env file):
+      ```powershell
+      cargo run -- db init
+      ```
+
+6.  **Build the Workspace**:
+
+    ```powershell
+    cargo build --workspace
+    ```
+
+7.  **Run the CLI**:
+
+    ```powershell
+    cargo run -p assets-cli -- --help
+    ```
+
+    This will show you the available commands.
+
+8.  **(Optional) Create Sample Data**:
+    ```powershell
+    cargo run -- demo create-sample
+    ```
+
+### Managing the Docker Container
+
+- **Stop the PostgreSQL container**:
   ```powershell
-  docker stop rustyassets-postgres
-  docker rm rustyassets-postgres
+  docker-compose down
+  ```
+- **Stop and remove the data volume** (if you want a fresh start):
+  ```powershell
+  docker-compose down -v
   ```
 
-Update your `.env` or configuration files to match these credentials for local development.
+## Alternative: Manual PostgreSQL Setup
+
+If you prefer not to use Docker or have an existing PostgreSQL instance:
+
+1.  **Install PostgreSQL**: Follow the official instructions for your OS from [postgresql.org](https://www.postgresql.org/download/).
+2.  **Create Database and User**:
+    - Create a database (e.g., `rustyassets`).
+    - Create a user (e.g., `rustyassets`) with a password and grant necessary permissions to the database.
+3.  **Configure Environment**:
+    - Copy `.env.example` to `.env`.
+    - Update `DATABASE_URL` in `.env` with your PostgreSQL connection string (e.g., `postgresql://youruser:yourpassword@yourhost:yourport/yourdatabase`).
+4.  **Follow steps 5-8** from the "Getting Started with Docker" section above (Run Migrations, Build, Run CLI, Sample Data).
 
 ## Development
 
