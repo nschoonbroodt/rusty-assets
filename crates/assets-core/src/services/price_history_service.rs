@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{Account, AccountWithMarketValue, NewPriceHistory, PriceHistory, JournalEntry};
+use crate::models::{Account, AccountWithMarketValue, NewPriceHistory, PriceHistory};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 
@@ -13,10 +13,7 @@ impl PriceHistoryService {
     }
 
     /// Add or update a price entry for a symbol on a specific date
-    pub async fn add_price(
-        &self,
-        new_price: NewPriceHistory,
-    ) -> Result<PriceHistory> {
+    pub async fn add_price(&self, new_price: NewPriceHistory) -> Result<PriceHistory> {
         let price = sqlx::query_as::<_, PriceHistory>(
             r#"
             INSERT INTO price_history (symbol, price, price_date, currency, source)
@@ -95,11 +92,10 @@ impl PriceHistoryService {
 
     /// Get all symbols that have price history
     pub async fn get_tracked_symbols(&self) -> Result<Vec<String>> {
-        let symbols: Vec<String> = sqlx::query_scalar(
-            "SELECT DISTINCT symbol FROM price_history ORDER BY symbol",
-        )
-        .fetch_all(&self.pool)
-        .await?;
+        let symbols: Vec<String> =
+            sqlx::query_scalar("SELECT DISTINCT symbol FROM price_history ORDER BY symbol")
+                .fetch_all(&self.pool)
+                .await?;
 
         Ok(symbols)
     }
@@ -141,12 +137,15 @@ impl PriceHistoryService {
         .fetch_optional(&self.pool)
         .await?;
 
-        let (market_value, unrealized_gain_loss, latest_price) = if let Some(row) = market_data_row {
+        let (market_value, unrealized_gain_loss, latest_price) = if let Some(row) = market_data_row
+        {
             let price_history = PriceHistory {
                 id: row.price_history_id.unwrap_or_else(uuid::Uuid::new_v4), // Handle potential NULL if view is not populated
                 symbol: row.asset_symbol.unwrap_or_default(), // Handle potential NULL
                 price: row.price_per_unit.unwrap_or_default(), // Handle potential NULL
-                price_date: row.value_date.unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()), // Handle potential NULL
+                price_date: row
+                    .value_date
+                    .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()), // Handle potential NULL
                 currency: row.value_currency.unwrap_or_default(), // Handle potential NULL
                 source: row.price_source,
                 created_at: row.price_created_at.unwrap_or_else(chrono::Utc::now), // Handle potential NULL

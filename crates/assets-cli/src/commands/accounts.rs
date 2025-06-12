@@ -606,8 +606,8 @@ fn prompt_account_name() -> Result<String> {
 }
 
 pub async fn prompt_parent_account(
-    account_service: &AccountService,
-    account_type: &AccountType,
+    _account_service: &AccountService, // Renamed to indicate it's not used directly in this function variant
+    _account_type: &AccountType, // Renamed to indicate it's not used
 ) -> Result<Option<Uuid>> {
     println!("\n🔗 Parent Account (Optional)");
     print!("Do you want to set a parent account? (y/N): ");
@@ -621,7 +621,7 @@ pub async fn prompt_parent_account(
 
     // List potential parent accounts (same type or broader categories)
     // For simplicity, listing all accounts here. Could be refined.
-    let all_accounts = account_service.get_all_accounts().await?;
+    let all_accounts = _account_service.get_all_accounts().await?;
     if all_accounts.is_empty() {
         println!("No existing accounts to set as parent.");
         return Ok(None);
@@ -646,7 +646,7 @@ pub async fn prompt_parent_account(
         match Uuid::from_str(parent_id_str) {
             Ok(uuid) => {
                 // Verify parent account exists
-                if account_service.get_account(uuid).await?.is_some() {
+                if _account_service.get_account(uuid).await?.is_some() {
                     return Ok(Some(uuid));
                 } else {
                     println!("❌ Parent account with ID {} not found. Please try again.", uuid);
