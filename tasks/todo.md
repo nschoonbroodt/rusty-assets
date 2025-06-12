@@ -4,15 +4,40 @@
 
 Implement automated price feeds from financial APIs for real-time price updates instead of manual entry. This would allow the system to automatically fetch current market prices for tracked assets (stocks, ETFs, crypto) from sources like Yahoo Finance, Alpha Vantage, or similar APIs.
 
+## Expand REST API endpoints
+
+Add more report endpoints to the REST API:
+- Income statement endpoint
+- Cash flow statement endpoint
+- Net worth tracking endpoint
+- Account listing and details endpoints
+- Transaction listing and filtering endpoints
+
+## Add API authentication and authorization
+
+Implement security for the REST API:
+- API key authentication
+- User-based access control
+- Rate limiting
+
+## Add API documentation
+
+Create comprehensive API documentation:
+- OpenAPI/Swagger specification
+- Interactive API documentation
+- Example requests and responses
+
 ## Add github actions
 
 ## Real-world transaction import (CSV, QIF, OFX)
 
 Support importing transactions from common financial data formats (CSV, QIF, OFX) to make onboarding and data migration easier.
 
-## Web or GUI interface
+## Web or GUI interface - ✅ DONE (REST API Foundation)
 
 Develop a web or graphical user interface as an alternative to the CLI for broader accessibility and ease of use.
+
+**REST API foundation completed:** Created assets-api crate with Axum web framework providing JSON endpoints for balance sheet reports. This provides the foundation for future web/GUI interfaces.
 
 ## Reporting: balance sheets, income statements, net worth tracking
 
@@ -27,9 +52,11 @@ Create SQL views for common reporting queries to optimize performance and avoid 
 - Cash flow view with operating/investing/financing activities
 - Trial balance view with current balances by account
 
-## Add CSV/JSON export for reports
+## Add CSV/JSON export for reports - ✅ DONE (JSON via API)
 
 Extend the reporting commands to actually export data in CSV and JSON formats as specified in the CLI parameters.
+
+**JSON export completed via REST API:** Balance sheet reports now available as structured JSON via REST endpoints. CSV export in CLI still pending.
 
 ## Add date range validation and defaults
 
@@ -90,7 +117,9 @@ such as share prices, crypto
 
 ## UI using tauri
 
-## possible web api
+## possible web api - ✅ DONE (REST API Foundation)
+
+**REST API implemented:** Created complete REST API with balance sheet endpoints, health checks, and JSON responses. Provides foundation for web apps, mobile apps, and third-party integrations.
 
 ## possible mobile app
 

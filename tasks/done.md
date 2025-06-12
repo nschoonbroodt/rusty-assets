@@ -199,3 +199,47 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - no need to install postgres
 - don't start the container manually, use docker compose
 - copy the .env from the .env.example
+
+## ✅ REST API Foundation - COMPLETED 2025-06-12
+
+**COMPLETED**: Created a complete REST API foundation for the RustyAssets application:
+
+**New assets-api Crate**:
+- ✅ Created new `assets-api` crate with Axum web framework
+- ✅ Modular architecture with separate handlers and routes
+- ✅ Async/await support with Tokio runtime
+- ✅ Structured logging with tracing and tracing-subscriber
+- ✅ CORS support for web browser access
+- ✅ Environment-based configuration
+
+**API Endpoints**:
+- ✅ Health check endpoint: `GET /api/v1/health`
+- ✅ Balance sheet endpoint: `GET /api/v1/reports/balance-sheet`
+- ✅ Date-specific balance sheet: `GET /api/v1/reports/balance-sheet/{date}`
+- ✅ Query parameter support: `?include_zero=true`
+
+**Response Features**:
+- ✅ Comprehensive JSON responses with metadata
+- ✅ Structured error handling with proper HTTP status codes
+- ✅ Balance validation and totals calculation
+- ✅ Account hierarchy with full path display
+- ✅ Currency formatting and decimal precision
+- ✅ Request/response timing and logging
+
+**Technical Implementation**:
+- ✅ Shared business logic from assets-core crate
+- ✅ Type-safe JSON serialization with Serde
+- ✅ Database connection pooling via SQLx
+- ✅ Production-ready with configurable port binding
+- ✅ Background process support for server deployment
+
+**Testing and Validation**:
+- ✅ Verified health check endpoint returns service status
+- ✅ Tested balance sheet endpoints with sample data
+- ✅ Confirmed query parameter handling
+- ✅ Validated JSON response structure and metadata
+- ✅ Browser compatibility confirmed via Simple Browser
+
+**Branch**: Created on `feature/rest-api` and published to remote repository.
+
+**Foundation for Future Development**: This REST API provides the foundation for web interfaces, mobile apps, and third-party integrations.
