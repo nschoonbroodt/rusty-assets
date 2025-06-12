@@ -121,6 +121,7 @@ dependencies = [
  "clap",
  "dotenv",
  "rust_decimal",
+ "serde_json",
  "tokio",
  "uuid",
 ]

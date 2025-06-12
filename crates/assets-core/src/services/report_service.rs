@@ -48,7 +48,6 @@ impl ReportService {
         for row in rows {
             let account_type: String = row.get("account_type");
             let balance: Decimal = row.get("balance");
-            println!("{:?}", balance);
 
             let account_balance = AccountBalance {
                 name: row.get("name"),
