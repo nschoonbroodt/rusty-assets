@@ -17,3 +17,4 @@
 - suggest to commit when tasks are done and it make sense to do so
 - don't mention the tasks/todo.md and tasks/done.md file in the commits
 - in rust try to avoid clone when possible, use references instead
+- when the user needs to identify an account, he should use the syntax "Assets:Current Assets:Main Checking", not refer by id
