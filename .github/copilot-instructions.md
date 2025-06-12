@@ -8,6 +8,7 @@
 - Core logic and DB in `assets-core`, CLI in `assets-cli`.
 - PostgreSQL is the target database.
 - Always use the non-macro version of SQLx queries (e.g., `sqlx::query()` instead of `sqlx::query!()`).
+- prefer to create view in the database instead of using complex queries, so that the view can be reused in multiple places without code duplication.
 - prefer to ask the database to do some calculations instead of doing them in Rust (join on tables, aggregate functions, etc.) to avoid multiple round trips.
 - Future interfaces (GUI/web) should be easy to add as new crates.
 - When creating new crates with `cargo new`, always use `--vcs none` to avoid initializing git in subdirectories.
