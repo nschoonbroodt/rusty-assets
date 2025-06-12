@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod commands;
-use commands::{accounts::*, db::*, demo::*, prices};
+use commands::{accounts::*, db::*, demo::*, prices, reports::*};
 
 #[derive(Parser)]
 #[command(name = "assets-cli")]
@@ -31,6 +31,11 @@ enum Commands {
     Prices {
         #[command(subcommand)]
         action: PriceCommands,
+    },
+    /// Financial reports and analysis
+    Reports {
+        #[command(subcommand)]
+        action: ReportCommands,
     },
     /// Demo and examples
     Demo {
@@ -81,6 +86,60 @@ enum PriceCommands {
 }
 
 #[derive(Subcommand)]
+enum ReportCommands {
+    /// Generate balance sheet report
+    BalanceSheet {
+        #[command(flatten)]
+        params: BalanceSheetParams,
+    },
+    /// Generate income statement report
+    IncomeStatement {
+        #[command(flatten)]
+        params: IncomeStatementParams,
+    },
+    /// Generate cash flow statement
+    CashFlow {
+        #[command(flatten)]
+        params: CashFlowParams,
+    },
+    /// Generate trial balance report
+    TrialBalance {
+        #[command(flatten)]
+        params: TrialBalanceParams,
+    },
+    /// Generate account ledger report
+    AccountLedger {
+        #[command(flatten)]
+        params: AccountLedgerParams,
+    },
+    /// Generate net worth report over time
+    NetWorth {
+        #[command(flatten)]
+        params: NetWorthParams,
+    },
+    /// Generate budget vs actual report
+    Budget {
+        #[command(flatten)]
+        params: BudgetReportParams,
+    },
+    /// Generate expense analysis report
+    ExpenseAnalysis {
+        #[command(flatten)]
+        params: ExpenseAnalysisParams,
+    },
+    /// Generate investment performance report
+    InvestmentPerformance {
+        #[command(flatten)]
+        params: InvestmentPerformanceParams,
+    },
+    /// Generate tax report
+    Tax {
+        #[command(flatten)]
+        params: TaxReportParams,
+    },
+}
+
+#[derive(Subcommand)]
 enum DemoCommands {
     /// Demonstrate double-entry bookkeeping examples
     DoubleEntry,
@@ -123,6 +182,37 @@ async fn main() -> Result<()> {
             PriceCommands::Add => prices::add_price_interactive().await?,
             PriceCommands::History { symbol } => prices::show_price_history(symbol.as_deref()).await?,
             PriceCommands::Market => prices::show_market_values().await?,
+        },        Commands::Reports { action } => match action {
+            ReportCommands::BalanceSheet { params } => {
+                generate_balance_sheet(params).await?;
+            }
+            ReportCommands::IncomeStatement { params } => {
+                generate_income_statement(params).await?;
+            }
+            ReportCommands::CashFlow { params } => {
+                generate_cash_flow_statement(params).await?;
+            }
+            ReportCommands::TrialBalance { params } => {
+                generate_trial_balance(params).await?;
+            }
+            ReportCommands::AccountLedger { params } => {
+                generate_account_ledger(params).await?;
+            }
+            ReportCommands::NetWorth { params } => {
+                generate_net_worth_report(params).await?;
+            }
+            ReportCommands::Budget { params } => {
+                generate_budget_report(params).await?;
+            }
+            ReportCommands::ExpenseAnalysis { params } => {
+                generate_expense_analysis(params).await?;
+            }
+            ReportCommands::InvestmentPerformance { params } => {
+                generate_investment_performance(params).await?;
+            }
+            ReportCommands::Tax { params } => {
+                generate_tax_report(params).await?;
+            }
         },
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,

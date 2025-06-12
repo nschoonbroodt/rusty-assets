@@ -16,17 +16,38 @@ Develop a web or graphical user interface as an alternative to the CLI for broad
 
 ## Reporting: balance sheets, income statements, net worth tracking
 
-Implement reporting features to generate balance sheets, income statements, and net worth tracking for comprehensive financial analysis.
+Implement the actual reporting logic behind the CLI commands to generate meaningful financial reports from the database.
 
-## Create reporting command
+## Implement reporting database views
 
-- general balance
-- income vs expense
-- performance of assets
-- allocation
-- net worth summary
+Create SQL views for common reporting queries to optimize performance and avoid code duplication:
+- Balance sheet view with account hierarchies
+- Income statement view with revenue/expense categorization  
+- Cash flow view with operating/investing/financing activities
+- Trial balance view with current balances by account
 
-All of these for entire familly and by user
+## Add CSV/JSON export for reports
+
+Extend the reporting commands to actually export data in CSV and JSON formats as specified in the CLI parameters.
+
+## Add date range validation and defaults
+
+Implement proper date handling in reports:
+- Default date ranges (current month, year, etc.)
+- Validation of start/end date relationships
+- Support for relative dates (last month, YTD, etc.)
+
+## Create reporting command - ✅ DONE
+
+- general balance ✅
+- income vs expense ✅  
+- performance of assets ✅
+- allocation ✅
+- net worth summary ✅
+
+All of these for entire familly and by user ✅
+
+CLI structure with clap is complete, need to implement the actual reporting logic.
 
 ## import bank statement
 
