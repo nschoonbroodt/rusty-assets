@@ -14,7 +14,6 @@ GROUP BY j.account_id,
 CREATE VIEW account_running_balances AS
 SELECT adc.account_id,
     acc.name AS account_name,
-    acc.code AS account_code,
     acc.account_type,
     acc.account_subtype,
     adc.balance_day,

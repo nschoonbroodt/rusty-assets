@@ -1,2 +1,22 @@
 -- Drop initial schema
+-- Drop indexes first (if they are not automatically dropped with tables, though most are)
+DROP INDEX IF EXISTS idx_journal_entries_amount;
+DROP INDEX IF EXISTS idx_journal_entries_account;
+DROP INDEX IF EXISTS idx_journal_entries_transaction;
+DROP INDEX IF EXISTS idx_transactions_created_by;
+DROP INDEX IF EXISTS idx_transactions_date;
+DROP INDEX IF EXISTS idx_accounts_parent;
+DROP INDEX IF EXISTS idx_accounts_type;
+DROP INDEX IF EXISTS idx_accounts_unique_root_name;
+-- Drop constraints on accounts table before dropping the table
+ALTER TABLE IF EXISTS accounts DROP CONSTRAINT IF EXISTS uq_account_name_parent;
+ALTER TABLE IF EXISTS accounts DROP CONSTRAINT IF EXISTS chk_account_name_no_colon;
+-- Drop tables in reverse order of creation due to foreign key constraints
+DROP TABLE IF EXISTS journal_entries;
+DROP TABLE IF EXISTS transactions;
+DROP TABLE IF EXISTS accounts;
+-- Drop custom types
+DROP TYPE IF EXISTS account_subtype;
+DROP TYPE IF EXISTS account_type;
+-- Drop extension
 DROP EXTENSION IF EXISTS "uuid-ossp";

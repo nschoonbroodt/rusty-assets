@@ -64,7 +64,7 @@ pub async fn list_accounts() -> Result<()> {
     Ok(())
 }
 
-pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
+pub async fn show_account_balance(account_id_str: Option<&str>) -> Result<()> {
     println!("💰 Account Balance");
     println!("==================\n");
 
@@ -72,85 +72,86 @@ pub async fn show_account_balance(account_id: Option<&str>) -> Result<()> {
     let db = Database::from_env().await?;
     let account_service = AccountService::new(db.pool().clone());
 
-    if let Some(id_str) = account_id {
-        // Try to find account by code first, then by UUID
-        let account = if let Ok(account_uuid) = Uuid::from_str(id_str) {
-            // It's a valid UUID
-            account_service.get_account(account_uuid).await?
-        } else {
-            // Try as account code
-            account_service.get_account_by_code(id_str).await?
-        };
-
-        match account {
-            Some(account) => {
-                println!("📊 Account: {}", account.name);
-                println!(
-                    "   Type: {:?} ({:?})",
-                    account.account_type, account.account_subtype
-                );
-                println!("   Currency: {}", account.currency);
-
-                if let Some(symbol) = &account.symbol {
-                    println!("   Symbol: {}", symbol);
-                }
-
-                if let Some(quantity) = account.quantity {
-                    println!("   Quantity: {}", quantity);
-                }
-                if let Some(avg_cost) = account.average_cost {
-                    println!("   Average Cost: €{}", avg_cost);
-                }
-
-                // Calculate actual balance from journal entries
-                println!();
-                match account.calculate_balance(db.pool()).await {
-                    Ok(balance) => {
-                        // Format balance according to account type
-                        let formatted_balance = if account.account_type == AccountType::Liability
-                            || account.account_type == AccountType::Equity
-                            || account.account_type == AccountType::Income
-                        {
-                            // For credit accounts, show positive balance as the normal balance
-                            format!("€{:.2}", -balance)
-                        } else {
-                            // For debit accounts (Assets, Expenses), show balance as-is
-                            format!("€{:.2}", balance)
-                        };
-
-                        let balance_type = if account.account_type.increases_with_debit() {
-                            "Debit balance"
-                        } else {
-                            "Credit balance"
-                        };
-
+    if let Some(id_str) = account_id_str {
+        // Expect a UUID for specific account balance
+        match Uuid::from_str(id_str) {
+            Ok(account_uuid) => {
+                match account_service.get_account(account_uuid).await? {
+                    Some(account) => {
+                        println!("📊 Account: {} (ID: {})", account.name, account.id);
                         println!(
-                            "💰 Current Balance: {} ({})",
-                            formatted_balance, balance_type
+                            "   Type: {:?} ({:?})",
+                            account.account_type, account.account_subtype
                         );
+                        println!("   Currency: {}", account.currency);
 
-                        if balance == rust_decimal::Decimal::ZERO {
-                            println!("   Account has no activity or transactions cancel out");
-                        } else if balance > rust_decimal::Decimal::ZERO
-                            && account.account_type.increases_with_debit()
-                        {
-                            println!(
-                                "   Positive balance - normal for {:?} accounts",
-                                account.account_type
-                            );
-                        } else if balance < rust_decimal::Decimal::ZERO
-                            && account.account_type.increases_with_credit()
-                        {
-                            println!("   Normal balance for {:?} accounts", account.account_type);
+                        if let Some(symbol) = &account.symbol {
+                            println!("   Symbol: {}", symbol);
+                        }
+
+                        if let Some(quantity) = account.quantity {
+                            println!("   Quantity: {}", quantity);
+                        }
+                        if let Some(avg_cost) = account.average_cost {
+                            println!("   Average Cost: €{}", avg_cost);
+                        }
+
+                        // Calculate actual balance from journal entries
+                        println!();
+                        match account.calculate_balance(db.pool()).await {
+                            Ok(balance) => {
+                                // Format balance according to account type
+                                let formatted_balance = if account.account_type == AccountType::Liability
+                                    || account.account_type == AccountType::Equity
+                                    || account.account_type == AccountType::Income
+                                {
+                                    // For credit accounts, show positive balance as the normal balance
+                                    format!("€{:.2}", -balance)
+                                } else {
+                                    // For debit accounts (Assets, Expenses), show balance as-is
+                                    format!("€{:.2}", balance)
+                                };
+
+                                let balance_type = if account.account_type.increases_with_debit() {
+                                    "Debit balance"
+                                } else {
+                                    "Credit balance"
+                                };
+
+                                println!(
+                                    "💰 Current Balance: {} ({})",
+                                    formatted_balance, balance_type
+                                );
+
+                                if balance == rust_decimal::Decimal::ZERO {
+                                    println!("   Account has no activity or transactions cancel out");
+                                } else if balance > rust_decimal::Decimal::ZERO
+                                    && account.account_type.increases_with_debit()
+                                {
+                                    println!(
+                                        "   Positive balance - normal for {:?} accounts",
+                                        account.account_type
+                                    );
+                                } else if balance < rust_decimal::Decimal::ZERO
+                                    && account.account_type.increases_with_credit()
+                                {
+                                    println!("   Normal balance for {:?} accounts", account.account_type);
+                                }
+                            }
+                            Err(e) => {
+                                println!("❌ Error calculating balance: {}", e);
+                            }
                         }
                     }
-                    Err(e) => {
-                        println!("❌ Error calculating balance: {}", e);
+                    None => {
+                        println!("❌ Account not found with ID: {}", id_str);
+                        println!("💡 Please provide a valid Account ID (UUID). Use 'accounts list' or 'accounts tree' to find IDs.");
                     }
                 }
             }
-            None => {
-                println!("❌ Account not found: {}", id_str);
+            Err(_) => {
+                println!("❌ Invalid Account ID format: {}. Please provide a valid UUID.", id_str);
+                println!("💡 Use 'accounts list' or 'accounts tree' to find account IDs.");
             }
         }
     } else {
@@ -232,34 +233,28 @@ pub async fn create_account_interactive() -> Result<()> {
     // Step 2: Select account subtype
     let account_subtype = prompt_account_subtype(&account_type)?;
 
-    // Step 3: Generate or enter account code
-    let suggested_code = account_service
-        .generate_account_code(account_type.clone())
-        .await?;
-    let code = prompt_account_code(&suggested_code)?;
-
-    // Step 4: Enter account name
+    // Step 3: Enter account name (Code is removed)
     let name = prompt_account_name()?;
 
-    // Step 5: Select parent account (optional)
+    // Step 4: Select parent account (optional)
     let parent_id = prompt_parent_account(&account_service, &account_type).await?;
 
-    // Step 6: Enter additional fields based on account type
+    // Step 5: Enter additional fields based on account type
     let (symbol, quantity, average_cost, address, purchase_date, purchase_price) =
         prompt_additional_fields(&account_type, &account_subtype)?;
 
-    // Step 7: Enter notes (optional)
+    // Step 6: Enter notes (optional)
     let notes = prompt_notes()?;
 
-    // Step 8: Show summary and confirm
+    // Step 7: Show summary and confirm
     println!("\n📋 Account Summary:");
     println!("==================");
-    println!("Code: {}", code);
+    // println!("Code: {}", code); // Code removed
     println!("Name: {}", name);
     println!("Type: {:?} ({:?})", account_type, account_subtype);
     if let Some(parent) = parent_id {
         if let Ok(Some(parent_account)) = account_service.get_account(parent).await {
-            println!("Parent: {}", parent_account.name);
+            println!("Parent: {} (ID: {})", parent_account.name, parent_account.id);
         }
     }
     if let Some(ref symbol) = symbol {
@@ -277,9 +272,9 @@ pub async fn create_account_interactive() -> Result<()> {
         return Ok(());
     }
 
-    // Step 9: Create the account
+    // Step 8: Create the account
     let new_account = NewAccount {
-        code: code.clone(),
+        // code: code.clone(), // Code removed
         name: name.clone(),
         account_type: account_type.clone(),
         account_subtype,
@@ -290,7 +285,7 @@ pub async fn create_account_interactive() -> Result<()> {
         address,
         purchase_date,
         purchase_price,
-        currency: "EUR".to_string(),
+        currency: "EUR".to_string(), // Default currency, consider making this a prompt
         notes,
     };
     println!("\n🔄 Creating account...");
@@ -310,14 +305,14 @@ pub async fn create_account_interactive() -> Result<()> {
         Ok(account) => {
             println!("✅ Account created successfully!");
             println!("   ID: {}", account.id);
-            println!("   Code: {}", account.code);
+            // println!("   Code: {}", account.code); // Code removed
             println!("   Name: {}", account.name);
 
             println!("\n🎉 Account setup complete!");
             println!("\n💡 Next steps:");
             println!(
                 "   • View with: cargo run -- accounts balance --id {}",
-                code
+                account.id // Use ID instead of code
             );
             println!("   • See tree: cargo run -- accounts tree");
             println!("   • Create transactions involving this account");
@@ -325,7 +320,7 @@ pub async fn create_account_interactive() -> Result<()> {
         Err(e) => {
             println!("❌ Failed to create account: {}", e);
             println!("💡 This could be due to:");
-            println!("   • Account code already exists");
+            println!("   • Account name conflict (name must be unique under the same parent, or globally if no parent)");
             println!("   • Invalid ownership percentages");
             println!("   • Database connection issues");
         }
@@ -421,80 +416,76 @@ fn print_account_tree_node(
     }
 }
 
-pub async fn show_account_ownership(account_id: &str) -> Result<()> {
+pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
     println!("🏠 Account Ownership Details");
     println!("============================\n");
 
     // Connect to database
     let db = Database::from_env().await?;
-    let account_service = AccountService::new(db.pool().clone()); // Try to find account by code first, then by UUID
-    let account_with_ownership = if let Ok(account_uuid) = Uuid::from_str(account_id) {
-        // It's a valid UUID
-        account_service
-            .get_account_with_ownership_and_users(account_uuid)
-            .await?
-    } else {
-        // Try as account code - first get the account, then get ownership
-        if let Some(account) = account_service.get_account_by_code(account_id).await? {
-            account_service
-                .get_account_with_ownership_and_users(account.id)
-                .await?
-        } else {
-            None
-        }
-    };
+    let account_service = AccountService::new(db.pool().clone());
 
-    match account_with_ownership {
-        Some(account_with_ownership) => {
-            let account = &account_with_ownership.account;
+    // Expect a UUID for specific account ownership
+    match Uuid::from_str(account_id_str) {
+        Ok(account_uuid) => {
+            match account_service
+                .get_account_with_ownership_and_users(account_uuid)
+                .await? {
+                Some(account_with_ownership) => {
+                    let account = &account_with_ownership.account;
 
-            println!("📊 Account: {}", account.name);
-            println!(
-                "   Type: {:?} ({:?})",
-                account.account_type, account.account_subtype
-            );
-            println!("   Currency: {}", account.currency);
-            println!();
-            if account_with_ownership.ownership.is_empty() {
-                println!("🏦 Ownership: 100% Unassigned (no specific owners)");
-                println!("   This account has no fractional ownership setup.");
-            } else {
-                println!("👥 Ownership Distribution:");
-                for ownership in &account_with_ownership.ownership {
-                    let percentage = ownership
-                        .ownership_percentage
-                        .to_string()
-                        .parse::<f64>()
-                        .unwrap_or(0.0);
+                    println!("📊 Account: {} (ID: {})", account.name, account.id);
                     println!(
-                        "   • {}: {:.1}%",
-                        ownership.user_display_name,
-                        percentage * 100.0
+                        "   Type: {:?} ({:?})",
+                        account.account_type, account.account_subtype
                     );
+                    println!("   Currency: {}", account.currency);
+                    println!();
+                    if account_with_ownership.ownership.is_empty() {
+                        println!("🏦 Ownership: 100% Unassigned (no specific owners)");
+                        println!("   This account has no fractional ownership setup.");
+                    } else {
+                        println!("👥 Ownership Distribution:");
+                        for ownership in &account_with_ownership.ownership {
+                            let percentage = ownership
+                                .ownership_percentage
+                                .to_string()
+                                .parse::<f64>()
+                                .unwrap_or(0.0);
+                            println!(
+                                "   • {}: {:.1}%",
+                                ownership.user_display_name,
+                                percentage * 100.0
+                            );
+                        }
+
+                        let total_percentage: f64 = account_with_ownership
+                            .ownership
+                            .iter()
+                            .map(|o| {
+                                o.ownership_percentage
+                                    .to_string()
+                                    .parse::<f64>()
+                                    .unwrap_or(0.0)
+                            })
+                            .sum();
+
+                        println!();
+                        println!("📊 Total Ownership: {:.1}%", total_percentage * 100.0);
+
+                        if (total_percentage - 1.0).abs() > 0.001 {
+                            println!("⚠️  Warning: Ownership does not sum to 100%!");
+                        }
+                    }
                 }
-
-                let total_percentage: f64 = account_with_ownership
-                    .ownership
-                    .iter()
-                    .map(|o| {
-                        o.ownership_percentage
-                            .to_string()
-                            .parse::<f64>()
-                            .unwrap_or(0.0)
-                    })
-                    .sum();
-
-                println!();
-                println!("📊 Total Ownership: {:.1}%", total_percentage * 100.0);
-
-                if (total_percentage - 1.0).abs() > 0.001 {
-                    println!("⚠️  Warning: Ownership does not sum to 100%!");
+                None => {
+                    println!("❌ Account not found with ID: {}", account_id_str);
+                    println!("💡 Please provide a valid Account ID (UUID). Use 'accounts list' or 'accounts tree' to find IDs.");
                 }
             }
         }
-        None => {
-            println!("❌ Account not found: {}", account_id);
-            println!("💡 Use 'cargo run -- accounts list' to see available accounts");
+        Err(_) => {
+            println!("❌ Invalid Account ID format: {}. Please provide a valid UUID.", account_id_str);
+            println!("💡 Use 'accounts list' or 'accounts tree' to find account IDs.");
         }
     }
 
@@ -604,24 +595,6 @@ fn prompt_account_subtype(account_type: &AccountType) -> Result<AccountSubtype> 
     }
 }
 
-fn prompt_account_code(suggested_code: &str) -> Result<String> {
-    println!("\n🔢 Account Code:");
-    println!("Suggested: {}", suggested_code);
-    let input = prompt_input("Enter code (or press Enter to use suggested): ")?;
-
-    if input.is_empty() {
-        Ok(suggested_code.to_string())
-    } else {
-        // Validate the code format
-        if input.chars().all(|c| c.is_ascii_alphanumeric()) {
-            Ok(input.to_uppercase())
-        } else {
-            println!("❌ Account code should contain only letters and numbers.");
-            prompt_account_code(suggested_code)
-        }
-    }
-}
-
 fn prompt_account_name() -> Result<String> {
     loop {
         let name = prompt_input("\n💼 Account Name: ")?;
@@ -632,48 +605,58 @@ fn prompt_account_name() -> Result<String> {
     }
 }
 
-async fn prompt_parent_account(
+pub async fn prompt_parent_account(
     account_service: &AccountService,
     account_type: &AccountType,
 ) -> Result<Option<Uuid>> {
-    println!("\n🌳 Parent Account (for account hierarchy):");
-    println!("Leave empty for top-level account");
+    println!("\n🔗 Parent Account (Optional)");
+    print!("Do you want to set a parent account? (y/N): ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
 
-    // Get existing accounts of the same type that could be parents
-    let existing_accounts = account_service
-        .get_accounts_by_type(account_type.clone())
-        .await?;
-
-    if existing_accounts.is_empty() {
-        println!(
-            "No existing {:?} accounts found. This will be a top-level account.",
-            account_type
-        );
+    if input.trim().to_lowercase() != "y" {
         return Ok(None);
     }
 
-    println!("Existing {:?} accounts:", account_type);
-    for (i, account) in existing_accounts.iter().enumerate() {
-        println!("{}. {}", i + 1, account.name);
-    }
-
-    let input = prompt_input(&format!(
-        "\nEnter choice (1-{}, or Enter for none): ",
-        existing_accounts.len()
-    ))?;
-
-    if input.is_empty() {
+    // List potential parent accounts (same type or broader categories)
+    // For simplicity, listing all accounts here. Could be refined.
+    let all_accounts = account_service.get_all_accounts().await?;
+    if all_accounts.is_empty() {
+        println!("No existing accounts to set as parent.");
         return Ok(None);
     }
 
-    if let Ok(choice) = input.parse::<usize>() {
-        if choice >= 1 && choice <= existing_accounts.len() {
-            return Ok(Some(existing_accounts[choice - 1].id));
+    println!("Available accounts to set as parent:");
+    for acc in &all_accounts {
+        println!("  - {} (ID: {})", acc.name, acc.id);
+    }
+
+    loop {
+        print!("Enter parent account ID (or leave blank for none): ");
+        io::stdout().flush()?;
+        input.clear();
+        io::stdin().read_line(&mut input)?;
+        let parent_id_str = input.trim();
+
+        if parent_id_str.is_empty() {
+            return Ok(None);
+        }
+
+        match Uuid::from_str(parent_id_str) {
+            Ok(uuid) => {
+                // Verify parent account exists
+                if account_service.get_account(uuid).await?.is_some() {
+                    return Ok(Some(uuid));
+                } else {
+                    println!("❌ Parent account with ID {} not found. Please try again.", uuid);
+                }
+            }
+            Err(_) => {
+                println!("❌ Invalid UUID format. Please enter a valid parent account ID.");
+            }
         }
     }
-
-    println!("❌ Invalid choice. No parent account selected.");
-    Ok(None)
 }
 
 fn prompt_additional_fields(

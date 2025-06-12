@@ -7,7 +7,7 @@ CREATE VIEW account_monthly_sampled_balances AS WITH relevant_accounts AS (
         name AS account_name,
         account_type,
         account_subtype
-    FROM accounts -- Removed account_code
+    FROM accounts
 ),
 month_series AS (
     -- Generate a series of the 1st day of each month
@@ -33,7 +33,6 @@ accounts_months AS (
     -- Create a combination of every account and every month start date
     SELECT ra.account_id,
         ra.account_name,
-        -- ra.account_code, -- Removed
         ra.account_type,
         ra.account_subtype,
         ms.month_start_date
@@ -42,7 +41,6 @@ accounts_months AS (
 )
 SELECT am.account_id,
     am.account_name,
-    -- am.account_code, -- Removed
     am.account_type,
     am.account_subtype,
     am.month_start_date,
@@ -92,16 +90,21 @@ CREATE VIEW latest_account_market_values AS WITH ranked_prices AS (
         a.account_subtype,
         a.symbol AS asset_symbol,
         a.quantity,
-        ph.price_date, -- This is the original date from price_history
+        ph.price_date,
+        -- This is the original date from price_history
         ph.price AS price_per_unit,
         ph.currency AS value_currency,
         (a.quantity * ph.price) AS market_value,
-        ph.id AS price_history_id,         -- Added for constructing PriceHistory struct
-        ph.source AS price_source,         -- Added
-        ph.created_at AS price_created_at, -- Added
+        ph.id AS price_history_id,
+        -- Added for constructing PriceHistory struct
+        ph.source AS price_source,
+        -- Added
+        ph.created_at AS price_created_at,
+        -- Added
         ROW_NUMBER() OVER (
             PARTITION BY a.id
-            ORDER BY ph.price_date DESC, ph.created_at DESC -- Added created_at for tie-breaking
+            ORDER BY ph.price_date DESC,
+                ph.created_at DESC -- Added created_at for tie-breaking
         ) as rn
     FROM accounts a
         JOIN price_history ph ON a.symbol = ph.symbol
@@ -123,12 +126,15 @@ SELECT account_id,
     account_subtype,
     asset_symbol,
     quantity,
-    price_date::date AS value_date, -- Cast to date for consistency if needed, ph.price_date is already DATE
+    price_date::date AS value_date,
+    -- Cast to date for consistency if needed, ph.price_date is already DATE
     price_per_unit,
     value_currency,
     market_value,
-    price_history_id,         -- Added
-    price_source,             -- Added
-    price_created_at          -- Added
+    price_history_id,
+    -- Added
+    price_source,
+    -- Added
+    price_created_at -- Added
 FROM ranked_prices
 WHERE rn = 1;

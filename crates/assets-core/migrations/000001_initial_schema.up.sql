@@ -52,15 +52,17 @@ CREATE TYPE account_subtype AS ENUM (
     'fees',
     'communication',
     'personal',
-    'other_expense'
+    'other_expense',
+    'category' -- Added category subtype
 );
 -- Chart of Accounts table
 CREATE TABLE accounts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    code VARCHAR(50) NOT NULL UNIQUE,
     name VARCHAR(255) NOT NULL,
     account_type account_type NOT NULL,
     account_subtype account_subtype NOT NULL,
+    is_category BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Added is_category column
     parent_id UUID REFERENCES accounts(id),
     -- Asset-specific fields (null for non-assets)
     symbol VARCHAR(20),
@@ -78,7 +80,9 @@ CREATE TABLE accounts (
     is_active BOOLEAN NOT NULL DEFAULT true,
     notes TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT chk_account_name_no_colon CHECK (name NOT LIKE '%:%'),
+    CONSTRAINT uq_account_name_parent UNIQUE (name, parent_id) -- Ensures name is unique under a given parent
 );
 -- Transactions table (header for journal entries)
 CREATE TABLE transactions (
@@ -102,7 +106,6 @@ CREATE TABLE journal_entries (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 -- Indexes for better performance
-CREATE INDEX idx_accounts_code ON accounts(code);
 CREATE INDEX idx_accounts_type ON accounts(account_type);
 CREATE INDEX idx_accounts_parent ON accounts(parent_id);
 CREATE INDEX idx_transactions_date ON transactions(transaction_date);
@@ -110,3 +113,6 @@ CREATE INDEX idx_transactions_created_by ON transactions(created_by);
 CREATE INDEX idx_journal_entries_transaction ON journal_entries(transaction_id);
 CREATE INDEX idx_journal_entries_account ON journal_entries(account_id);
 CREATE INDEX idx_journal_entries_amount ON journal_entries(amount);
+-- Partial unique index for root account names (parent_id IS NULL)
+CREATE UNIQUE INDEX idx_accounts_unique_root_name ON accounts (name)
+WHERE parent_id IS NULL;

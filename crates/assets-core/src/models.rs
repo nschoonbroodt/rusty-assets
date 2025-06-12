@@ -63,13 +63,13 @@ pub enum AccountSubtype {
     Taxes,
     Fees,
     OtherExpense,
+    Category, // Added Category subtype
 }
 
 /// Chart of Accounts - the foundation of double-entry bookkeeping
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct Account {
     pub id: Uuid,
-    pub code: String,
     pub name: String,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
@@ -275,7 +275,6 @@ pub enum UserContext {
 /// New account data for creation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NewAccount {
-    pub code: String,
     pub name: String,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,

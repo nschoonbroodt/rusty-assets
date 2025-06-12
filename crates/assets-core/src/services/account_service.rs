@@ -15,20 +15,20 @@ impl AccountService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    
+
     /// Get all accounts
     pub async fn get_all_accounts(&self) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, code, name, 
+                id, name, -- Removed code
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
                 notes, created_at, updated_at
             FROM accounts 
             WHERE is_active = true 
-            ORDER BY code
+            ORDER BY name -- Order by name instead of code
             "#,
         )
         .fetch_all(&self.pool)
@@ -36,20 +36,20 @@ impl AccountService {
 
         Ok(accounts)
     }
-    
+
     /// Get accounts by type
     pub async fn get_accounts_by_type(&self, account_type: AccountType) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, code, name, 
+                id, name, -- Removed code
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
                 notes, created_at, updated_at
             FROM accounts 
             WHERE account_type = $1 AND is_active = true 
-            ORDER BY code
+            ORDER BY name -- Order by name instead of code
             "#,
         )
         .bind(account_type)
@@ -58,33 +58,13 @@ impl AccountService {
 
         Ok(accounts)
     }
-    
-    /// Get account by code
-    pub async fn get_account_by_code(&self, code: &str) -> Result<Option<Account>> {
-        let account = sqlx::query_as::<_, Account>(
-            r#"
-            SELECT 
-                id, code, name, 
-                account_type, account_subtype,
-                parent_id, symbol, quantity, average_cost, address, 
-                purchase_date, purchase_price, currency, is_active, 
-                notes, created_at, updated_at
-            FROM accounts 
-            WHERE code = $1
-            "#,
-        )
-        .bind(code)
-        .fetch_optional(&self.pool)
-        .await?;
-        Ok(account)
-    }
 
     /// Get account by ID
     pub async fn get_account(&self, account_id: Uuid) -> Result<Option<Account>> {
         let account = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, code, name, 
+                id, name, -- Removed code
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
@@ -170,24 +150,23 @@ impl AccountService {
             user_percentage: None,
         }))
     }
-    
+
     /// Create a new account
     pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
-                code, name, account_type, account_subtype, parent_id,
+                name, account_type, account_subtype, parent_id, -- Removed code
                 symbol, quantity, average_cost, address, purchase_date, 
                 purchase_price, currency, notes
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) -- Adjusted parameter count
             RETURNING 
-                id, code, name, account_type, account_subtype, parent_id,
+                id, name, account_type, account_subtype, parent_id, -- Removed code
                 symbol, quantity, average_cost, address, purchase_date,
                 purchase_price, currency, is_active, notes, created_at, updated_at
             "#,
         )
-        .bind(&new_account.code)
         .bind(&new_account.name)
         .bind(&new_account.account_type)
         .bind(&new_account.account_subtype)
@@ -204,39 +183,6 @@ impl AccountService {
         .await?;
 
         Ok(account)
-    }
-
-    /// Generate the next available account code for a given account type
-    pub async fn generate_account_code(&self, account_type: AccountType) -> Result<String> {
-        // Account code ranges by type (following standard chart of accounts)
-        let (prefix, start_range) = match account_type {
-            AccountType::Asset => ("1", 1000),
-            AccountType::Liability => ("2", 2000),
-            AccountType::Equity => ("3", 3000),
-            AccountType::Income => ("4", 4000),
-            AccountType::Expense => ("5", 5000),
-        };
-
-        // Find the highest existing code in this range
-        let max_code: Option<String> = sqlx::query_scalar(
-            "SELECT code FROM accounts WHERE code LIKE $1 ORDER BY code DESC LIMIT 1",
-        )
-        .bind(format!("{}%", prefix))
-        .fetch_optional(&self.pool)
-        .await?;
-
-        let next_number = if let Some(code) = max_code {
-            // Parse the numeric part and increment
-            if let Ok(num) = code.parse::<i32>() {
-                num + 1
-            } else {
-                start_range
-            }
-        } else {
-            start_range
-        };
-
-        Ok(next_number.to_string())
     }
 
     /// Create a new account with ownership in a single transaction
@@ -260,18 +206,17 @@ impl AccountService {
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
-                code, name, account_type, account_subtype, parent_id,
+                name, account_type, account_subtype, parent_id, -- Removed code
                 symbol, quantity, average_cost, address, purchase_date, 
                 purchase_price, currency, notes
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) -- Adjusted parameter count
             RETURNING 
-                id, code, name, account_type, account_subtype, parent_id,
+                id, name, account_type, account_subtype, parent_id, -- Removed code
                 symbol, quantity, average_cost, address, purchase_date,
                 purchase_price, currency, is_active, notes, created_at, updated_at
             "#,
         )
-        .bind(&new_account.code)
         .bind(&new_account.name)
         .bind(&new_account.account_type)
         .bind(&new_account.account_subtype)
