@@ -12,8 +12,8 @@
 - prefer to ask the database to do some calculations instead of doing them in Rust (join on tables, aggregate functions, etc.) to avoid multiple round trips.
 - Future interfaces (GUI/web) should be easy to add as new crates.
 - When creating new crates with `cargo new`, always use `--vcs none` to avoid initializing git in subdirectories.
-- move completed tasks to the bottom of the list when todo are done
-- if you identify missing features, update the TODO.md file with new tasks
+- move completed tasks from tasks/todo.md to tasks/done.md
+- if you identify missing features, update the tasks/todo.md file with new tasks
 - suggest to commit when tasks are done and it make sense to do so
-- don't mention the TODO.md file in the commits
-- try to avoid clone when possible, use references instead
+- don't mention the tasks/todo.md and tasks/done.md file in the commits
+- in rust try to avoid clone when possible, use references instead
