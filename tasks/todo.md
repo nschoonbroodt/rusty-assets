@@ -1,9 +1,5 @@
 # Actual Todo
 
-## check sqlx macro usage
-
-Even with the instruction, copilot did use the macros in some place. Need to check that.
-
 ## Automated Price Feeds
 
 Implement automated price feeds from financial APIs for real-time price updates instead of manual entry. This would allow the system to automatically fetch current market prices for tracked assets (stocks, ETFs, crypto) from sources like Yahoo Finance, Alpha Vantage, or similar APIs.
