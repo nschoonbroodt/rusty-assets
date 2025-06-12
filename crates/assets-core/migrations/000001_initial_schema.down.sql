@@ -1,4 +1,8 @@
 -- Drop initial schema
+-- Drop the constraint trigger first
+DROP TRIGGER IF EXISTS trigger_validate_transaction_balance ON journal_entries;
+-- Drop the function
+DROP FUNCTION IF EXISTS validate_transaction_balance();
 -- Drop indexes first (if they are not automatically dropped with tables, though most are)
 DROP INDEX IF EXISTS idx_journal_entries_amount;
 DROP INDEX IF EXISTS idx_journal_entries_account;
@@ -12,6 +16,7 @@ DROP INDEX IF EXISTS idx_accounts_unique_root_name;
 ALTER TABLE IF EXISTS accounts DROP CONSTRAINT IF EXISTS uq_account_name_parent;
 ALTER TABLE IF EXISTS accounts DROP CONSTRAINT IF EXISTS chk_account_name_no_colon;
 -- Drop tables in reverse order of creation due to foreign key constraints
+ALTER TABLE IF EXISTS transactions DROP CONSTRAINT IF EXISTS chk_transaction_balanced;
 DROP TABLE IF EXISTS journal_entries;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS accounts;
