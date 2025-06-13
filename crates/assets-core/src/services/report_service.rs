@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{AccountType, IncomeStatementRow}; // Added IncomeStatementRow and AccountType
+use crate::models::IncomeStatementRow;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};

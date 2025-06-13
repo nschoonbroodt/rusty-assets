@@ -1,12 +1,9 @@
 use anyhow::Result;
 use assets_core::models::IncomeStatementRow;
-use chrono::NaiveDate;
 use comfy_table::{presets::UTF8_FULL, ContentArrangement, Table};
 use rust_decimal::Decimal;
 use serde_json;
-use uuid::Uuid;
-
-use super::IncomeStatementParams; // Assuming IncomeStatementParams is in the parent module (reports.rs)
+use csv;
 
 /// Format and print income statement in a professional table format
 pub(super) fn print_income_statement_table(data: &[IncomeStatementRow]) -> Result<()> {
