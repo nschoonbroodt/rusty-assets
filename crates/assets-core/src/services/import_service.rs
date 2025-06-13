@@ -315,13 +315,14 @@ impl ImportService {
                 Ok(fallback_account.id)
             }
         }
-    }    /// Check if a transaction description indicates an internal transfer
+    }
+    /// Check if a transaction description indicates an internal transfer
     fn is_internal_transfer(&self, description: &str) -> bool {
         // Only catch actual internal transfers between your own accounts
         description.contains("Virement interne") 
             || description.contains("Versement initial")
             || description.starts_with("VIR INST")  // VIR INST = internal institutional transfer
-            || (description.starts_with("VIR ") && description.contains("depuis"))  // VIR depuis = from another account
+            || (description.starts_with("VIR ") && description.contains("depuis")) // VIR depuis = from another account
     }
 
     /// Get or create the transfers pending account for internal transfers
