@@ -1,7 +1,11 @@
 # Actual Todo
 
-## Check the data model in sql.
-I feel that there is something wrong with the category including income, assets, ...
+## Review balance sheet account sign conventions
+
+The balance sheet is showing some asset accounts (BoursoBank, SG) with negative balances, which doesn't follow standard accounting conventions. Need to review:
+- Whether transaction posting logic correctly handles debits/credits for different account types
+- If balance sheet display should flip signs for proper presentation 
+- Ensure consistency between balance sheet and income statement sign conventions
 
 ## Automated Price Feeds
 
@@ -59,6 +63,8 @@ Implement the actual reporting logic behind the CLI commands to generate meaning
 - ✅ Support for table, JSON, and CSV output formats
 - ✅ Proper account ownership handling with percentage calculations
 - ✅ Modular design with reports/income_statement.rs submodule
+- ✅ **Fixed SQL function to display correct income values as positive amounts**
+- ✅ **Income accounts now show proper salary/income values instead of tiny decimals**
 
 ### Remaining Reports
 - [ ] Net worth tracking over time
