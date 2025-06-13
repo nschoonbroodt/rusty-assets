@@ -32,7 +32,8 @@ enum Commands {
     Prices {
         #[command(subcommand)]
         action: PriceCommands,
-    },    /// Financial reports and analysis
+    },
+    /// Financial reports and analysis
     Reports {
         #[command(subcommand)]
         action: ReportCommands,
@@ -73,7 +74,29 @@ enum AccountCommands {
         id: Option<String>,
     },
     /// Create a new account interactively
-    Create,
+    Create {
+        /// Account name
+        #[arg(long)]
+        name: Option<String>,
+        /// Account type (Asset, Liability, Equity, Income, Expense)
+        #[arg(long)]
+        account_type: Option<String>,
+        /// Account subtype
+        #[arg(long)]
+        subtype: Option<String>,
+        /// Parent account path (e.g., "Assets:Current Assets")
+        #[arg(long)]
+        parent: Option<String>,
+        /// Stock/ETF symbol (for investment accounts)
+        #[arg(long)]
+        symbol: Option<String>,
+        /// Currency code (default: EUR)
+        #[arg(long, default_value = "EUR")]
+        currency: String,
+        /// Account notes
+        #[arg(long)]
+        notes: Option<String>,
+    },
     /// Show chart of accounts as a tree
     Tree,
     /// Show account ownership details
@@ -177,11 +200,28 @@ async fn main() -> Result<()> {
         Commands::Db { action } => match action {
             DbCommands::Init => init_database().await?,
             DbCommands::Status => show_db_status().await?,
-        },
-        Commands::Accounts { action } => match action {
+        },        Commands::Accounts { action } => match action {
             AccountCommands::List => list_accounts().await?,
             AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
-            AccountCommands::Create => create_account_interactive().await?,
+            AccountCommands::Create {
+                name,
+                account_type,
+                subtype,
+                parent,
+                symbol,
+                currency,
+                notes,
+            } => {                create_account(
+                    name.as_deref(),
+                    account_type.as_deref(),
+                    subtype.as_deref(),
+                    parent.as_deref(),
+                    symbol.as_deref(),
+                    &currency,
+                    notes.as_deref(),
+                )
+                .await?
+            }
             AccountCommands::Tree => show_accounts_tree().await?,
             AccountCommands::Ownership { account_id } => {
                 show_account_ownership(&account_id).await?
@@ -218,7 +258,8 @@ async fn main() -> Result<()> {
             }
             ReportCommands::ExpenseAnalysis { params } => {
                 generate_expense_analysis(params).await?;
-            }            ReportCommands::InvestmentPerformance { params } => {
+            }
+            ReportCommands::InvestmentPerformance { params } => {
                 generate_investment_performance(params).await?;
             }
         },

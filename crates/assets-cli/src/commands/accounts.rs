@@ -492,6 +492,153 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
     Ok(())
 }
 
+/// Create account with command-line arguments or interactively
+pub async fn create_account(
+    name: Option<&str>,
+    account_type: Option<&str>,
+    subtype: Option<&str>,
+    parent: Option<&str>,
+    symbol: Option<&str>,
+    currency: &str,
+    notes: Option<&str>,
+) -> Result<()> {
+    // If any required argument is missing, fall back to interactive mode
+    if name.is_none() || account_type.is_none() || subtype.is_none() {
+        return create_account_interactive().await;
+    }
+
+    println!("🏗️  Create New Account (Command Line)");
+    println!("=====================================\n");
+
+    let db = Database::from_env().await?;
+    let account_service = AccountService::new(db.pool().clone());
+
+    // Parse account type
+    let account_type = match account_type.unwrap().to_lowercase().as_str() {
+        "asset" => AccountType::Asset,
+        "liability" => AccountType::Liability,
+        "equity" => AccountType::Equity,
+        "income" => AccountType::Income,
+        "expense" => AccountType::Expense,
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Invalid account type. Must be one of: Asset, Liability, Equity, Income, Expense"
+            ));
+        }
+    };
+
+    // Parse account subtype
+    let account_subtype = match subtype.unwrap().to_lowercase().as_str() {
+        // Asset subtypes
+        "cash" => AccountSubtype::Cash,
+        "checking" => AccountSubtype::Checking,
+        "savings" => AccountSubtype::Savings,
+        "investmentaccount" => AccountSubtype::InvestmentAccount,
+        "stocks" => AccountSubtype::Stocks,
+        "etf" => AccountSubtype::Etf,
+        "bonds" => AccountSubtype::Bonds,
+        "mutualfund" => AccountSubtype::MutualFund,
+        "crypto" => AccountSubtype::Crypto,
+        "realestate" => AccountSubtype::RealEstate,
+        "equipment" => AccountSubtype::Equipment,
+        "otherasset" => AccountSubtype::OtherAsset,
+        // Liability subtypes
+        "creditcard" => AccountSubtype::CreditCard,
+        "loan" => AccountSubtype::Loan,
+        "mortgage" => AccountSubtype::Mortgage,
+        "otherliability" => AccountSubtype::OtherLiability,
+        // Equity subtypes
+        "openingbalance" => AccountSubtype::OpeningBalance,
+        "retainedearnings" => AccountSubtype::RetainedEarnings,
+        "ownerequity" => AccountSubtype::OwnerEquity,
+        // Income subtypes
+        "salary" => AccountSubtype::Salary,
+        "bonus" => AccountSubtype::Bonus,
+        "dividend" => AccountSubtype::Dividend,
+        "interest" => AccountSubtype::Interest,
+        "investment" => AccountSubtype::Investment,
+        "rental" => AccountSubtype::Rental,
+        "otherincome" => AccountSubtype::OtherIncome,
+        // Expense subtypes
+        "otherexpense" => AccountSubtype::OtherExpense,
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Invalid account subtype. See help for valid subtypes"
+            ));
+        }
+    };
+
+    // Parse parent account if provided
+    let parent_id = if let Some(parent_path) = parent {
+        match account_service.get_account_by_path(parent_path).await {
+            Ok(parent_account) => Some(parent_account.id),
+            Err(_) => {
+                return Err(anyhow::anyhow!(
+                    "Parent account '{}' not found. Create it first or check the path",
+                    parent_path
+                ));
+            }
+        }
+    } else {
+        None
+    };
+
+    // Create the account
+    let new_account = NewAccount {
+        name: name.unwrap().to_string(),
+        account_type: account_type.clone(),
+        account_subtype,
+        parent_id,
+        symbol: symbol.map(|s| s.to_string()),
+        quantity: None,
+        average_cost: None,
+        address: None,
+        purchase_date: None,
+        purchase_price: None,
+        currency: currency.to_string(),
+        notes: notes.map(|n| n.to_string()),
+    };
+
+    // Show summary
+    println!("📋 Account Summary:");
+    println!("==================");
+    println!("Name: {}", new_account.name);
+    println!("Type: {:?} ({:?})", account_type, new_account.account_subtype);
+    if let Some(parent_id) = parent_id {
+        if let Ok(Some(parent_account)) = account_service.get_account(parent_id).await {
+            println!("Parent: {} ({})", parent_account.name, parent_account.full_path.unwrap_or_else(|| "No path".to_string()));
+        }
+    }
+    if let Some(ref symbol) = new_account.symbol {
+        println!("Symbol: {}", symbol);
+    }
+    if let Some(ref notes) = new_account.notes {
+        println!("Notes: {}", notes);
+    }
+    println!("Currency: {}", new_account.currency);
+
+    // Create the account
+    match account_service.create_account(new_account).await {
+        Ok(account) => {
+            println!("\n✅ Account created successfully!");
+            println!("📋 Account Details:");
+            println!("   ID: {}", account.id);
+            println!("   Name: {}", account.name);
+            if let Some(full_path) = &account.full_path {
+                println!("   Full Path: {}", full_path);
+            }
+            println!("   Type: {:?} ({:?})", account.account_type, account.account_subtype);
+            println!("   Currency: {}", account.currency);
+            println!("   Created: {}", account.created_at.format("%Y-%m-%d %H:%M"));
+        }
+        Err(e) => {
+            return Err(anyhow::anyhow!("Failed to create account: {}", e));
+        }
+    }
+
+    Ok(())
+}
+
 // Helper functions for interactive account creation
 
 fn prompt_input(prompt: &str) -> Result<String> {
