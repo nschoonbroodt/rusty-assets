@@ -18,17 +18,16 @@ pub(super) fn print_income_statement_table(data: &[IncomeStatementRow]) -> Resul
         println!("No income statement data to display for the selected criteria.");
         return Ok(());
     }
-
     let mut table = Table::new();
     table
         .load_preset(UTF8_FULL)
         .set_content_arrangement(ContentArrangement::Dynamic)
-        .set_header(vec!["Category", "Account Name", "Total Amount"]);
+        .set_header(vec!["Category", "Account Path", "Total Amount"]);
 
     for row in data {
         table.add_row(vec![
             row.category_name.as_deref().unwrap_or("N/A"),
-            &row.account_name,
+            &row.account_path,
             &format_currency(row.total_amount),
         ]);
     }

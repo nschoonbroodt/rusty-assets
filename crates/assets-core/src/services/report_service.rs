@@ -95,7 +95,7 @@ impl ReportService {
         // Convert single Uuid to a slice for the SQL query
         let user_ids_array = [user_id];
         let rows = sqlx::query_as::<_, IncomeStatementRow>(
-            "SELECT category_name, account_name, total_amount FROM fn_income_statement($1, $2, $3)", // Adjusted selected columns
+            "SELECT category_name, account_name, account_path, total_amount FROM fn_income_statement($1, $2, $3)", // Updated to include account_path
         )
         .bind(&user_ids_array) // Bind as a slice
         .bind(start_date)

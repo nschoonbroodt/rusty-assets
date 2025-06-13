@@ -333,6 +333,7 @@ pub struct AccountWithMarketValue {
 pub struct IncomeStatementRow {
     pub category_name: Option<String>, // Added category_name, optional as some accounts might not have a category
     pub account_name: String,
+    pub account_path: String, // Added account_path for full account path display
     pub total_amount: Decimal,
 }
 
