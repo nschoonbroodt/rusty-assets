@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 mod account_ledger;
 mod balance_sheet;
+mod cash_flow;
 mod income_statement;
 
 /// Helper function to get user UUID from username
@@ -88,11 +89,33 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
 
 /// Generate cash flow statement
 pub async fn generate_cash_flow_statement(params: CashFlowParams) -> Result<()> {
-    todo!(
-        "Generate cash flow statement from {:?} to {:?}",
-        params.start_date,
-        params.end_date
-    );
+    let db = Database::from_env().await?;
+    let report_service = ReportService::new(db.pool().clone());
+    
+    // Get user ID from username
+    let user_id = get_user_id_by_name(&params.user).await?;
+    
+    // Set default dates if not provided
+    let end_date = params
+        .end_date
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    let start_date = params
+        .start_date
+        .unwrap_or_else(|| {
+            // Default to first day of current month
+            let current_date = end_date;
+            chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1).unwrap()
+        });
+
+    let cash_flow_data = report_service
+        .cash_flow_statement(start_date, end_date, user_id)
+        .await?;    match params.format {
+        OutputFormat::Json => cash_flow::print_cash_flow_json(&cash_flow_data, start_date, end_date)?,
+        OutputFormat::Csv => cash_flow::print_cash_flow_csv(&cash_flow_data)?,
+        OutputFormat::Table => cash_flow::print_cash_flow_table(&cash_flow_data, start_date, end_date)?,
+    }
+
+    Ok(())
 }
 
 /// Generate trial balance report
@@ -104,9 +127,11 @@ pub async fn generate_trial_balance(params: TrialBalanceParams) -> Result<()> {
 pub async fn generate_account_ledger(params: AccountLedgerParams) -> Result<()> {
     let db = Database::from_env().await?;
     let report_service = ReportService::new(db.pool().clone());
-      // Find account by path
+    // Find account by path
     let account_service = assets_core::AccountService::new(db.pool().clone());
-    let account = account_service.get_account_by_path(&params.account_path).await
+    let account = account_service
+        .get_account_by_path(&params.account_path)
+        .await
         .map_err(|_| anyhow::anyhow!("Account '{}' not found", params.account_path))?;
 
     // Set default dates if not provided
@@ -119,10 +144,21 @@ pub async fn generate_account_ledger(params: AccountLedgerParams) -> Result<()> 
 
     let ledger_data = report_service
         .account_ledger(account.id, start_date, end_date)
-        .await?;    match params.format {
-        OutputFormat::Json => account_ledger::print_account_ledger_json(&ledger_data, &account, start_date, end_date)?,
-        OutputFormat::Csv => account_ledger::print_account_ledger_csv(&ledger_data, &account, start_date, end_date)?,
-        OutputFormat::Table => account_ledger::print_account_ledger_table(&ledger_data, &account, start_date, end_date, params.show_balance)?,
+        .await?;
+    match params.format {
+        OutputFormat::Json => {
+            account_ledger::print_account_ledger_json(&ledger_data, &account, start_date, end_date)?
+        }
+        OutputFormat::Csv => {
+            account_ledger::print_account_ledger_csv(&ledger_data, &account, start_date, end_date)?
+        }
+        OutputFormat::Table => account_ledger::print_account_ledger_table(
+            &ledger_data,
+            &account,
+            start_date,
+            end_date,
+            params.show_balance,
+        )?,
     }
 
     Ok(())
@@ -202,6 +238,9 @@ pub struct IncomeStatementParams {
 /// Parameters for cash flow statement
 #[derive(Args)]
 pub struct CashFlowParams {
+    /// Username for the report
+    #[arg(long)]
+    pub user: String,
     /// Start date for the period
     #[arg(long)]
     pub start_date: Option<NaiveDate>,
