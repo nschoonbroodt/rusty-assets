@@ -12,11 +12,18 @@ pub enum CoreError {
     #[error("Environment variable error: {0}")]
     Environment(#[from] std::env::VarError),
 
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
+
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 
+    #[error("Validation error: {0}")]
+    ValidationError(String),
+
     #[error("Not found: {0}")]
     NotFound(String),
+    
     #[error("Transaction does not balance: expected {expected}, got {actual}")]
     UnbalancedTransaction { expected: Decimal, actual: Decimal },
 
