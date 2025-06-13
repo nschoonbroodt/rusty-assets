@@ -14,7 +14,8 @@ pub struct AccountService {
 impl AccountService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }    /// Get all accounts
+    }
+    /// Get all accounts
     pub async fn get_all_accounts(&self) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
@@ -33,7 +34,8 @@ impl AccountService {
         .await?;
 
         Ok(accounts)
-    }    /// Get accounts by type
+    }
+    /// Get accounts by type
     pub async fn get_accounts_by_type(&self, account_type: AccountType) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
@@ -53,7 +55,8 @@ impl AccountService {
         .await?;
 
         Ok(accounts)
-    }    /// Get account by ID
+    }
+    /// Get account by ID
     pub async fn get_account(&self, account_id: Uuid) -> Result<Option<Account>> {
         let account = sqlx::query_as::<_, Account>(
             r#"
@@ -143,17 +146,19 @@ impl AccountService {
             user_balance: None,
             user_percentage: None,
         }))
-    }    /// Create a new account with default ownership (100% to first user)
+    }
+    /// Create a new account with default ownership (100% to first user)
     pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
         // Get the first user as default owner
         let user_service = crate::services::UserService::new(self.pool.clone());
         let default_user = user_service.get_first_user().await?;
-        
+
         match default_user {
             Some(user) => {
                 // Create account with default 100% ownership to first user
                 let ownership = vec![(user.id, Decimal::from(1))]; // 100%
-                self.create_account_with_ownership(new_account, ownership).await
+                self.create_account_with_ownership(new_account, ownership)
+                    .await
             }
             None => {
                 // No users exist - create account without ownership for now
@@ -212,7 +217,7 @@ impl AccountService {
             ));
         }
 
-        let mut tx = self.pool.begin().await?;        // Create the account
+        let mut tx = self.pool.begin().await?; // Create the account
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
