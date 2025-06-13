@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{Parser, Subcommand};
+use rust_decimal::Decimal;
 
 mod commands;
 use commands::{
@@ -105,11 +106,24 @@ enum AccountCommands {
         notes: Option<String>,
     },
     /// Show chart of accounts as a tree
-    Tree,
-    /// Show account ownership details
+    Tree,    /// Show account ownership details
     Ownership {
         /// Account ID to show ownership for
         account_id: String,
+    },
+    /// Set opening balance for an account
+    SetOpeningBalance {
+        /// Account path (e.g., "Assets:Current Assets:BoursoBank")
+        account_path: String,
+        /// Opening balance amount
+        #[arg(long)]
+        amount: Decimal,
+        /// Date for the opening balance (default: January 1st of current year)
+        #[arg(long)]
+        date: Option<chrono::NaiveDate>,
+        /// User who owns this account (default: lookup first user)
+        #[arg(long)]
+        user: Option<String>,
     },
 }
 
@@ -230,10 +244,12 @@ async fn main() -> Result<()> {
                     notes.as_deref(),
                 )
                 .await?
-            }
-            AccountCommands::Tree => show_accounts_tree().await?,
+            }            AccountCommands::Tree => show_accounts_tree().await?,
             AccountCommands::Ownership { account_id } => {
                 show_account_ownership(&account_id).await?
+            }
+            AccountCommands::SetOpeningBalance { account_path, amount, date, user } => {
+                set_account_opening_balance(&account_path, amount, date, user.as_deref()).await?
             }
         },
         Commands::Prices { action } => match action {

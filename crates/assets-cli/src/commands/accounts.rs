@@ -1013,3 +1013,137 @@ async fn prompt_account_ownership(user_service: &UserService) -> Result<Vec<(Uui
 
     Ok(ownership_data)
 }
+
+/// Set opening balance for an account
+pub async fn set_account_opening_balance(
+    account_path: &str,
+    amount: Decimal,
+    date: Option<chrono::NaiveDate>,
+    user: Option<&str>,
+) -> Result<()> {
+    use assets_core::{NewJournalEntry, NewTransaction, TransactionService};
+    use chrono::{Datelike, Utc};
+
+    let db = Database::from_env().await?;
+    let account_service = AccountService::new(db.pool().clone());
+    let user_service = UserService::new(db.pool().clone());
+    let transaction_service = TransactionService::new(db.pool().clone());
+
+    // Find the account
+    println!("🔍 Looking up account: {}", account_path);
+    let account = account_service.get_account_by_path(account_path).await
+        .map_err(|_| anyhow::anyhow!("Account '{}' not found", account_path))?;
+
+    // Find or use first user
+    let target_user = if let Some(username) = user {
+        match user_service.get_user_by_name(username).await? {
+            Some(user) => user,
+            None => return Err(anyhow::anyhow!("User '{}' not found", username)),
+        }
+    } else {
+        // Get first user as default
+        let users = user_service.get_all_users().await?;
+        if users.is_empty() {
+            return Err(anyhow::anyhow!("No users found. Create a user first."));
+        }
+        users.into_iter().next().unwrap()
+    };
+
+    // Find or create opening balance equity account
+    let opening_balance_account = match account_service.get_account_by_path("Equity:Opening Balance").await {
+        Ok(account) => account,
+        Err(_) => {
+            println!("📝 Creating 'Equity:Opening Balance' account...");
+            
+            // Find or create parent Equity account
+            let equity_parent = match account_service.get_account_by_path("Equity").await {
+                Ok(account) => Some(account.id),
+                Err(_) => {
+                    println!("📝 Creating 'Equity' parent account...");                    let equity_account = NewAccount {
+                        name: "Equity".to_string(),
+                        account_type: AccountType::Equity,
+                        account_subtype: AccountSubtype::OwnerEquity,
+                        parent_id: None,
+                        symbol: None,
+                        quantity: None,
+                        average_cost: None,
+                        address: None,
+                        purchase_date: None,
+                        purchase_price: None,
+                        currency: "EUR".to_string(),
+                        notes: Some("Parent equity account".to_string()),
+                    };
+                    Some(account_service.create_account(equity_account).await?.id)
+                }
+            };            let opening_balance_new = NewAccount {
+                name: "Opening Balance".to_string(),
+                account_type: AccountType::Equity,
+                account_subtype: AccountSubtype::OpeningBalance,
+                parent_id: equity_parent,
+                symbol: None,
+                quantity: None,
+                average_cost: None,
+                address: None,
+                purchase_date: None,
+                purchase_price: None,
+                currency: "EUR".to_string(),
+                notes: Some("Opening balances for accounts".to_string()),
+            };
+            account_service.create_account(opening_balance_new).await?
+        }
+    };
+
+    // Use provided date or default to January 1st of current year
+    let transaction_date = date.unwrap_or_else(|| {
+        let current_year = Utc::now().year();
+        chrono::NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap()
+    });
+
+    // Create the opening balance transaction
+    // For assets: Debit the account, Credit opening balance
+    // For liabilities: Credit the account, Debit opening balance
+    let (account_amount, opening_balance_amount) = match account.account_type {
+        AccountType::Asset => (amount, -amount), // Debit asset, Credit opening balance
+        AccountType::Liability => (-amount, amount), // Credit liability, Debit opening balance
+        _ => return Err(anyhow::anyhow!("Opening balances are only supported for Asset and Liability accounts")),
+    };
+
+    let transaction = NewTransaction {
+        description: format!("Opening balance for {}", account.name),
+        reference: Some("OPENING".to_string()),
+        transaction_date: transaction_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
+        created_by: Some(target_user.id),
+        entries: vec![
+            NewJournalEntry {
+                account_id: account.id,
+                amount: account_amount,
+                memo: Some("Opening balance".to_string()),
+            },
+            NewJournalEntry {
+                account_id: opening_balance_account.id,
+                amount: opening_balance_amount,
+                memo: Some(format!("Opening balance for {}", account.name)),
+            },
+        ],
+    };
+
+    // Validate the transaction balances
+    if !transaction.is_balanced() {
+        return Err(anyhow::anyhow!("Opening balance transaction does not balance"));
+    }
+
+    // Create the transaction
+    let created_transaction = transaction_service.create_transaction(transaction).await?;
+
+    println!();
+    println!("✅ Opening balance set successfully!");
+    println!("   📊 Account: {}", account_path);
+    println!("   💰 Amount: € {:.2}", amount);
+    println!("   📅 Date: {}", transaction_date);
+    println!("   👤 User: {}", target_user.name);
+    println!("   🔗 Transaction ID: {}", created_transaction.transaction.id);
+    println!();
+    println!("💡 Tip: Run 'cargo run -- reports balance-sheet' to see the updated balance sheet");
+
+    Ok(())
+}
