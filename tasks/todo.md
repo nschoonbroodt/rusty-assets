@@ -66,8 +66,23 @@ Implement the actual reporting logic behind the CLI commands to generate meaning
 - ✅ **Fixed SQL function to display correct income values as positive amounts**
 - ✅ **Income accounts now show proper salary/income values instead of tiny decimals**
 
+### Account Ledger Reports - ✅ COMPLETED
+- ✅ Created SQL migration with fn_account_ledger PostgreSQL function
+- ✅ Added AccountLedgerRow model for transaction history display
+- ✅ Implemented ReportService.account_ledger method with running balance calculation
+- ✅ CLI integration with account path lookup and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Comprehensive transaction history with debit/credit separation
+- ✅ Running balance calculation showing account progression over time
+- ✅ Summary statistics including transaction count and totals
+- ✅ Modular design with reports/account_ledger.rs submodule
+- ✅ **Perfect for personal finance audit trails and transaction tracking**
+
 ### Remaining Reports
+- ✅ **Account ledger reports - COMPLETED**
 - [ ] Net worth tracking over time
+- [ ] Cash flow statement
+- [ ] Trial balance report
 - [ ] Cash flow statement
 - [ ] Trial balance report
 - [ ] Account ledger reports
