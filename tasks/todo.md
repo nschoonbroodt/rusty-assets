@@ -25,6 +25,12 @@ Implement automated price feeds from financial APIs for real-time price updates 
 - [ ] QIF format support
 - [ ] OFX format support
 
+### User Management CLI - ✅ COMPLETED
+- ✅ Added `users` CLI command with add, list, and get subcommands
+- ✅ User creation with name and display name
+- ✅ UUID lookup by username for easy reference in other commands
+- ✅ Table-formatted user listing
+
 ## Web or GUI interface
 
 Develop a web or graphical user interface as an alternative to the CLI for broader accessibility and ease of use.
@@ -140,3 +146,11 @@ such as share prices, crypto
 ## future tax estimation
 
 ## multi "main currency" support?
+
+## Batch Account Creation
+
+Add CLI command for batch account creation to streamline setup process:
+- [ ] `accounts batch-create` command that accepts JSON/YAML file with account hierarchy
+- [ ] Support for creating full account trees in one command
+- [ ] Validation of account hierarchy before creation
+- [ ] This would make the setup automation scripts much more effective
