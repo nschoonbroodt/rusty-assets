@@ -374,22 +374,6 @@ fn print_balance_sheet_table(data: &BalanceSheetData, params: &BalanceSheetParam
     );
     println!();
 
-    // Balance Check
-    let balance_check = data.total_assets - data.total_liabilities - data.total_equity;
-    println!("{}", "═".repeat(80));
-    println!(
-        "{:>60} {:>15}",
-        "Assets - Liabilities - Equity:",
-        format_currency(balance_check)
-    );
-
-    if balance_check.is_zero() {
-        println!("{:>60} ✅ Balanced", "");
-    } else {
-        println!("{:>60} ⚠️  Out of Balance!", "");
-    }
-    println!("{}", "═".repeat(80));
-
     // Footer notes
     println!();
     if params.include_zero {
@@ -452,8 +436,7 @@ fn print_balance_sheet_json(data: &BalanceSheetData) -> Result<()> {
         "totals": {
             "total_assets": data.total_assets,
             "total_liabilities": data.total_liabilities,
-            "total_equity": data.total_equity,
-            "balance_check": data.total_assets - data.total_liabilities - data.total_equity
+            "total_equity": data.total_equity
         }
     });
 
@@ -502,12 +485,6 @@ fn print_balance_sheet_csv(data: &BalanceSheetData) -> Result<()> {
     println!(
         "balance_sheet,summary,\"Total Equity\",\"\",{},0,{}",
         data.total_equity, data.report_date
-    );
-
-    let balance_check = data.total_assets - data.total_liabilities - data.total_equity;
-    println!(
-        "balance_sheet,summary,\"Balance Check\",\"\",{},0,{}",
-        balance_check, data.report_date
     );
 
     Ok(())
