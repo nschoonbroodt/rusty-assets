@@ -147,10 +147,11 @@ such as share prices, crypto
 
 ## multi "main currency" support?
 
-## Batch Account Creation
+## Batch Account Creation - ✅ COMPLETED
 
-Add CLI command for batch account creation to streamline setup process:
-- [ ] `accounts batch-create` command that accepts JSON/YAML file with account hierarchy
-- [ ] Support for creating full account trees in one command
-- [ ] Validation of account hierarchy before creation
-- [ ] This would make the setup automation scripts much more effective
+Enhanced `accounts create` command for batch account creation:
+- ✅ Command-line arguments support (--name, --account-type, --subtype, --parent, etc.)
+- ✅ Maintains backward compatibility with interactive mode
+- ✅ Enables full automation of account structure setup
+- ✅ PowerShell scripts updated to use automated account creation
+- ✅ Complete hands-off BoursoBank import process
