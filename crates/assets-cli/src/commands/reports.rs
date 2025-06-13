@@ -145,11 +145,6 @@ pub async fn generate_investment_performance(params: InvestmentPerformanceParams
     );
 }
 
-/// Generate tax report
-pub async fn generate_tax_report(params: TaxReportParams) -> Result<()> {
-    todo!("Generate tax report for year: {}", params.year);
-}
-
 /// Parameters for balance sheet report
 #[derive(Args)]
 pub struct BalanceSheetParams {
@@ -319,23 +314,6 @@ pub struct InvestmentPerformanceParams {
     /// Include dividends
     #[arg(long)]
     pub include_dividends: bool,
-
-    /// Output format
-    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
-    pub format: OutputFormat,
-}
-
-/// Parameters for tax report
-#[derive(Args)]
-pub struct TaxReportParams {
-    /// Tax year
-    pub year: i32,
-
-    /// Tax jurisdiction (US, CA, etc.)
-    #[arg(long, default_value = "US")]
-    pub jurisdiction: String,
-    /// Include only transactions above threshold    #[arg(long)]
-    pub threshold: Option<f64>,
 
     /// Output format
     #[arg(long, value_enum, default_value_t = OutputFormat::Table)]

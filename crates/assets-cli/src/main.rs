@@ -22,7 +22,8 @@ enum Commands {
     Db {
         #[command(subcommand)]
         action: DbCommands,
-    },    /// Account management and chart of accounts
+    },
+    /// Account management and chart of accounts
     Accounts {
         #[command(subcommand)]
         action: AccountCommands,
@@ -65,7 +66,8 @@ enum AccountCommands {
     /// Create a new account interactively
     Create,
     /// Show chart of accounts as a tree
-    Tree,    /// Show account ownership details
+    Tree,
+    /// Show account ownership details
     Ownership {
         /// Account ID to show ownership for
         account_id: String,
@@ -132,11 +134,6 @@ enum ReportCommands {
         #[command(flatten)]
         params: InvestmentPerformanceParams,
     },
-    /// Generate tax report
-    Tax {
-        #[command(flatten)]
-        params: TaxReportParams,
-    },
 }
 
 #[derive(Subcommand)]
@@ -154,7 +151,8 @@ enum DemoCommands {
     /// Create sample users and accounts with database
     CreateSample,
     /// Create deep category hierarchy examples in database
-    CreateDeepCategories,    /// Create deep account hierarchy examples in database
+    CreateDeepCategories,
+    /// Create deep account hierarchy examples in database
     CreateDeepAccounts,
     /// Create sample price data for investments
     CreateSamplePrices,
@@ -175,14 +173,19 @@ async fn main() -> Result<()> {
             AccountCommands::List => list_accounts().await?,
             AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
             AccountCommands::Create => create_account_interactive().await?,
-            AccountCommands::Tree => show_accounts_tree().await?,            AccountCommands::Ownership { account_id } => {
+            AccountCommands::Tree => show_accounts_tree().await?,
+            AccountCommands::Ownership { account_id } => {
                 show_account_ownership(&account_id).await?
             }
-        },        Commands::Prices { action } => match action {
+        },
+        Commands::Prices { action } => match action {
             PriceCommands::Add => prices::add_price_interactive().await?,
-            PriceCommands::History { symbol } => prices::show_price_history(symbol.as_deref()).await?,
+            PriceCommands::History { symbol } => {
+                prices::show_price_history(symbol.as_deref()).await?
+            }
             PriceCommands::Market => prices::show_market_values().await?,
-        },        Commands::Reports { action } => match action {
+        },
+        Commands::Reports { action } => match action {
             ReportCommands::BalanceSheet { params } => {
                 generate_balance_sheet(params).await?;
             }
@@ -210,9 +213,6 @@ async fn main() -> Result<()> {
             ReportCommands::InvestmentPerformance { params } => {
                 generate_investment_performance(params).await?;
             }
-            ReportCommands::Tax { params } => {
-                generate_tax_report(params).await?;
-            }
         },
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,
@@ -221,7 +221,8 @@ async fn main() -> Result<()> {
             DemoCommands::Ownership => show_ownership_examples(),
             DemoCommands::Categories => show_category_examples().await?,
             DemoCommands::CreateSample => create_sample_data(&cli.user).await?,
-            DemoCommands::CreateDeepCategories => create_deep_categories().await?,            DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
+            DemoCommands::CreateDeepCategories => create_deep_categories().await?,
+            DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
             DemoCommands::CreateSamplePrices => create_sample_prices().await?,
         },
     }
