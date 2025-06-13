@@ -1,9 +1,9 @@
 use crate::error::Result;
-use crate::models::IncomeStatementRow;
+use crate::models::{AccountLedgerRow, IncomeStatementRow};
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
-use uuid::Uuid; // Added Uuid
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct BalanceSheetData {
@@ -98,6 +98,24 @@ impl ReportService {
             "SELECT category_name, account_name, account_path, total_amount FROM fn_income_statement($1, $2, $3)", // Updated to include account_path
         )
         .bind(&user_ids_array) // Bind as a slice
+        .bind(start_date)
+        .bind(end_date)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
+    }
+
+    pub async fn account_ledger(
+        &self,
+        account_id: Uuid,
+        start_date: NaiveDate,
+        end_date: NaiveDate,
+    ) -> Result<Vec<AccountLedgerRow>> {
+        let rows = sqlx::query_as::<_, AccountLedgerRow>(
+            "SELECT transaction_date, transaction_id, description, reference, memo, debit_amount, credit_amount, running_balance FROM fn_account_ledger($1, $2, $3)",
+        )
+        .bind(account_id)
         .bind(start_date)
         .bind(end_date)
         .fetch_all(&self.pool)

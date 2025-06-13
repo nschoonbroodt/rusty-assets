@@ -21,3 +21,4 @@
 - don't hesitate to ask for more details if the task is not clear
 - don't hesitate to say that my ideas are bad if you think so, and suggest alternatives
 - don't hesite to say that you don't know how to do something, and suggest alternatives
+- when doing migration using sqlx cli, add the argument '--source crates/assets-core/migrations' to the command

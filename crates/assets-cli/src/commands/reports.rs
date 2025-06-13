@@ -4,6 +4,7 @@ use chrono::{Datelike, NaiveDate};
 use clap::{Args, ValueEnum};
 use uuid::Uuid;
 
+mod account_ledger;
 mod balance_sheet;
 mod income_statement;
 
@@ -101,12 +102,30 @@ pub async fn generate_trial_balance(params: TrialBalanceParams) -> Result<()> {
 
 /// Generate account ledger report
 pub async fn generate_account_ledger(params: AccountLedgerParams) -> Result<()> {
-    todo!(
-        "Generate account ledger for account: {} from {:?} to {:?}",
-        params.account_path,
-        params.start_date,
-        params.end_date
-    );
+    let db = Database::from_env().await?;
+    let report_service = ReportService::new(db.pool().clone());
+      // Find account by path
+    let account_service = assets_core::AccountService::new(db.pool().clone());
+    let account = account_service.get_account_by_path(&params.account_path).await
+        .map_err(|_| anyhow::anyhow!("Account '{}' not found", params.account_path))?;
+
+    // Set default dates if not provided
+    let end_date = params
+        .end_date
+        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
+    let start_date = params
+        .start_date
+        .unwrap_or_else(|| end_date - chrono::Duration::days(30)); // Default to last 30 days
+
+    let ledger_data = report_service
+        .account_ledger(account.id, start_date, end_date)
+        .await?;    match params.format {
+        OutputFormat::Json => account_ledger::print_account_ledger_json(&ledger_data, &account, start_date, end_date)?,
+        OutputFormat::Csv => account_ledger::print_account_ledger_csv(&ledger_data, &account, start_date, end_date)?,
+        OutputFormat::Table => account_ledger::print_account_ledger_table(&ledger_data, &account, start_date, end_date, params.show_balance)?,
+    }
+
+    Ok(())
 }
 
 /// Generate net worth report over time
