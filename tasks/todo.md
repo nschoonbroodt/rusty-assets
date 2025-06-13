@@ -1,5 +1,8 @@
 # Actual Todo
 
+## Check the data model in sql.
+I feel that there is something wrong with the category including income, assets, ...
+
 ## Automated Price Feeds
 
 Implement automated price feeds from financial APIs for real-time price updates instead of manual entry. This would allow the system to automatically fetch current market prices for tracked assets (stocks, ETFs, crypto) from sources like Yahoo Finance, Alpha Vantage, or similar APIs.
