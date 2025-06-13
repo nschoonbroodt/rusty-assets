@@ -1,10 +1,21 @@
 use anyhow::Result;
-use assets_core::{Database, TransactionService, TransactionWithEntriesAndAccounts};
+use assets_core::{Database, TransactionService, TransactionWithEntriesAndAccounts, UserService};
 use chrono::{NaiveDate, DateTime, Utc};
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
 use rust_decimal::Decimal;
 use uuid::Uuid;
+
+/// Helper function to get user UUID from username
+async fn get_user_id_by_name(username: &str) -> Result<Uuid> {
+    let db = Database::from_env().await?;
+    let user_service = UserService::new(db.pool().clone());
+    
+    match user_service.get_user_by_name(username).await? {
+        Some(user) => Ok(user.id),
+        None => Err(anyhow::anyhow!("User '{}' not found", username)),
+    }
+}
 
 #[derive(Subcommand)]
 pub enum TransactionCommands {
@@ -30,10 +41,9 @@ pub struct ListTransactionsArgs {
     /// Filter by account path (e.g., "Assets:Current Assets:BoursoBank")
     #[arg(long)]
     account: Option<String>,
-    
-    /// Filter by user ID
+      /// Filter by username
     #[arg(long)]
-    user_id: Option<String>,
+    user: Option<String>,
     
     /// Maximum number of transactions to show
     #[arg(long, default_value = "50")]
@@ -77,9 +87,8 @@ async fn list_transactions(args: ListTransactionsArgs) -> Result<()> {
     } else {
         None
     };
-    
-    let user_id = if let Some(user_str) = &args.user_id {
-        Some(Uuid::parse_str(user_str)?)
+      let user_id = if let Some(user_str) = &args.user {
+        Some(get_user_id_by_name(user_str).await?)
     } else {
         None
     };
@@ -94,7 +103,7 @@ async fn list_transactions(args: ListTransactionsArgs) -> Result<()> {
         println!("💡 Try adjusting your filters or check:");
         println!("   - Date range with --from and --to");
         println!("   - Account filter with --account");
-        println!("   - User filter with --user-id");
+        println!("   - User filter with --user");
         return Ok(());
     }
     

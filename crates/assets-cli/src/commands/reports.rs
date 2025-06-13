@@ -1,11 +1,22 @@
 use anyhow::Result;
-use assets_core::{Database, ReportService};
+use assets_core::{Database, ReportService, UserService};
 use chrono::{Datelike, NaiveDate};
 use clap::{Args, ValueEnum};
 use uuid::Uuid;
 
 mod balance_sheet;
 mod income_statement;
+
+/// Helper function to get user UUID from username
+async fn get_user_id_by_name(username: &str) -> Result<Uuid> {
+    let db = Database::from_env().await?;
+    let user_service = UserService::new(db.pool().clone());
+
+    match user_service.get_user_by_name(username).await? {
+        Some(user) => Ok(user.id),
+        None => Err(anyhow::anyhow!("User '{}' not found", username)),
+    }
+}
 
 /// Output format for reports
 #[derive(Debug, Clone, ValueEnum)]
@@ -54,17 +65,7 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
         .start_date
         .unwrap_or_else(|| NaiveDate::from_ymd_opt(today.year(), 1, 1).unwrap_or(today)); // Used today.year()
     let end_date = params.end_date.unwrap_or(today);
-
-    let user_uuid = match Uuid::parse_str(&params.user_id) {
-        Ok(id) => id,
-        Err(e) => {
-            // eprintln! is fine for CLI, but consider a more structured error
-            return Err(anyhow::anyhow!(
-                "Invalid user_id format: {}. Please provide a valid UUID.",
-                e
-            ));
-        }
-    };
+    let user_uuid = get_user_id_by_name(&params.user).await?;
 
     let income_statement_data = report_service
         .income_statement(start_date, end_date, user_uuid) // user_uuid is already a Uuid
@@ -164,9 +165,9 @@ pub struct BalanceSheetParams {
 /// Parameters for income statement report
 #[derive(Args)]
 pub struct IncomeStatementParams {
-    /// User ID for the report (UUID format)
+    /// Username for the report
     #[arg(long)]
-    pub user_id: String,
+    pub user: String,
     /// Start date for the period (YYYY-MM-DD)
     #[arg(long)]
     pub start_date: Option<NaiveDate>,

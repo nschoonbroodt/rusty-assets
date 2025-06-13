@@ -1,8 +1,19 @@
 use anyhow::Result;
 use assets_core::importers::{BoursoBankImporter, SocietegeneraleImporter};
-use assets_core::{Database, ImportService};
+use assets_core::{Database, ImportService, UserService};
 use clap::{Args, Subcommand};
 use uuid::Uuid;
+
+/// Helper function to get user UUID from username
+async fn get_user_id_by_name(username: &str) -> Result<Uuid> {
+    let db = Database::from_env().await?;
+    let user_service = UserService::new(db.pool().clone());
+
+    match user_service.get_user_by_name(username).await? {
+        Some(user) => Ok(user.id),
+        None => Err(anyhow::anyhow!("User '{}' not found", username)),
+    }
+}
 
 #[derive(Subcommand)]
 pub enum ImportCommands {
@@ -17,14 +28,13 @@ pub struct BoursoBankArgs {
     /// Path to the CSV file to import
     #[arg(short, long)]
     file: String,
-
     /// Target account path (e.g., "Assets:Current Assets:BoursoBank")
     #[arg(short, long)]
     account: String,
 
-    /// User ID
+    /// Username (instead of UUID)
     #[arg(short, long)]
-    user_id: String,
+    user: String,
 }
 
 #[derive(Args)]
@@ -32,14 +42,13 @@ pub struct SgArgs {
     /// Path to the CSV file to import
     #[arg(short, long)]
     file: String,
-
     /// Target account path (e.g., "Assets:Current Assets:SG")
     #[arg(short, long)]
     account: String,
 
-    /// User ID
+    /// Username (instead of UUID)
     #[arg(short, long)]
-    user_id: String,
+    user: String,
 }
 
 pub async fn handle_import_command(command: ImportCommands) -> Result<()> {
@@ -54,7 +63,7 @@ async fn import_boursobank(args: BoursoBankArgs) -> Result<()> {
     println!("====================================\n");
 
     let db = Database::from_env().await?;
-    let user_id = Uuid::parse_str(&args.user_id)?;
+    let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
     let importer = BoursoBankImporter::new(args.account.clone());
@@ -78,7 +87,7 @@ async fn import_sg(args: SgArgs) -> Result<()> {
     println!("==========================================\n");
 
     let db = Database::from_env().await?;
-    let user_id = Uuid::parse_str(&args.user_id)?;
+    let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
     let importer = SocietegeneraleImporter::new(args.account.clone());
