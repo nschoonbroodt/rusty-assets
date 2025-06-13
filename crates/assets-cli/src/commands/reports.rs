@@ -1,13 +1,28 @@
 use anyhow::Result;
 use assets_core::{Database, ReportService};
-use chrono::{Datelike, NaiveDate}; // Added Datelike for year()
-use clap::Args;
-use uuid::Uuid; // Added Uuid
+use chrono::{Datelike, NaiveDate};
+use clap::{Args, ValueEnum};
+use uuid::Uuid;
 
 mod balance_sheet;
-mod income_statement; // Added
+mod income_statement;
 
-// TODO: format should be an enum instead of a string
+/// Output format for reports
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    /// Display as a formatted table (default)
+    Table,
+    /// Export as JSON
+    Json,
+    /// Export as CSV
+    Csv,
+}
+
+impl Default for OutputFormat {
+    fn default() -> Self {
+        Self::Table
+    }
+}
 
 /// Generate balance sheet report
 pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
@@ -18,10 +33,10 @@ pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
         .unwrap_or_else(|| chrono::Utc::now().naive_utc().date() + chrono::Duration::days(1));
     let balance_sheet_data = report_service.balance_sheet(report_date).await?;
 
-    match params.format.as_str() {
-        "json" => balance_sheet::print_balance_sheet_json(&balance_sheet_data)?, // TODO: should use the params
-        "csv" => balance_sheet::print_balance_sheet_csv(&balance_sheet_data)?, // TODO: should use the params
-        _ => balance_sheet::print_balance_sheet_table(&balance_sheet_data, &params)?,
+    match params.format {
+        OutputFormat::Json => balance_sheet::print_balance_sheet_json(&balance_sheet_data)?,
+        OutputFormat::Csv => balance_sheet::print_balance_sheet_csv(&balance_sheet_data)?,
+        OutputFormat::Table => balance_sheet::print_balance_sheet_table(&balance_sheet_data, &params)?,
     }
 
     Ok(())
@@ -51,18 +66,15 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
 
     let income_statement_data = report_service
         .income_statement(start_date, end_date, user_uuid) // user_uuid is already a Uuid
-        .await?;
-
-    match params.format.as_str() {
-        "json" => {
+        .await?;    match params.format {
+        OutputFormat::Json => {
             income_statement::print_income_statement_json(&income_statement_data)?;
         }
-        "csv" => {
+        OutputFormat::Csv => {
             income_statement::print_income_statement_csv(&income_statement_data)?;
         }
-        _ => {
+        OutputFormat::Table => {
             income_statement::print_income_statement_table(&income_statement_data)?;
-            // Added ? to handle the Result
         }
     }
 
@@ -146,9 +158,9 @@ pub struct BalanceSheetParams {
     #[arg(long)]
     pub include_zero: bool,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for income statement report
@@ -160,15 +172,13 @@ pub struct IncomeStatementParams {
 
     /// Start date for the period (YYYY-MM-DD)
     #[arg(long, value_parser = parse_date)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (YYYY-MM-DD, default: today)
+    pub start_date: Option<NaiveDate>,    /// End date for the period (YYYY-MM-DD, default: today)
     #[arg(long, value_parser = parse_date)]
     pub end_date: Option<NaiveDate>,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for cash flow statement
@@ -182,9 +192,9 @@ pub struct CashFlowParams {
     #[arg(long, value_parser = parse_date)]
     pub end_date: Option<NaiveDate>,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for trial balance report
@@ -198,9 +208,9 @@ pub struct TrialBalanceParams {
     #[arg(long)]
     pub include_zero: bool,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for account ledger report
@@ -215,15 +225,13 @@ pub struct AccountLedgerParams {
 
     /// End date for the period (default: today)
     #[arg(long, value_parser = parse_date)]
-    pub end_date: Option<NaiveDate>,
-
-    /// Show running balance
+    pub end_date: Option<NaiveDate>,    /// Show running balance
     #[arg(long)]
     pub show_balance: bool,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for net worth report
@@ -235,15 +243,13 @@ pub struct NetWorthParams {
 
     /// End date for the period (default: today)
     #[arg(long, value_parser = parse_date)]
-    pub end_date: Option<NaiveDate>,
-
-    /// Frequency: daily, weekly, monthly, yearly
+    pub end_date: Option<NaiveDate>,    /// Frequency: daily, weekly, monthly, yearly
     #[arg(long, default_value = "monthly")]
     pub frequency: String,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for budget report
@@ -259,15 +265,13 @@ pub struct BudgetReportParams {
 
     /// Budget name/version to compare against
     #[arg(long)]
-    pub budget_name: Option<String>,
-
-    /// Show only variances above threshold
+    pub budget_name: Option<String>,    /// Show only variances above threshold
     #[arg(long)]
     pub variance_threshold: Option<f64>,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for expense analysis report
@@ -283,15 +287,13 @@ pub struct ExpenseAnalysisParams {
 
     /// Filter by category pattern
     #[arg(long)]
-    pub category_filter: Option<String>,
-
-    /// Group by: category, month, week
+    pub category_filter: Option<String>,    /// Group by: category, month, week
     #[arg(long, default_value = "category")]
     pub group_by: String,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for investment performance report
@@ -307,15 +309,13 @@ pub struct InvestmentPerformanceParams {
 
     /// Filter by symbol
     #[arg(long)]
-    pub symbol: Option<String>,
-
-    /// Include dividends
+    pub symbol: Option<String>,    /// Include dividends
     #[arg(long)]
     pub include_dividends: bool,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parameters for tax report
@@ -326,15 +326,13 @@ pub struct TaxReportParams {
 
     /// Tax jurisdiction (US, CA, etc.)
     #[arg(long, default_value = "US")]
-    pub jurisdiction: String,
-
-    /// Include only transactions above threshold
+    pub jurisdiction: String,    /// Include only transactions above threshold
     #[arg(long)]
     pub threshold: Option<f64>,
 
-    /// Output format: table, csv, json
-    #[arg(long, default_value = "table")]
-    pub format: String,
+    /// Output format
+    #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
+    pub format: OutputFormat,
 }
 
 /// Parse date string into NaiveDate
