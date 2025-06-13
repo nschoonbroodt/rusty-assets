@@ -1,9 +1,9 @@
 use anyhow::Result;
 use assets_core::models::IncomeStatementRow;
 use comfy_table::{presets::UTF8_FULL, ContentArrangement, Table};
+use csv;
 use rust_decimal::Decimal;
 use serde_json;
-use csv;
 
 /// Format and print income statement in a professional table format
 pub(super) fn print_income_statement_table(data: &[IncomeStatementRow]) -> Result<()> {

@@ -36,7 +36,9 @@ pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
     match params.format {
         OutputFormat::Json => balance_sheet::print_balance_sheet_json(&balance_sheet_data)?,
         OutputFormat::Csv => balance_sheet::print_balance_sheet_csv(&balance_sheet_data)?,
-        OutputFormat::Table => balance_sheet::print_balance_sheet_table(&balance_sheet_data, &params)?,
+        OutputFormat::Table => {
+            balance_sheet::print_balance_sheet_table(&balance_sheet_data, &params)?
+        }
     }
 
     Ok(())
@@ -66,7 +68,8 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
 
     let income_statement_data = report_service
         .income_statement(start_date, end_date, user_uuid) // user_uuid is already a Uuid
-        .await?;    match params.format {
+        .await?;
+    match params.format {
         OutputFormat::Json => {
             income_statement::print_income_statement_json(&income_statement_data)?;
         }
@@ -151,7 +154,7 @@ pub async fn generate_tax_report(params: TaxReportParams) -> Result<()> {
 #[derive(Args)]
 pub struct BalanceSheetParams {
     /// Date for the balance sheet (default: tomorrow)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub date: Option<NaiveDate>,
 
     /// Include zero balances
@@ -169,11 +172,11 @@ pub struct IncomeStatementParams {
     /// User ID for the report (UUID format)
     #[arg(long)]
     pub user_id: String,
-
     /// Start date for the period (YYYY-MM-DD)
-    #[arg(long, value_parser = parse_date)]
-    pub start_date: Option<NaiveDate>,    /// End date for the period (YYYY-MM-DD, default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
+    pub start_date: Option<NaiveDate>,
+    /// End date for the period (YYYY-MM-DD, default: today)
+    #[arg(long)]
     pub end_date: Option<NaiveDate>,
 
     /// Output format
@@ -185,11 +188,11 @@ pub struct IncomeStatementParams {
 #[derive(Args)]
 pub struct CashFlowParams {
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub end_date: Option<NaiveDate>,
 
     /// Output format
@@ -201,7 +204,7 @@ pub struct CashFlowParams {
 #[derive(Args)]
 pub struct TrialBalanceParams {
     /// Date for the trial balance (default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub date: Option<NaiveDate>,
 
     /// Include zero balances
@@ -218,14 +221,14 @@ pub struct TrialBalanceParams {
 pub struct AccountLedgerParams {
     /// Account path (e.g., "Assets:Current Assets:Main Checking")
     pub account_path: String,
-
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
-    pub end_date: Option<NaiveDate>,    /// Show running balance
+    #[arg(long)]
+    pub end_date: Option<NaiveDate>,
+    /// Show running balance
     #[arg(long)]
     pub show_balance: bool,
 
@@ -238,12 +241,13 @@ pub struct AccountLedgerParams {
 #[derive(Args)]
 pub struct NetWorthParams {
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
-    pub end_date: Option<NaiveDate>,    /// Frequency: daily, weekly, monthly, yearly
+    #[arg(long)]
+    pub end_date: Option<NaiveDate>,
+    /// Frequency: daily, weekly, monthly, yearly
     #[arg(long, default_value = "monthly")]
     pub frequency: String,
 
@@ -256,16 +260,17 @@ pub struct NetWorthParams {
 #[derive(Args)]
 pub struct BudgetReportParams {
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub end_date: Option<NaiveDate>,
 
     /// Budget name/version to compare against
     #[arg(long)]
-    pub budget_name: Option<String>,    /// Show only variances above threshold
+    pub budget_name: Option<String>,
+    /// Show only variances above threshold
     #[arg(long)]
     pub variance_threshold: Option<f64>,
 
@@ -278,16 +283,17 @@ pub struct BudgetReportParams {
 #[derive(Args)]
 pub struct ExpenseAnalysisParams {
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub end_date: Option<NaiveDate>,
 
     /// Filter by category pattern
     #[arg(long)]
-    pub category_filter: Option<String>,    /// Group by: category, month, week
+    pub category_filter: Option<String>,
+    /// Group by: category, month, week
     #[arg(long, default_value = "category")]
     pub group_by: String,
 
@@ -300,16 +306,17 @@ pub struct ExpenseAnalysisParams {
 #[derive(Args)]
 pub struct InvestmentPerformanceParams {
     /// Start date for the period
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub start_date: Option<NaiveDate>,
 
     /// End date for the period (default: today)
-    #[arg(long, value_parser = parse_date)]
+    #[arg(long)]
     pub end_date: Option<NaiveDate>,
 
     /// Filter by symbol
     #[arg(long)]
-    pub symbol: Option<String>,    /// Include dividends
+    pub symbol: Option<String>,
+    /// Include dividends
     #[arg(long)]
     pub include_dividends: bool,
 
@@ -326,17 +333,11 @@ pub struct TaxReportParams {
 
     /// Tax jurisdiction (US, CA, etc.)
     #[arg(long, default_value = "US")]
-    pub jurisdiction: String,    /// Include only transactions above threshold
-    #[arg(long)]
+    pub jurisdiction: String,
+    /// Include only transactions above threshold    #[arg(long)]
     pub threshold: Option<f64>,
 
     /// Output format
     #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
     pub format: OutputFormat,
-}
-
-/// Parse date string into NaiveDate
-fn parse_date(s: &str) -> Result<NaiveDate, String> {
-    NaiveDate::parse_from_str(s, "%Y-%m-%d")
-        .map_err(|_| format!("Invalid date format: '{}'. Please use YYYY-MM-DD.", s))
 }
