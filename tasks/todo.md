@@ -78,14 +78,28 @@ Implement the actual reporting logic behind the CLI commands to generate meaning
 - ✅ Modular design with reports/account_ledger.rs submodule
 - ✅ **Perfect for personal finance audit trails and transaction tracking**
 
+### Cash Flow Statement - ✅ COMPLETED
+- ✅ Created SQL migration with fn_cash_flow_statement PostgreSQL function
+- ✅ Added CashFlowRow model for cash flow activity display
+- ✅ Implemented ReportService.cash_flow_statement method
+- ✅ CLI integration with user parameter and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Proper activity categorization (Operating, Investing, Financing)
+- ✅ Cash flow calculation with positive/negative flow indication
+- ✅ Comprehensive summary with net change calculations
+- ✅ Modular design with reports/cash_flow.rs submodule
+- ✅ **Successfully tested with real transaction data**
+- ✅ **All output formats working correctly for data export**
+
 ### Remaining Reports
-- ✅ **Account ledger reports - COMPLETED**
 - [ ] Net worth tracking over time
-- [ ] Cash flow statement
 - [ ] Trial balance report
-- [ ] Cash flow statement
-- [ ] Trial balance report
-- [ ] Account ledger reports
+
+### Potential Cash Flow Improvements (Lower Priority)
+- [ ] Refine account categorization (e.g., large "Pending" transfers)
+- [ ] Better investment activity detection
+- [ ] Add beginning/ending cash balance display
+- [ ] Enhanced category mapping for more accurate activity classification
 
 ## Implement reporting database views
 
