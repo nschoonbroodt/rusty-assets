@@ -101,7 +101,8 @@ pub async fn show_account_balance(account_id_str: Option<&str>) -> Result<()> {
                         match account.calculate_balance(db.pool()).await {
                             Ok(balance) => {
                                 // Format balance according to account type
-                                let formatted_balance = if account.account_type == AccountType::Liability
+                                let formatted_balance = if account.account_type
+                                    == AccountType::Liability
                                     || account.account_type == AccountType::Equity
                                     || account.account_type == AccountType::Income
                                 {
@@ -124,7 +125,9 @@ pub async fn show_account_balance(account_id_str: Option<&str>) -> Result<()> {
                                 );
 
                                 if balance == rust_decimal::Decimal::ZERO {
-                                    println!("   Account has no activity or transactions cancel out");
+                                    println!(
+                                        "   Account has no activity or transactions cancel out"
+                                    );
                                 } else if balance > rust_decimal::Decimal::ZERO
                                     && account.account_type.increases_with_debit()
                                 {
@@ -135,7 +138,10 @@ pub async fn show_account_balance(account_id_str: Option<&str>) -> Result<()> {
                                 } else if balance < rust_decimal::Decimal::ZERO
                                     && account.account_type.increases_with_credit()
                                 {
-                                    println!("   Normal balance for {:?} accounts", account.account_type);
+                                    println!(
+                                        "   Normal balance for {:?} accounts",
+                                        account.account_type
+                                    );
                                 }
                             }
                             Err(e) => {
@@ -150,7 +156,10 @@ pub async fn show_account_balance(account_id_str: Option<&str>) -> Result<()> {
                 }
             }
             Err(_) => {
-                println!("❌ Invalid Account ID format: {}. Please provide a valid UUID.", id_str);
+                println!(
+                    "❌ Invalid Account ID format: {}. Please provide a valid UUID.",
+                    id_str
+                );
                 println!("💡 Use 'accounts list' or 'accounts tree' to find account IDs.");
             }
         }
@@ -254,7 +263,10 @@ pub async fn create_account_interactive() -> Result<()> {
     println!("Type: {:?} ({:?})", account_type, account_subtype);
     if let Some(parent) = parent_id {
         if let Ok(Some(parent_account)) = account_service.get_account(parent).await {
-            println!("Parent: {} (ID: {})", parent_account.name, parent_account.id);
+            println!(
+                "Parent: {} (ID: {})",
+                parent_account.name, parent_account.id
+            );
         }
     }
     if let Some(ref symbol) = symbol {
@@ -429,7 +441,8 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
         Ok(account_uuid) => {
             match account_service
                 .get_account_with_ownership_and_users(account_uuid)
-                .await? {
+                .await?
+            {
                 Some(account_with_ownership) => {
                     let account = &account_with_ownership.account;
 
@@ -484,7 +497,10 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
             }
         }
         Err(_) => {
-            println!("❌ Invalid Account ID format: {}. Please provide a valid UUID.", account_id_str);
+            println!(
+                "❌ Invalid Account ID format: {}. Please provide a valid UUID.",
+                account_id_str
+            );
             println!("💡 Use 'accounts list' or 'accounts tree' to find account IDs.");
         }
     }
@@ -603,10 +619,19 @@ pub async fn create_account(
     println!("📋 Account Summary:");
     println!("==================");
     println!("Name: {}", new_account.name);
-    println!("Type: {:?} ({:?})", account_type, new_account.account_subtype);
+    println!(
+        "Type: {:?} ({:?})",
+        account_type, new_account.account_subtype
+    );
     if let Some(parent_id) = parent_id {
         if let Ok(Some(parent_account)) = account_service.get_account(parent_id).await {
-            println!("Parent: {} ({})", parent_account.name, parent_account.full_path.unwrap_or_else(|| "No path".to_string()));
+            println!(
+                "Parent: {} ({})",
+                parent_account.name,
+                parent_account
+                    .full_path
+                    .unwrap_or_else(|| "No path".to_string())
+            );
         }
     }
     if let Some(ref symbol) = new_account.symbol {
@@ -627,9 +652,15 @@ pub async fn create_account(
             if let Some(full_path) = &account.full_path {
                 println!("   Full Path: {}", full_path);
             }
-            println!("   Type: {:?} ({:?})", account.account_type, account.account_subtype);
+            println!(
+                "   Type: {:?} ({:?})",
+                account.account_type, account.account_subtype
+            );
             println!("   Currency: {}", account.currency);
-            println!("   Created: {}", account.created_at.format("%Y-%m-%d %H:%M"));
+            println!(
+                "   Created: {}",
+                account.created_at.format("%Y-%m-%d %H:%M")
+            );
         }
         Err(e) => {
             return Err(anyhow::anyhow!("Failed to create account: {}", e));
@@ -754,7 +785,7 @@ fn prompt_account_name() -> Result<String> {
 
 pub async fn prompt_parent_account(
     _account_service: &AccountService, // Renamed to indicate it's not used directly in this function variant
-    _account_type: &AccountType, // Renamed to indicate it's not used
+    _account_type: &AccountType,       // Renamed to indicate it's not used
 ) -> Result<Option<Uuid>> {
     println!("\n🔗 Parent Account (Optional)");
     print!("Do you want to set a parent account? (y/N): ");
@@ -796,7 +827,10 @@ pub async fn prompt_parent_account(
                 if _account_service.get_account(uuid).await?.is_some() {
                     return Ok(Some(uuid));
                 } else {
-                    println!("❌ Parent account with ID {} not found. Please try again.", uuid);
+                    println!(
+                        "❌ Parent account with ID {} not found. Please try again.",
+                        uuid
+                    );
                 }
             }
             Err(_) => {

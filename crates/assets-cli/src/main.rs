@@ -200,7 +200,8 @@ async fn main() -> Result<()> {
         Commands::Db { action } => match action {
             DbCommands::Init => init_database().await?,
             DbCommands::Status => show_db_status().await?,
-        },        Commands::Accounts { action } => match action {
+        },
+        Commands::Accounts { action } => match action {
             AccountCommands::List => list_accounts().await?,
             AccountCommands::Balance { id } => show_account_balance(id.as_deref()).await?,
             AccountCommands::Create {
@@ -211,7 +212,8 @@ async fn main() -> Result<()> {
                 symbol,
                 currency,
                 notes,
-            } => {                create_account(
+            } => {
+                create_account(
                     name.as_deref(),
                     account_type.as_deref(),
                     subtype.as_deref(),
