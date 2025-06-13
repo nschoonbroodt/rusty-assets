@@ -2,7 +2,9 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 
 mod commands;
-use commands::{accounts::*, db::*, demo::*, import::*, prices, reports::*, users::*};
+use commands::{
+    accounts::*, db::*, demo::*, import::*, prices, reports::*, transactions::*, users::*,
+};
 
 #[derive(Parser)]
 #[command(name = "assets-cli")]
@@ -42,6 +44,11 @@ enum Commands {
     Users {
         #[command(subcommand)]
         action: UserCommands,
+    },
+    /// Transaction management and viewing
+    Transactions {
+        #[command(subcommand)]
+        action: TransactionCommands,
     },
     /// Import bank transactions
     Import {
@@ -266,6 +273,7 @@ async fn main() -> Result<()> {
             }
         },
         Commands::Users { action } => handle_user_command(action).await?,
+        Commands::Transactions { action } => handle_transaction_command(action).await?,
         Commands::Import { action } => handle_import_command(action).await?,
         Commands::Demo { action } => match action {
             DemoCommands::DoubleEntry => demo_double_entry().await?,

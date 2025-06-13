@@ -103,9 +103,17 @@ CLI structure with clap is complete, need to implement the actual reporting logi
 
 Add proper error handling and user-friendly error messages throughout the CLI, especially for database operations and user input validation.
 
-## Transaction search and filtering
+## Transaction search and filtering - ✅ COMPLETED
 
-Add commands to search/filter transactions by date range, account, amount, or description to make the system more useful with real data.
+Added CLI commands to search/filter transactions by date range, account, amount, or description:
+- ✅ `transactions list` command with date filtering (--from, --to)
+- ✅ Account path filtering (--account) using LIKE queries
+- ✅ User-based filtering (--user-id)
+- ✅ Flexible output formats: table, JSON, CSV
+- ✅ Transaction limit control (--limit)
+- ✅ `transactions show` command for detailed transaction view
+- ✅ Complete journal entry details with balance verification
+- ✅ Integrated with existing TransactionService and database views
 
 ## Backup and restore functionality
 
