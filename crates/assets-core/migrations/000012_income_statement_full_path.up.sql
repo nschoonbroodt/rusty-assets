@@ -24,8 +24,8 @@ BEGIN
         COALESCE(
             SUM(
                 CASE
-                    WHEN a.account_type = 'income' THEN (je.amount * -1.0 * ao.ownership_percentage / 100.0)
-                    WHEN a.account_type = 'expense' THEN (je.amount * ao.ownership_percentage / 100.0)
+                    WHEN a.account_type = 'income' THEN (je.amount * -1.0 * ao.ownership_percentage)
+                    WHEN a.account_type = 'expense' THEN (je.amount * ao.ownership_percentage)
                     ELSE 0.0
                 END
             ), 0.0
@@ -51,8 +51,8 @@ BEGIN
         ABS(COALESCE(
             SUM(
                 CASE
-                    WHEN a.account_type = 'income' THEN (je.amount * ao.ownership_percentage / 100.0)
-                    WHEN a.account_type = 'expense' THEN (je.amount * ao.ownership_percentage / 100.0)
+                    WHEN a.account_type = 'income' THEN (je.amount * ao.ownership_percentage)
+                    WHEN a.account_type = 'expense' THEN (je.amount * ao.ownership_percentage)
                     ELSE 0.0
                 END
             ), 0.0
