@@ -64,7 +64,8 @@ impl ImportService {
             skipped: skipped_count,
             errors,
         })
-    }    async fn create_transaction_from_import(
+    }
+    async fn create_transaction_from_import(
         &self,
         imported: &ImportedTransaction,
         target_account_id: &Uuid,
@@ -76,8 +77,10 @@ impl ImportService {
         let new_transaction = if self.is_card_transaction(&imported.description) {
             // Handle deferred debit card transactions
             let card_account_id = self.get_or_create_deferred_card_account().await?;
-            let expense_account_id = self.determine_expense_account_for_card_transaction(imported).await?;
-            
+            let expense_account_id = self
+                .determine_expense_account_for_card_transaction(imported)
+                .await?;
+
             // Card purchase: Expense account (debit) / Card liability account (credit)
             // The bank account is not immediately affected
             let abs_amount = imported.amount.abs();
@@ -93,8 +96,8 @@ impl ImportService {
         } else if self.is_card_settlement_transaction(&imported.description) {
             // Handle monthly card settlement
             let card_account_id = self.get_or_create_deferred_card_account().await?;
-            
-            // Card settlement: Card liability account (debit) / Bank account (credit) 
+
+            // Card settlement: Card liability account (debit) / Bank account (credit)
             let abs_amount = imported.amount.abs();
             TransactionService::create_simple_transaction(
                 imported.description.clone(),
@@ -108,7 +111,7 @@ impl ImportService {
         } else {
             // Handle regular transactions (not card-related)
             let other_account_id = self.determine_other_account(imported).await?;
-            
+
             if imported.amount > Decimal::ZERO {
                 // Money coming in: debit target account, credit other account
                 TransactionService::create_simple_transaction(
@@ -140,12 +143,13 @@ impl ImportService {
             .create_transaction(new_transaction)
             .await?;
         Ok(transaction_with_entries.transaction.id)
-    }    async fn determine_other_account(&self, imported: &ImportedTransaction) -> Result<Uuid> {
+    }
+    async fn determine_other_account(&self, imported: &ImportedTransaction) -> Result<Uuid> {
         // Handle deferred debit card transactions
         if self.is_card_transaction(&imported.description) {
             return self.get_or_create_deferred_card_account().await;
         }
-        
+
         // Handle monthly card settlement transactions
         if self.is_card_settlement_transaction(&imported.description) {
             return self.get_or_create_deferred_card_account().await;
@@ -190,7 +194,8 @@ impl ImportService {
                     "Parking" => "Expenses:Transportation:Parking",
                     "Péages" => "Expenses:Transportation:Tolls",
                     _ => "Expenses:Transportation:Other",
-                },                "Abonnements & téléphonie" => "Expenses:Utilities:Subscriptions",
+                },
+                "Abonnements & téléphonie" => "Expenses:Utilities:Subscriptions",
                 "Logement" => "Expenses:Housing:Mortgage",
                 "Services financiers & professionnels" => "Expenses:Financial:Fees",
                 "Dépenses d'épargne" => "Assets:Savings:Insurance",
@@ -224,7 +229,10 @@ impl ImportService {
     }
 
     /// Determine the expense account for a card transaction based on BoursoBank categorization
-    async fn determine_expense_account_for_card_transaction(&self, imported: &ImportedTransaction) -> Result<Uuid> {
+    async fn determine_expense_account_for_card_transaction(
+        &self,
+        imported: &ImportedTransaction,
+    ) -> Result<Uuid> {
         // Use the same logic as determine_other_account but only for expenses
         let account_path = match (&imported.category_parent, &imported.category) {
             (Some(parent), Some(category)) => match parent.as_str() {
@@ -277,23 +285,29 @@ impl ImportService {
         // Exclude the monthly settlement transaction
         !description.contains("Relevé différé Carte")
     }
-    
+
     /// Check if a transaction description indicates a monthly card settlement
     fn is_card_settlement_transaction(&self, description: &str) -> bool {
-        description.contains("Relevé différé Carte") || 
-        description.contains("Releve differe Carte")
+        description.contains("Relevé différé Carte") || description.contains("Releve differe Carte")
     }
-    
+
     /// Get or create the deferred debit card account
     async fn get_or_create_deferred_card_account(&self) -> Result<Uuid> {
         let card_account_path = "Liabilities:Current Liabilities:Deferred Debit Card";
-        
-        match self.account_service.get_account_by_path(card_account_path).await {
+
+        match self
+            .account_service
+            .get_account_by_path(card_account_path)
+            .await
+        {
             Ok(account) => Ok(account.id),
             Err(_) => {
                 // Account doesn't exist, create it
                 // For now, return a fallback account - in production you'd want to create the hierarchy
-                println!("⚠️  Deferred card account '{}' doesn't exist. Using fallback.", card_account_path);
+                println!(
+                    "⚠️  Deferred card account '{}' doesn't exist. Using fallback.",
+                    card_account_path
+                );
                 let fallback_account = self
                     .account_service
                     .get_account_by_path("Expenses:Uncategorized")
@@ -301,24 +315,31 @@ impl ImportService {
                 Ok(fallback_account.id)
             }
         }
+    }    /// Check if a transaction description indicates an internal transfer
+    fn is_internal_transfer(&self, description: &str) -> bool {
+        // Only catch actual internal transfers between your own accounts
+        description.contains("Virement interne") 
+            || description.contains("Versement initial")
+            || description.starts_with("VIR INST")  // VIR INST = internal institutional transfer
+            || (description.starts_with("VIR ") && description.contains("depuis"))  // VIR depuis = from another account
     }
 
-    /// Check if a transaction description indicates an internal transfer
-    fn is_internal_transfer(&self, description: &str) -> bool {
-        description.starts_with("VIR ") || 
-        description.contains("Virement interne") ||
-        description.contains("Versement initial")
-    }
-    
     /// Get or create the transfers pending account for internal transfers
     async fn get_or_create_transfers_pending_account(&self) -> Result<Uuid> {
         let transfers_account_path = "Assets:Transfers:Pending";
-        
-        match self.account_service.get_account_by_path(transfers_account_path).await {
+
+        match self
+            .account_service
+            .get_account_by_path(transfers_account_path)
+            .await
+        {
             Ok(account) => Ok(account.id),
             Err(_) => {
                 // Account doesn't exist, create it or use fallback
-                println!("⚠️  Transfers account '{}' doesn't exist. Using fallback.", transfers_account_path);
+                println!(
+                    "⚠️  Transfers account '{}' doesn't exist. Using fallback.",
+                    transfers_account_path
+                );
                 let fallback_account = self
                     .account_service
                     .get_account_by_path("Expenses:Uncategorized")
