@@ -1,7 +1,9 @@
 use crate::error::Result;
+use crate::models::{AccountType, IncomeStatementRow}; // Added IncomeStatementRow and AccountType
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::{PgPool, Row};
+use uuid::Uuid; // Added Uuid
 
 #[derive(Debug)]
 pub struct BalanceSheetData {
@@ -82,5 +84,25 @@ impl ReportService {
             total_equity,
             report_date,
         })
+    }
+
+    pub async fn income_statement(
+        &self,
+        start_date: NaiveDate, // Reordered and changed user_ids to user_id
+        end_date: NaiveDate,
+        user_id: Uuid, // Changed from &[Uuid] to Uuid
+    ) -> Result<Vec<IncomeStatementRow>> {
+        // Convert single Uuid to a slice for the SQL query
+        let user_ids_array = [user_id];
+        let rows = sqlx::query_as::<_, IncomeStatementRow>(
+            "SELECT category_name, account_name, total_amount FROM fn_income_statement($1, $2, $3)", // Adjusted selected columns
+        )
+        .bind(&user_ids_array) // Bind as a slice
+        .bind(start_date)
+        .bind(end_date)
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(rows)
     }
 }

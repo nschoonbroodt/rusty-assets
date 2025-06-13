@@ -326,3 +326,11 @@ pub struct AccountWithMarketValue {
     pub unrealized_gain_loss: Option<Decimal>, // market_value - book_value
     pub latest_price: Option<PriceHistory>,
 }
+
+/// Represents a single row in the income statement report.
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
+pub struct IncomeStatementRow {
+    pub category_name: Option<String>, // Added category_name, optional as some accounts might not have a category
+    pub account_name: String,
+    pub total_amount: Decimal,
+}

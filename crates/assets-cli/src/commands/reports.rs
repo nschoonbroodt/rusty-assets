@@ -1,9 +1,13 @@
 use anyhow::Result;
 use assets_core::{Database, ReportService};
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate}; // Added Datelike for year()
 use clap::Args;
+use uuid::Uuid; // Added Uuid
 
 mod balance_sheet;
+mod income_statement; // Added
+
+// TODO: format should be an enum instead of a string
 
 /// Generate balance sheet report
 pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
@@ -25,11 +29,44 @@ pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
 
 /// Generate income statement report
 pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<()> {
-    todo!(
-        "Generate income statement from {:?} to {:?}",
-        params.start_date,
-        params.end_date
-    );
+    let db = Database::from_env().await?;
+    let report_service = ReportService::new(db.pool().clone());
+
+    let today = chrono::Utc::now().naive_utc().date();
+    let start_date = params
+        .start_date
+        .unwrap_or_else(|| NaiveDate::from_ymd_opt(today.year(), 1, 1).unwrap_or(today)); // Used today.year()
+    let end_date = params.end_date.unwrap_or(today);
+
+    let user_uuid = match Uuid::parse_str(&params.user_id) {
+        Ok(id) => id,
+        Err(e) => {
+            // eprintln! is fine for CLI, but consider a more structured error
+            return Err(anyhow::anyhow!(
+                "Invalid user_id format: {}. Please provide a valid UUID.",
+                e
+            ));
+        }
+    };
+
+    let income_statement_data = report_service
+        .income_statement(start_date, end_date, user_uuid) // user_uuid is already a Uuid
+        .await?;
+
+    match params.format.as_str() {
+        "json" => {
+            income_statement::print_income_statement_json(&income_statement_data)?;
+        }
+        "csv" => {
+            income_statement::print_income_statement_csv(&income_statement_data)?;
+        }
+        _ => {
+            income_statement::print_income_statement_table(&income_statement_data)?;
+            // Added ? to handle the Result
+        }
+    }
+
+    Ok(())
 }
 
 /// Generate cash flow statement
@@ -117,11 +154,15 @@ pub struct BalanceSheetParams {
 /// Parameters for income statement report
 #[derive(Args)]
 pub struct IncomeStatementParams {
-    /// Start date for the period
+    /// User ID for the report (UUID format)
+    #[arg(long)]
+    pub user_id: String,
+
+    /// Start date for the period (YYYY-MM-DD)
     #[arg(long, value_parser = parse_date)]
     pub start_date: Option<NaiveDate>,
 
-    /// End date for the period (default: today)
+    /// End date for the period (YYYY-MM-DD, default: today)
     #[arg(long, value_parser = parse_date)]
     pub end_date: Option<NaiveDate>,
 
@@ -298,19 +339,6 @@ pub struct TaxReportParams {
 
 /// Parse date string into NaiveDate
 fn parse_date(s: &str) -> Result<NaiveDate, String> {
-    // Try various date formats
-    if let Ok(date) = NaiveDate::parse_from_str(s, "%Y-%m-%d") {
-        return Ok(date);
-    }
-    if let Ok(date) = NaiveDate::parse_from_str(s, "%m/%d/%Y") {
-        return Ok(date);
-    }
-    if let Ok(date) = NaiveDate::parse_from_str(s, "%d/%m/%Y") {
-        return Ok(date);
-    }
-
-    Err(format!(
-        "Invalid date format: {}. Expected formats: YYYY-MM-DD, MM/DD/YYYY, DD/MM/YYYY",
-        s
-    ))
+    NaiveDate::parse_from_str(s, "%Y-%m-%d")
+        .map_err(|_| format!("Invalid date format: '{}'. Please use YYYY-MM-DD.", s))
 }

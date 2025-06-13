@@ -199,3 +199,52 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - no need to install postgres
 - don't start the container manually, use docker compose
 - copy the .env from the .env.example
+
+## ✅ Income Statement Report Implementation - DONE
+
+**COMPLETED**: Implemented comprehensive income statement reporting feature with full CLI integration and multiple output formats:
+
+**Database Infrastructure**:
+- ✅ Created `000011_income_statement_function.up.sql` migration
+- ✅ Implemented `fn_income_statement` PostgreSQL function accepting:
+  - Array of user UUIDs for multi-user support
+  - Date range parameters (start_date, end_date)
+  - Returns category_name, account_name, total_amount
+- ✅ Proper joins with accounts, account_ownership, journal_entries, and transactions
+- ✅ Handles ownership percentages for shared accounts
+- ✅ Filters for income and expense account types with proper enum handling
+
+**Core Models & Services**:
+- ✅ Added `IncomeStatementRow` model to `models.rs` with proper field mapping
+- ✅ Implemented `income_statement` method in `ReportService`
+- ✅ Single user support for CLI (accepts one UUID, converts to array for SQL function)
+- ✅ Proper error handling and type conversions
+
+**CLI Integration**:
+- ✅ Added `IncomeStatementParams` struct with user_id, date range, and format options
+- ✅ Implemented `generate_income_statement` function with:
+  - UUID parsing and validation
+  - Default date range handling (start of year to today)
+  - Database connection and service instantiation
+- ✅ Added `mod income_statement;` for modular design
+
+**Output Formatting**:
+- ✅ Created `reports/income_statement.rs` submodule with three output functions:
+  - `print_income_statement_table()` - Professional table format with header
+  - `print_income_statement_json()` - JSON array output for data export
+  - `print_income_statement_csv()` - CSV format for spreadsheet import
+- ✅ Proper empty data handling for all output formats
+- ✅ Added required dependencies (comfy-table, csv) to assets-cli Cargo.toml
+
+**Testing & Verification**:
+- ✅ Successfully compiles without errors
+- ✅ All three output formats working correctly (table, JSON, CSV)
+- ✅ Handles empty data gracefully with appropriate messages
+- ✅ Migration applies and reverts cleanly
+- ✅ SQL function executes without structure mismatch errors
+
+**Architecture Benefits**:
+- ✅ Modular design allows easy addition of more reports
+- ✅ SQL function supports future multi-user GUI features
+- ✅ Consistent error handling across all output formats
+- ✅ Reusable patterns for implementing additional financial reports

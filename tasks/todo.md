@@ -18,6 +18,28 @@ Develop a web or graphical user interface as an alternative to the CLI for broad
 
 Implement the actual reporting logic behind the CLI commands to generate meaningful financial reports from the database.
 
+### Balance Sheet - ✅ COMPLETED
+- ✅ Implemented balance sheet SQL function with account hierarchies
+- ✅ Created ReportService with balance_sheet method
+- ✅ CLI integration with table, JSON, and CSV output formats
+- ✅ Removed balance check validation from output
+- ✅ Modular design with separate reporting submodules
+
+### Income Statement - ✅ COMPLETED
+- ✅ Created SQL migration with fn_income_statement PostgreSQL function
+- ✅ Added IncomeStatementRow model to match SQL output
+- ✅ Implemented ReportService.income_statement method
+- ✅ CLI integration with user_id parameter and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Proper account ownership handling with percentage calculations
+- ✅ Modular design with reports/income_statement.rs submodule
+
+### Remaining Reports
+- [ ] Net worth tracking over time
+- [ ] Cash flow statement
+- [ ] Trial balance report
+- [ ] Account ledger reports
+
 ## Implement reporting database views
 
 Create SQL views for common reporting queries to optimize performance and avoid code duplication:
