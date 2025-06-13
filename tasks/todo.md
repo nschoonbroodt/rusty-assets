@@ -19,6 +19,11 @@ Implement automated price feeds from financial APIs for real-time price updates 
 - ✅ CLI command for importing bank CSV files
 - ✅ Import progress tracking and error reporting
 - ✅ Added full_path support to Account model for path-based account lookups
+- ✅ **Implemented proper French deferred debit card accounting**
+  - Card transactions (CARTE) create liability entries without affecting bank account
+  - Monthly settlements (Relevé différé) transfer liability to bank account
+  - Maintains proper double-entry bookkeeping for card transactions
+  - Added Liabilities account hierarchy for deferred card tracking
 
 ### Future Import Extensions
 - [ ] Generic CSV importer for other banks

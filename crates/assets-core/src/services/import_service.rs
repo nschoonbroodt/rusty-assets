@@ -151,6 +151,11 @@ impl ImportService {
             return self.get_or_create_deferred_card_account().await;
         }
 
+        // Handle internal transfers (VIR transactions) - these go to other accounts
+        if self.is_internal_transfer(&imported.description) {
+            return self.get_or_create_transfers_pending_account().await;
+        }
+
         // Map BoursoBank categories to our account structure
         let account_path = match (
             &imported.category_parent,
@@ -185,12 +190,11 @@ impl ImportService {
                     "Parking" => "Expenses:Transportation:Parking",
                     "Péages" => "Expenses:Transportation:Tolls",
                     _ => "Expenses:Transportation:Other",
-                },
-                "Abonnements & téléphonie" => "Expenses:Utilities:Subscriptions",
+                },                "Abonnements & téléphonie" => "Expenses:Utilities:Subscriptions",
                 "Logement" => "Expenses:Housing:Mortgage",
                 "Services financiers & professionnels" => "Expenses:Financial:Fees",
                 "Dépenses d'épargne" => "Assets:Savings:Insurance",
-                "Mouvements internes débiteurs" => "Assets:Current Assets:Credit Card",
+                "Mouvements internes débiteurs" => "Assets:Transfers:Pending",
                 _ => "Expenses:Uncategorized",
             },
 
@@ -290,6 +294,31 @@ impl ImportService {
                 // Account doesn't exist, create it
                 // For now, return a fallback account - in production you'd want to create the hierarchy
                 println!("⚠️  Deferred card account '{}' doesn't exist. Using fallback.", card_account_path);
+                let fallback_account = self
+                    .account_service
+                    .get_account_by_path("Expenses:Uncategorized")
+                    .await?;
+                Ok(fallback_account.id)
+            }
+        }
+    }
+
+    /// Check if a transaction description indicates an internal transfer
+    fn is_internal_transfer(&self, description: &str) -> bool {
+        description.starts_with("VIR ") || 
+        description.contains("Virement interne") ||
+        description.contains("Versement initial")
+    }
+    
+    /// Get or create the transfers pending account for internal transfers
+    async fn get_or_create_transfers_pending_account(&self) -> Result<Uuid> {
+        let transfers_account_path = "Assets:Transfers:Pending";
+        
+        match self.account_service.get_account_by_path(transfers_account_path).await {
+            Ok(account) => Ok(account.id),
+            Err(_) => {
+                // Account doesn't exist, create it or use fallback
+                println!("⚠️  Transfers account '{}' doesn't exist. Using fallback.", transfers_account_path);
                 let fallback_account = self
                     .account_service
                     .get_account_by_path("Expenses:Uncategorized")
