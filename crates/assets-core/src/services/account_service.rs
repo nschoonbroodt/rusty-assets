@@ -14,42 +14,38 @@ pub struct AccountService {
 impl AccountService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }
-
-    /// Get all accounts
+    }    /// Get all accounts
     pub async fn get_all_accounts(&self) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, name, -- Removed code
+                id, name, full_path,
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
                 notes, created_at, updated_at
             FROM accounts 
             WHERE is_active = true 
-            ORDER BY name -- Order by name instead of code
+            ORDER BY name
             "#,
         )
         .fetch_all(&self.pool)
         .await?;
 
         Ok(accounts)
-    }
-
-    /// Get accounts by type
+    }    /// Get accounts by type
     pub async fn get_accounts_by_type(&self, account_type: AccountType) -> Result<Vec<Account>> {
         let accounts = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, name, -- Removed code
+                id, name, full_path,
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
                 notes, created_at, updated_at
             FROM accounts 
             WHERE account_type = $1 AND is_active = true 
-            ORDER BY name -- Order by name instead of code
+            ORDER BY name
             "#,
         )
         .bind(account_type)
@@ -57,14 +53,12 @@ impl AccountService {
         .await?;
 
         Ok(accounts)
-    }
-
-    /// Get account by ID
+    }    /// Get account by ID
     pub async fn get_account(&self, account_id: Uuid) -> Result<Option<Account>> {
         let account = sqlx::query_as::<_, Account>(
             r#"
             SELECT 
-                id, name, -- Removed code
+                id, name, full_path,
                 account_type, account_subtype,
                 parent_id, symbol, quantity, average_cost, address, 
                 purchase_date, purchase_price, currency, is_active, 
@@ -149,20 +143,18 @@ impl AccountService {
             user_balance: None,
             user_percentage: None,
         }))
-    }
-
-    /// Create a new account
+    }    /// Create a new account
     pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
-                name, account_type, account_subtype, parent_id, -- Removed code
+                name, account_type, account_subtype, parent_id,
                 symbol, quantity, average_cost, address, purchase_date, 
                 purchase_price, currency, notes
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) -- Adjusted parameter count
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING 
-                id, name, account_type, account_subtype, parent_id, -- Removed code
+                id, name, full_path, account_type, account_subtype, parent_id,
                 symbol, quantity, average_cost, address, purchase_date,
                 purchase_price, currency, is_active, notes, created_at, updated_at
             "#,
@@ -200,19 +192,17 @@ impl AccountService {
             ));
         }
 
-        let mut tx = self.pool.begin().await?;
-
-        // Create the account
+        let mut tx = self.pool.begin().await?;        // Create the account
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
-                name, account_type, account_subtype, parent_id, -- Removed code
+                name, account_type, account_subtype, parent_id,
                 symbol, quantity, average_cost, address, purchase_date, 
                 purchase_price, currency, notes
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) -- Adjusted parameter count
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING 
-                id, name, account_type, account_subtype, parent_id, -- Removed code
+                id, name, full_path, account_type, account_subtype, parent_id,
                 symbol, quantity, average_cost, address, purchase_date,
                 purchase_price, currency, is_active, notes, created_at, updated_at
             "#,
@@ -247,6 +237,27 @@ impl AccountService {
         }
 
         tx.commit().await?;
+        Ok(account)
+    }
+
+    /// Get account by full path (e.g., "Assets:Current Assets:Checking")
+    pub async fn get_account_by_path(&self, path: &str) -> Result<Account> {
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            SELECT 
+                id, name, full_path,
+                account_type, account_subtype,
+                parent_id, symbol, quantity, average_cost, address, 
+                purchase_date, purchase_price, currency, is_active, 
+                notes, created_at, updated_at
+            FROM accounts 
+            WHERE full_path = $1 AND is_active = true
+            "#,
+        )
+        .bind(path)
+        .fetch_one(&self.pool)
+        .await?;
+
         Ok(account)
     }
 }

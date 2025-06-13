@@ -32,3 +32,6 @@ Thumbs.db
 
 # Ignore Docker volumes (if mapped locally)
 db-data/
+
+# Ignore my personal bank account file
+perso/

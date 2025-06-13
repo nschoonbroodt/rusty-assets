@@ -74,6 +74,7 @@ pub struct Account {
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
     pub parent_id: Option<Uuid>,
+    pub full_path: Option<String>, // Full account path (e.g., "Assets:Current Assets:Checking")
 
     // Asset-specific fields (null for non-assets)
     pub symbol: Option<String>,        // Stock/ETF symbol

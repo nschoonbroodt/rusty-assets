@@ -1,5 +1,6 @@
 // Re-export all services for easier imports
 mod account_service;
+mod import_service;
 mod ownership_service;
 mod price_history_service;
 mod report_service;
@@ -7,6 +8,7 @@ mod transaction_service;
 mod user_service;
 
 pub use account_service::AccountService;
+pub use import_service::{ImportService, ImportSummary};
 pub use ownership_service::OwnershipService;
 pub use price_history_service::PriceHistoryService;
 pub use report_service::{AccountBalance, BalanceSheetData, ReportService};

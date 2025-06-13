@@ -20,6 +20,9 @@ pub enum CoreError {
     #[error("Transaction does not balance: expected {expected}, got {actual}")]
     UnbalancedTransaction { expected: Decimal, actual: Decimal },
 
+    #[error("Import error: {0}")]
+    ImportError(String),
+
     #[error("Generic error: {0}")]
     Generic(String),
 }

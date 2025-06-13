@@ -9,9 +9,21 @@ Implement automated price feeds from financial APIs for real-time price updates 
 
 ## Add github actions
 
-## Real-world transaction import (CSV, QIF, OFX)
+## Real-world transaction import (CSV, QIF, OFX) - ✅ COMPLETED
 
-Support importing transactions from common financial data formats (CSV, QIF, OFX) to make onboarding and data migration easier.
+### BoursoBank CSV Importer - ✅ COMPLETED
+- ✅ Created importer trait system for extensible bank support
+- ✅ Implemented BoursoBank-specific CSV parser with French format support
+- ✅ Added ImportService for processing transactions with double-entry bookkeeping
+- ✅ Automatic account categorization based on BoursoBank transaction categories
+- ✅ CLI command for importing bank CSV files
+- ✅ Import progress tracking and error reporting
+- ✅ Added full_path support to Account model for path-based account lookups
+
+### Future Import Extensions
+- [ ] Generic CSV importer for other banks
+- [ ] QIF format support
+- [ ] OFX format support
 
 ## Web or GUI interface
 
