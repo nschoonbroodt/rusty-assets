@@ -18,3 +18,6 @@
 - don't mention the tasks/todo.md and tasks/done.md file in the commits
 - in rust try to avoid clone when possible, use references instead
 - when the user needs to identify an account, he should use the syntax "Assets:Current Assets:Main Checking", not refer by id
+- don't hesitate to ask for more details if the task is not clear
+- don't hesitate to say that my ideas are bad if you think so, and suggest alternatives
+- don't hesite to say that you don't know how to do something, and suggest alternatives

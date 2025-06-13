@@ -163,3 +163,15 @@ Enhanced `accounts create` command for batch account creation:
 - ✅ Enables full automation of account structure setup
 - ✅ PowerShell scripts updated to use automated account creation
 - ✅ Complete hands-off BoursoBank import process
+
+## Default Account Ownership - ✅ COMPLETED
+
+Implemented automatic account ownership assignment for better consistency:
+- ✅ Added `get_first_user()` method to UserService for default owner selection
+- ✅ Modified `create_account()` to automatically assign 100% ownership to first user
+- ✅ Deterministic ownership: uses oldest user by creation date as default
+- ✅ Maintains backward compatibility with existing code
+- ✅ Preserves `create_account_with_ownership()` for custom ownership scenarios
+- ✅ All accounts now have ownership records for consistency and audit trail
+- ✅ Single-user friendly: no manual ownership setup required
+- ✅ Multi-user ready: easy to modify ownership later

@@ -50,4 +50,15 @@ impl UserService {
 
         Ok(user)
     }
+
+    /// Get the first user (ordered by creation date) - used as default owner for accounts
+    pub async fn get_first_user(&self) -> Result<Option<User>> {
+        let user = sqlx::query_as::<_, User>(
+            "SELECT id, name, display_name, is_active, created_at FROM users WHERE is_active = true ORDER BY created_at ASC LIMIT 1"
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
 }

@@ -143,8 +143,28 @@ impl AccountService {
             user_balance: None,
             user_percentage: None,
         }))
-    }    /// Create a new account
+    }    /// Create a new account with default ownership (100% to first user)
     pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
+        // Get the first user as default owner
+        let user_service = crate::services::UserService::new(self.pool.clone());
+        let default_user = user_service.get_first_user().await?;
+        
+        match default_user {
+            Some(user) => {
+                // Create account with default 100% ownership to first user
+                let ownership = vec![(user.id, Decimal::from(1))]; // 100%
+                self.create_account_with_ownership(new_account, ownership).await
+            }
+            None => {
+                // No users exist - create account without ownership for now
+                // This should be rare and might indicate a setup issue
+                self.create_account_without_ownership(new_account).await
+            }
+        }
+    }
+
+    /// Create a new account without ownership (internal method)
+    async fn create_account_without_ownership(&self, new_account: NewAccount) -> Result<Account> {
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
