@@ -1,2 +1,0 @@
-pay_date,pay_period_start,pay_period_end,employee_name,employer_name,item_type,description,amount,is_employer_contribution
-2025-01-31,2025-01-01,2025-01-31,Nicolas,TechCorp,BaseSalary,Base Salary,5000.00,false

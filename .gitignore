@@ -35,3 +35,4 @@ db-data/
 
 # Ignore my personal bank account file
 perso/
+*.csv
