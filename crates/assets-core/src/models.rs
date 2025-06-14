@@ -103,6 +103,13 @@ pub struct Transaction {
     pub transaction_date: DateTime<Utc>,
     pub created_by: Option<Uuid>, // User who created the transaction
     pub created_at: DateTime<Utc>,
+    // Import tracking fields
+    pub import_source: Option<String>,
+    pub import_batch_id: Option<Uuid>,
+    pub external_reference: Option<String>,
+    // Duplicate tracking fields
+    pub is_duplicate: Option<bool>,
+    pub merged_into_transaction_id: Option<Uuid>,
 }
 
 /// Journal entries - the actual debits and credits that make up a transaction

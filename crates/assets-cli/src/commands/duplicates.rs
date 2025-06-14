@@ -18,6 +18,10 @@ pub enum DuplicateCommands {
     Reject(RejectDuplicateArgs),
     /// Run automatic duplicate detection on recent imports
     Detect(DetectDuplicatesArgs),
+    /// Merge transactions (hide duplicate)
+    Merge(MergeDuplicateArgs),
+    /// Unmerge transaction (unhide duplicate)
+    Unmerge(UnmergeDuplicateArgs),
 }
 
 #[derive(Args)]
@@ -74,6 +78,23 @@ pub struct DetectDuplicatesArgs {
     auto_confirm_exact: bool,
 }
 
+#[derive(Args)]
+pub struct MergeDuplicateArgs {
+    /// Primary transaction ID (the one to keep)
+    #[arg(short, long)]
+    primary_id: String,
+    /// Duplicate transaction ID (the one to hide)
+    #[arg(short, long)]
+    duplicate_id: String,
+}
+
+#[derive(Args)]
+pub struct UnmergeDuplicateArgs {
+    /// Transaction ID to unhide
+    #[arg(short, long)]
+    transaction_id: String,
+}
+
 pub async fn handle_duplicate_command(command: DuplicateCommands) -> Result<()> {
     match command {
         DuplicateCommands::Find(args) => find_duplicates(args).await,
@@ -82,6 +103,8 @@ pub async fn handle_duplicate_command(command: DuplicateCommands) -> Result<()> 
         DuplicateCommands::Confirm(args) => confirm_duplicate(args).await,
         DuplicateCommands::Reject(args) => reject_duplicate(args).await,
         DuplicateCommands::Detect(args) => detect_duplicates(args).await,
+        DuplicateCommands::Merge(args) => merge_duplicate(args).await,
+        DuplicateCommands::Unmerge(args) => unmerge_duplicate(args).await,
     }
 }
 
@@ -310,6 +333,41 @@ async fn detect_duplicates(args: DetectDuplicatesArgs) -> Result<()> {
     }
 
     println!("\n💡 Use 'assets-cli duplicates list --only-duplicates' to review pending matches");
+
+    Ok(())
+}
+
+async fn merge_duplicate(args: MergeDuplicateArgs) -> Result<()> {
+    println!("🔗 Merging Transactions");
+    println!("========================\n");
+
+    let db = Database::from_env().await?;
+    let dedup_service = DeduplicationService::new(db.pool().clone());
+
+    let primary_id = Uuid::parse_str(&args.primary_id)?;
+    let duplicate_id = Uuid::parse_str(&args.duplicate_id)?;
+    dedup_service
+        .merge_transaction(primary_id, duplicate_id)
+        .await?;
+
+    println!("✅ Transaction {} merged successfully", args.primary_id);
+
+    Ok(())
+}
+
+async fn unmerge_duplicate(args: UnmergeDuplicateArgs) -> Result<()> {
+    println!("🔓 Unmerging Transaction");
+    println!("========================\n");
+
+    let db = Database::from_env().await?;
+    let dedup_service = DeduplicationService::new(db.pool().clone());
+
+    let transaction_id = Uuid::parse_str(&args.transaction_id)?;
+    dedup_service
+        .unmerge_transaction(transaction_id)
+        .await?;
+
+    println!("✅ Transaction {} unmerged successfully", args.transaction_id);
 
     Ok(())
 }

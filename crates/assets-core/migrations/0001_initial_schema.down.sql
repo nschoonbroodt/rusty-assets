@@ -1,4 +1,10 @@
 -- Drop initial schema
+-- Drop any remaining views that might depend on the tables
+DROP VIEW IF EXISTS v_account_balances;
+DROP VIEW IF EXISTS v_balance_sheet_accounts; 
+DROP VIEW IF EXISTS v_income_statement_accounts;
+DROP VIEW IF EXISTS v_all_transactions_with_duplicate_status;
+
 -- Drop the constraint trigger first
 DROP TRIGGER IF EXISTS trigger_validate_transaction_balance ON journal_entries;
 -- Drop the function

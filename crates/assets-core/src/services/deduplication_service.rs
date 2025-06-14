@@ -252,22 +252,49 @@ impl DeduplicationService {
         primary_transaction_id: Uuid,
         duplicate_transaction_id: Uuid,
     ) -> Result<()> {
-        // For now, we'll just update the match status to confirmed
-        // In the future, we could implement actual transaction merging
+        // Use the database function to hide the duplicate transaction
         sqlx::query(
-            r#"
-            UPDATE transaction_matches 
-            SET status = 'CONFIRMED', updated_at = NOW()
-            WHERE (primary_transaction_id = $1 AND duplicate_transaction_id = $2)
-               OR (primary_transaction_id = $2 AND duplicate_transaction_id = $1)
-            "#
+            "SELECT fn_hide_duplicate_transaction($1, $2)"
         )
-        .bind(primary_transaction_id)
         .bind(duplicate_transaction_id)
+        .bind(primary_transaction_id)
         .execute(&self.pool)
         .await?;
 
         Ok(())
+    }
+
+    /// Unhide a previously merged transaction (undo the merge)
+    pub async fn unhide_duplicate_transaction(
+        &self,
+        transaction_id: Uuid,
+    ) -> Result<()> {
+        // Use the database function to unhide the transaction
+        sqlx::query(
+            "SELECT fn_unhide_duplicate_transaction($1)"
+        )
+        .bind(transaction_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(())
+    }
+
+    /// Convenience method for CLI - merge transactions by IDs
+    pub async fn merge_transaction(
+        &self,
+        primary_id: Uuid,
+        duplicate_id: Uuid,
+    ) -> Result<()> {
+        self.merge_duplicate_transactions(primary_id, duplicate_id).await
+    }
+
+    /// Convenience method for CLI - unmerge transaction by ID
+    pub async fn unmerge_transaction(
+        &self,
+        transaction_id: Uuid,
+    ) -> Result<()> {
+        self.unhide_duplicate_transaction(transaction_id).await
     }
 }
 
