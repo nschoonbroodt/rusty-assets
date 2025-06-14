@@ -1,6 +1,9 @@
 # Actual Todo
 
 
+## Balancing with units
+Check how we manage transactions. I think currently we only have an amount, no units?
+
 ## Review balance sheet account sign conventions
 
 The balance sheet is showing some asset accounts (BoursoBank, SG) with negative balances, which doesn't follow standard accounting conventions. Need to review:
