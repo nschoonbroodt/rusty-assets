@@ -1,3 +1,0 @@
--- Revert the duplicate detection function to the original version
--- This down migration just references the previous version
--- The function will be reverted when migration 15 is rolled back

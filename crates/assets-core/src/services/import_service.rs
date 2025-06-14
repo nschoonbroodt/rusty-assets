@@ -1,19 +1,21 @@
 use crate::error::Result;
 use crate::importers::{ImportedTransaction, TransactionImporter};
-use crate::services::{AccountService, TransactionService};
+use crate::services::{AccountService, FileImportService, TransactionService};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
 pub struct ImportService {
     account_service: AccountService,
     transaction_service: TransactionService,
+    file_import_service: FileImportService,
 }
 
 impl ImportService {
     pub fn new(db: sqlx::PgPool) -> Self {
         Self {
             account_service: AccountService::new(db.clone()),
-            transaction_service: TransactionService::new(db),
+            transaction_service: TransactionService::new(db.clone()),
+            file_import_service: FileImportService::new(db),
         }
     }
     /// Import transactions using the specified importer
@@ -33,11 +35,35 @@ impl ImportService {
         println!("📦 Import batch ID: {}", import_batch_id);
         println!("🔍 Import source: {}", import_source);
 
+        // Check if file has already been imported
+        let file_hash = FileImportService::calculate_file_hash(file_path)?;
+        if self
+            .file_import_service
+            .is_file_already_imported(&file_hash)
+            .await?
+        {
+            if let Some(existing_file) = self
+                .file_import_service
+                .get_imported_file_by_hash(&file_hash)
+                .await?
+            {
+                return Err(crate::error::CoreError::ImportError(format!(
+                    "File already imported on {} from source '{}'. {} transactions were imported. File: {}",
+                    existing_file.imported_at.format("%Y-%m-%d %H:%M:%S"),
+                    existing_file.import_source,
+                    existing_file.transaction_count,
+                    existing_file.file_name
+                )));
+            }
+        }
+
         // Verify target account exists
         let target_account = self
             .account_service
             .get_account_by_path(target_account_path)
-            .await?; // Import raw transactions
+            .await?;
+
+        // Import raw transactions
         let imported = importer.import_from_file(file_path).await?;
         println!("📊 Found {} transactions", imported.len());
 
@@ -68,6 +94,27 @@ impl ImportService {
                 }
             }
         }
+
+        // Record the file import (only if we had successful imports)
+        if created_count > 0 {
+            let file_metadata = self.file_import_service.prepare_file_metadata(
+                file_path,
+                &import_source,
+                import_batch_id,
+                user_id,
+                created_count as i32,
+                Some(format!(
+                    "Imported {} transactions, skipped {}",
+                    created_count, skipped_count
+                )),
+            )?;
+
+            self.file_import_service
+                .record_file_import(file_metadata)
+                .await?;
+            println!("📝 File import recorded in database");
+        }
+
         Ok(ImportSummary {
             total: total_count,
             created: created_count,
