@@ -1,5 +1,7 @@
 use anyhow::Result;
-use assets_core::importers::{BoursoBankImporter, GenericPayslipImporter, SocietegeneraleImporter};
+use assets_core::importers::{
+    BoursoBankImporter, GenericPayslipImporter, QtPayslipImporter, SocietegeneraleImporter,
+};
 use assets_core::{Database, ImportService, PayslipImportService, UserService};
 use clap::{Args, Subcommand};
 use uuid::Uuid;
@@ -131,7 +133,6 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
 
     let db = Database::from_env().await?;
     let payslip_import_service = PayslipImportService::new(db.pool().clone());
-
     let result = match args.importer.as_str() {
         "generic" => {
             let importer = GenericPayslipImporter::new();
@@ -139,9 +140,15 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
                 .import_payslip(&importer, &args.file, &args.account, &args.user)
                 .await?
         }
+        "qt" => {
+            let importer = QtPayslipImporter::new()?;
+            payslip_import_service
+                .import_payslip(&importer, &args.file, &args.account, &args.user)
+                .await?
+        }
         _ => {
             return Err(anyhow::anyhow!(
-                "Unknown payslip importer: {}. Available: generic",
+                "Unknown payslip importer: {}. Available: generic, qt",
                 args.importer
             ));
         }
@@ -151,9 +158,9 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
     println!("📊 Import Summary");
     println!("=================");
     println!("• Pay Date: {}", result.payslip_info.pay_date);
-    println!("• Pay Period: {} to {}", 
-        result.payslip_info.pay_period_start, 
-        result.payslip_info.pay_period_end
+    println!(
+        "• Pay Period: {} to {}",
+        result.payslip_info.pay_period_start, result.payslip_info.pay_period_end
     );
     println!("• Employee: {}", result.payslip_info.employee_name);
     println!("• Employer: {}", result.payslip_info.employer_name);
@@ -171,7 +178,10 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
 
     println!("\n✅ Payslip import completed successfully!");
     println!("💡 Tip: Run 'assets-cli reports balance-sheet' to see your updated balance");
-    println!("💡 Tip: Run 'assets-cli reports income-statement --user {}' to see income details", args.user);
+    println!(
+        "💡 Tip: Run 'assets-cli reports income-statement --user {}' to see income details",
+        args.user
+    );
 
     Ok(())
 }
