@@ -12,7 +12,8 @@ mod user_service;
 
 pub use account_service::AccountService;
 pub use deduplication_service::{
-    DeduplicationService, MatchStatus, MatchType, TransactionMatch, TransactionWithDuplicateInfo,
+    DeduplicationService, MatchStatus, MatchType, TransactionComparisonDetails, TransactionMatch,
+    TransactionWithDuplicateInfo,
 };
 pub use file_import_service::FileImportService;
 pub use import_service::{ImportService, ImportSummary};

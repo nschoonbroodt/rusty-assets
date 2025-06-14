@@ -35,7 +35,7 @@ impl TransactionService {
             r#"
             INSERT INTO transactions (id, description, reference, transaction_date, created_by, import_source, import_batch_id, external_reference)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, description, reference, transaction_date, created_by, created_at
+            RETURNING id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id
             "#,
         )
         .bind(transaction_id)
@@ -77,10 +77,9 @@ impl TransactionService {
     /// Get a transaction with all its journal entries
     pub async fn get_transaction(
         &self,
-        transaction_id: Uuid,
-    ) -> Result<Option<TransactionWithEntries>> {
+        transaction_id: Uuid,    ) -> Result<Option<TransactionWithEntries>> {
         let transaction = sqlx::query_as::<_, Transaction>(
-            "SELECT id, description, reference, transaction_date, created_by, created_at FROM transactions WHERE id = $1",
+            "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
         .fetch_optional(&self.pool)
@@ -107,9 +106,8 @@ impl TransactionService {
     pub async fn get_transaction_with_accounts(
         &self,
         transaction_id: Uuid,
-    ) -> Result<Option<TransactionWithEntriesAndAccounts>> {
-        let transaction = sqlx::query_as::<_, Transaction>(
-            "SELECT id, description, reference, transaction_date, created_by, created_at FROM transactions WHERE id = $1",
+    ) -> Result<Option<TransactionWithEntriesAndAccounts>> {        let transaction = sqlx::query_as::<_, Transaction>(
+            "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
         .fetch_optional(&self.pool)

@@ -1,6 +1,6 @@
 use crate::error::Result;
 use crate::importers::{ImportedTransaction, TransactionImporter};
-use crate::services::{AccountService, FileImportService, TransactionService};
+use crate::services::{AccountService, FileImportService, TransactionService, DeduplicationService};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -8,14 +8,15 @@ pub struct ImportService {
     account_service: AccountService,
     transaction_service: TransactionService,
     file_import_service: FileImportService,
+    deduplication_service: DeduplicationService,
 }
 
-impl ImportService {
-    pub fn new(db: sqlx::PgPool) -> Self {
+impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
         Self {
             account_service: AccountService::new(db.clone()),
             transaction_service: TransactionService::new(db.clone()),
-            file_import_service: FileImportService::new(db),
+            file_import_service: FileImportService::new(db.clone()),
+            deduplication_service: DeduplicationService::new(db),
         }
     }
     /// Import transactions using the specified importer
@@ -107,12 +108,44 @@ impl ImportService {
                     "Imported {} transactions, skipped {}",
                     created_count, skipped_count
                 )),
-            )?;
-
-            self.file_import_service
+            )?;            self.file_import_service
                 .record_file_import(file_metadata)
                 .await?;
             println!("📝 File import recorded in database");
+
+            // Automatically run duplicate detection on the imported batch
+            println!("🔍 Running automatic duplicate detection...");
+            match self
+                .deduplication_service
+                .detect_duplicates_for_batch(import_batch_id, true) // Auto-confirm exact matches
+                .await
+            {
+                Ok(matches) => {
+                    if !matches.is_empty() {
+                        let exact_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Exact)).count();
+                        let probable_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Probable)).count();
+                        let possible_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Possible)).count();
+                        
+                        println!("🎯 Detected {} potential duplicate(s):", matches.len());
+                        if exact_count > 0 {
+                            println!("   📌 {} exact match(es) - auto-confirmed", exact_count);
+                        }
+                        if probable_count > 0 {
+                            println!("   🟡 {} probable match(es) - needs review", probable_count);
+                        }
+                        if possible_count > 0 {
+                            println!("   🟠 {} possible match(es) - needs review", possible_count);
+                        }
+                        println!("💡 Use 'assets-cli duplicates list --only-duplicates' to review");
+                    } else {
+                        println!("✅ No duplicates detected in this import");
+                    }
+                }
+                Err(e) => {
+                    println!("⚠️  Duplicate detection failed: {}", e);
+                    println!("   Import was successful, but you may want to run 'assets-cli duplicates detect' manually");
+                }
+            }
         }
 
         Ok(ImportSummary {

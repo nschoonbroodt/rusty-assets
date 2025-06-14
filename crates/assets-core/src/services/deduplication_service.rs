@@ -18,6 +18,15 @@ pub struct TransactionMatch {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransactionComparisonDetails {
+    pub id: Uuid,
+    pub description: String,
+    pub transaction_date: DateTime<Utc>,
+    pub import_source: Option<String>,
+    pub entries_summary: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "varchar", rename_all = "UPPERCASE")]
 pub enum MatchType {
@@ -60,7 +69,29 @@ pub struct DeduplicationService {
 impl DeduplicationService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
-    }    /// Find potential duplicates for a given transaction
+    }
+
+    /// Find a transaction by partial UUID (useful for CLI commands)
+    pub async fn find_transaction_by_partial_uuid(&self, partial_uuid: &str) -> Result<Option<Uuid>> {
+        let query = format!("SELECT id FROM transactions WHERE id::text LIKE '{}%' LIMIT 1", partial_uuid);
+        let result = sqlx::query_scalar::<_, Uuid>(&query)
+            .fetch_optional(&self.pool)
+            .await?;
+        
+        Ok(result)
+    }
+
+    /// Find a transaction match by partial UUID (useful for CLI commands)
+    pub async fn find_match_by_partial_uuid(&self, partial_uuid: &str) -> Result<Option<Uuid>> {
+        let query = format!("SELECT id FROM transaction_matches WHERE id::text LIKE '{}%' LIMIT 1", partial_uuid);
+        let result = sqlx::query_scalar::<_, Uuid>(&query)
+            .fetch_optional(&self.pool)
+            .await?;
+        
+        Ok(result)
+    }
+
+    /// Find potential duplicates for a given transaction
     pub async fn find_potential_duplicates(
         &self,
         transaction_id: Uuid,
@@ -295,6 +326,43 @@ impl DeduplicationService {
         transaction_id: Uuid,
     ) -> Result<()> {
         self.unhide_duplicate_transaction(transaction_id).await
+    }
+
+    /// Get detailed transaction information for duplicate comparison
+    pub async fn get_transaction_details_for_comparison(&self, transaction_id: Uuid) -> Result<Option<TransactionComparisonDetails>> {
+        let query = r#"
+            SELECT 
+                t.id,
+                t.description,
+                t.transaction_date,
+                t.import_source,
+                COALESCE(
+                    (SELECT string_agg(a.full_path || ': ' || je.amount, ' | ' ORDER BY je.amount DESC)
+                     FROM journal_entries je 
+                     JOIN accounts a ON je.account_id = a.id 
+                     WHERE je.transaction_id = t.id),
+                    'No entries'
+                ) as entries_summary
+            FROM transactions t
+            WHERE t.id = $1
+        "#;
+
+        let result = sqlx::query(query)
+            .bind(transaction_id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        if let Some(row) = result {
+            Ok(Some(TransactionComparisonDetails {
+                id: row.get("id"),
+                description: row.get("description"),
+                transaction_date: row.get("transaction_date"),
+                import_source: row.get("import_source"),
+                entries_summary: row.get("entries_summary"),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 use anyhow::Result;
-use assets_core::{Database, DeduplicationService, MatchStatus, MatchType};
+use assets_core::{
+    Database, DeduplicationService, MatchStatus, MatchType, TransactionComparisonDetails,
+};
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
 use uuid::Uuid;
@@ -119,11 +121,18 @@ async fn find_duplicates(args: FindDuplicatesArgs) -> Result<()> {
     let amount_tolerance = args.amount_tolerance.parse()?;
 
     let duplicates = dedup_service
-        .find_potential_duplicates(transaction_id, Some(amount_tolerance), Some(args.date_tolerance))
+        .find_potential_duplicates(
+            transaction_id,
+            Some(amount_tolerance),
+            Some(args.date_tolerance),
+        )
         .await?;
 
     if duplicates.is_empty() {
-        println!("✅ No potential duplicates found for transaction {}", args.transaction_id);
+        println!(
+            "✅ No potential duplicates found for transaction {}",
+            args.transaction_id
+        );
         return Ok(());
     }
 
@@ -136,7 +145,10 @@ async fn find_duplicates(args: FindDuplicatesArgs) -> Result<()> {
     for duplicate in &duplicates {
         table.add_row(vec![
             duplicate.potential_duplicate_id.to_string()[..8].to_string(),
-            format!("{:.2}%", duplicate.match_confidence * rust_decimal::Decimal::from(100)),
+            format!(
+                "{:.2}%",
+                duplicate.match_confidence * rust_decimal::Decimal::from(100)
+            ),
             format!("{}", duplicate.match_criteria),
         ]);
     }
@@ -170,13 +182,18 @@ async fn list_duplicates(args: ListDuplicatesArgs) -> Result<()> {
     let mut table = Table::new();
     table.load_preset(UTF8_FULL);
     table.set_header(vec![
-        "Date", "Description", "Amount", "Source", "Duplicates", "ID"
+        "Date",
+        "Description",
+        "Amount",
+        "Source",
+        "Duplicates",
+        "ID",
     ]);
 
     for tx in &transactions {
         let source = tx.import_source.as_deref().unwrap_or("-");
         let duplicate_indicator = if tx.has_duplicates { "⚠️" } else { "✅" };
-        
+
         table.add_row(vec![
             tx.transaction_date.format("%Y-%m-%d").to_string(),
             truncate_string(&tx.description, 30),
@@ -188,12 +205,18 @@ async fn list_duplicates(args: ListDuplicatesArgs) -> Result<()> {
     }
 
     println!("{table}");
-    
+
     if args.only_duplicates {
-        println!("\n⚠️ Showing {} transactions with potential duplicates", transactions.len());
+        println!(
+            "\n⚠️ Showing {} transactions with potential duplicates",
+            transactions.len()
+        );
         println!("💡 Use 'assets-cli duplicates show -t <transaction_id>' for details");
     } else {
-        println!("\n📊 Showing {} transactions (duplicates marked with ⚠️)", transactions.len());
+        println!(
+            "\n📊 Showing {} transactions (duplicates marked with ⚠️)",
+            transactions.len()
+        );
     }
 
     Ok(())
@@ -206,43 +229,92 @@ async fn show_duplicates(args: ShowDuplicatesArgs) -> Result<()> {
     let db = Database::from_env().await?;
     let dedup_service = DeduplicationService::new(db.pool().clone());
 
-    let transaction_id = Uuid::parse_str(&args.transaction_id)?;
+    // Try to parse as full UUID first, if that fails, look up by partial UUID
+    let transaction_id = if let Ok(uuid) = Uuid::parse_str(&args.transaction_id) {
+        uuid
+    } else {
+        // Look up transaction by partial UUID using the service
+        match dedup_service
+            .find_transaction_by_partial_uuid(&args.transaction_id)
+            .await?
+        {
+            Some(id) => id,
+            None => {
+                println!(
+                    "❌ No transaction found with ID starting with '{}'",
+                    args.transaction_id
+                );
+                return Ok(());
+            }
+        }
+    }; // Get the main transaction details
+    let main_transaction = dedup_service
+        .get_transaction_details_for_comparison(transaction_id)
+        .await?;
+
+    if let Some(main_tx) = main_transaction {
+        println!("🎯 Main Transaction:");
+        println!("   Date: {}", main_tx.transaction_date.format("%Y-%m-%d"));
+        println!("   Description: {}", main_tx.description);
+        println!(
+            "   Source: {}",
+            main_tx.import_source.as_deref().unwrap_or("N/A")
+        );
+        println!("   Accounts: {}", main_tx.entries_summary);
+        println!("   ID: {}\n", main_tx.id);
+    }
+
     let matches = dedup_service
         .get_matches_for_transaction(transaction_id)
         .await?;
 
     if matches.is_empty() {
-        println!("✅ No duplicate matches found for transaction {}", args.transaction_id);
+        println!(
+            "✅ No duplicate matches found for transaction {}",
+            args.transaction_id
+        );
         return Ok(());
     }
 
-    println!("Found {} match(es):\n", matches.len());
+    println!("🔄 Found {} potential duplicate(s):\n", matches.len());
 
-    let mut table = Table::new();
-    table.load_preset(UTF8_FULL);
-    table.set_header(vec![
-        "Match ID", "Other Transaction", "Confidence", "Type", "Status", "Created"
-    ]);
-
-    for match_record in &matches {
+    for (index, match_record) in matches.iter().enumerate() {
         let other_tx_id = if match_record.primary_transaction_id == transaction_id {
             match_record.duplicate_transaction_id
         } else {
             match_record.primary_transaction_id
         };
 
-        table.add_row(vec![
-            match_record.id.to_string()[..8].to_string(),
-            other_tx_id.to_string()[..8].to_string(),
-            format!("{:.1}%", match_record.match_confidence * rust_decimal::Decimal::from(100)),
-            format!("{:?}", match_record.match_type),
-            format!("{:?}", match_record.status),
-            match_record.created_at.format("%Y-%m-%d").to_string(),
-        ]);
+        // Get details of the other transaction
+        if let Some(other_tx) = dedup_service
+            .get_transaction_details_for_comparison(other_tx_id)
+            .await?
+        {
+            println!(
+                "📋 Match #{} ({}% confidence, {:?}, {:?}):",
+                index + 1,
+                (match_record.match_confidence * rust_decimal::Decimal::from(100)).round(),
+                match_record.match_type,
+                match_record.status
+            );
+            println!("   Date: {}", other_tx.transaction_date.format("%Y-%m-%d"));
+            println!("   Description: {}", other_tx.description);
+            println!(
+                "   Source: {}",
+                other_tx.import_source.as_deref().unwrap_or("N/A")
+            );
+            println!("   Accounts: {}", other_tx.entries_summary);
+            println!("   ID: {}", other_tx.id);
+            println!(
+                "   Match ID: {} (use this to confirm/reject)\n",
+                match_record.id.to_string()[..8].to_string()
+            );
+        }
     }
 
-    println!("{table}");
-    println!("\n💡 Use 'assets-cli duplicates confirm/reject -m <match_id>' to manage matches");
+    println!("💡 Commands:");
+    println!("   Confirm: assets-cli duplicates confirm -m <match_id>");
+    println!("   Reject:  assets-cli duplicates reject -m <match_id>");
 
     Ok(())
 }
@@ -254,15 +326,42 @@ async fn confirm_duplicate(args: ConfirmDuplicateArgs) -> Result<()> {
     let db = Database::from_env().await?;
     let dedup_service = DeduplicationService::new(db.pool().clone());
 
-    let match_id = Uuid::parse_str(&args.match_id)?;
+    // Try to parse as full UUID first, if that fails, look up by partial UUID
+    let match_id = if let Ok(uuid) = Uuid::parse_str(&args.match_id) {
+        uuid
+    } else {
+        match dedup_service
+            .find_match_by_partial_uuid(&args.match_id)
+            .await?
+        {
+            Some(id) => id,
+            None => {
+                println!(
+                    "❌ No match found with ID starting with '{}'",
+                    args.match_id
+                );
+                return Ok(());
+            }
+        }
+    };
+
     let updated_match = dedup_service
         .update_match_status(match_id, MatchStatus::Confirmed)
         .await?;
 
     println!("✅ Match {} confirmed successfully", args.match_id);
-    println!("   Primary Transaction: {}", updated_match.primary_transaction_id);
-    println!("   Duplicate Transaction: {}", updated_match.duplicate_transaction_id);
-    println!("   Confidence: {:.1}%", updated_match.match_confidence * rust_decimal::Decimal::from(100));
+    println!(
+        "   Primary Transaction: {}",
+        updated_match.primary_transaction_id
+    );
+    println!(
+        "   Duplicate Transaction: {}",
+        updated_match.duplicate_transaction_id
+    );
+    println!(
+        "   Confidence: {:.1}%",
+        updated_match.match_confidence * rust_decimal::Decimal::from(100)
+    );
 
     Ok(())
 }
@@ -274,15 +373,42 @@ async fn reject_duplicate(args: RejectDuplicateArgs) -> Result<()> {
     let db = Database::from_env().await?;
     let dedup_service = DeduplicationService::new(db.pool().clone());
 
-    let match_id = Uuid::parse_str(&args.match_id)?;
+    // Try to parse as full UUID first, if that fails, look up by partial UUID
+    let match_id = if let Ok(uuid) = Uuid::parse_str(&args.match_id) {
+        uuid
+    } else {
+        match dedup_service
+            .find_match_by_partial_uuid(&args.match_id)
+            .await?
+        {
+            Some(id) => id,
+            None => {
+                println!(
+                    "❌ No match found with ID starting with '{}'",
+                    args.match_id
+                );
+                return Ok(());
+            }
+        }
+    };
+
     let updated_match = dedup_service
         .update_match_status(match_id, MatchStatus::Rejected)
         .await?;
 
     println!("❌ Match {} rejected successfully", args.match_id);
-    println!("   Primary Transaction: {}", updated_match.primary_transaction_id);
-    println!("   Duplicate Transaction: {}", updated_match.duplicate_transaction_id);
-    println!("   Confidence: {:.1}%", updated_match.match_confidence * rust_decimal::Decimal::from(100));
+    println!(
+        "   Primary Transaction: {}",
+        updated_match.primary_transaction_id
+    );
+    println!(
+        "   Duplicate Transaction: {}",
+        updated_match.duplicate_transaction_id
+    );
+    println!(
+        "   Confidence: {:.1}%",
+        updated_match.match_confidence * rust_decimal::Decimal::from(100)
+    );
 
     Ok(())
 }
@@ -317,17 +443,25 @@ async fn detect_duplicates(args: DetectDuplicatesArgs) -> Result<()> {
             MatchType::Probable => probable_count += 1,
             MatchType::Possible => possible_count += 1,
         }
-        
+
         if matches!(match_record.status, MatchStatus::Confirmed) {
             confirmed_count += 1;
         }
     }
 
     println!("📊 Summary:");
-    println!("   Exact matches: {} ({})", exact_count, if args.auto_confirm_exact { "auto-confirmed" } else { "pending review" });
+    println!(
+        "   Exact matches: {} ({})",
+        exact_count,
+        if args.auto_confirm_exact {
+            "auto-confirmed"
+        } else {
+            "pending review"
+        }
+    );
     println!("   Probable matches: {} (pending review)", probable_count);
     println!("   Possible matches: {} (pending review)", possible_count);
-    
+
     if confirmed_count > 0 {
         println!("   Auto-confirmed: {}", confirmed_count);
     }
@@ -363,11 +497,12 @@ async fn unmerge_duplicate(args: UnmergeDuplicateArgs) -> Result<()> {
     let dedup_service = DeduplicationService::new(db.pool().clone());
 
     let transaction_id = Uuid::parse_str(&args.transaction_id)?;
-    dedup_service
-        .unmerge_transaction(transaction_id)
-        .await?;
+    dedup_service.unmerge_transaction(transaction_id).await?;
 
-    println!("✅ Transaction {} unmerged successfully", args.transaction_id);
+    println!(
+        "✅ Transaction {} unmerged successfully",
+        args.transaction_id
+    );
 
     Ok(())
 }
