@@ -11,7 +11,7 @@ pub(super) fn print_balance_sheet_table(
     // Header
     println!();
     println!("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-    println!("┃                              📊 BALANCE SHEET                               ┃");
+    println!("┃                              📊 BALANCE SHEET                                  ┃");
     println!(
         "┃                               As of {}                              ┃",
         data.report_date.format("%B %d, %Y")
