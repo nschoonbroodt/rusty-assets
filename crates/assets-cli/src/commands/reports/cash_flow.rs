@@ -11,7 +11,7 @@ pub fn print_cash_flow_table(
 ) -> Result<()> {
     println!();
     println!("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-    println!("┃                             📊 CASH FLOW STATEMENT                          ┃");
+    println!("┃                             📊 CASH FLOW STATEMENT                             ┃");
     println!(
         "┃                        {} - {}                         ┃",
         start_date.format("%B %d, %Y"),
