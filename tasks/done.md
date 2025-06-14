@@ -295,3 +295,264 @@ Changed DATABASE_URL from `localhost` to `127.0.0.1` which reduced command time 
 - Net Change in Cash: €2334.64
 
 This implementation provides a professional-grade cash flow statement that correctly categorizes personal finance transactions into standard accounting activities, making it easy to understand cash movement patterns
+
+
+## Duplicate Transaction Detection and Management - ✅ COMPLETED
+
+### Core Deduplication System - ✅ COMPLETED
+- ✅ **Created comprehensive transaction deduplication database schema**
+  - Added import metadata fields (import_source, import_batch_id, external_reference) to transactions table
+  - Created transaction_matches table to track duplicate relationships
+  - Added confidence scoring and match type classification (Exact, Probable, Possible)
+  - Added status tracking (Pending, Confirmed, Rejected) for user review
+- ✅ **Implemented SQL function for intelligent duplicate detection**
+  - Smart matching algorithm using amount tolerance, date range, and text similarity
+  - Configurable thresholds for flexible detection
+  - Cross-source duplicate detection (prevents matching within same import source)
+  - Confidence scoring based on multiple criteria (amount, date, description similarity)
+- ✅ **Built comprehensive DeduplicationService in Rust**
+  - find_potential_duplicates() with configurable tolerances
+  - create_transaction_match() for manual and automatic match creation
+  - update_match_status() for confirm/reject workflows
+  - detect_duplicates_for_batch() for automatic detection on import batches
+  - get_transactions_with_duplicates() for overview and management
+- ✅ **Extended import services to track source metadata**
+  - Updated NewTransaction model with import tracking fields
+  - Modified ImportService to generate batch IDs and track import sources
+  - Updated PayslipImportService to include source information
+  - All new transactions now include import provenance for deduplication
+
+### CLI Interface for Duplicate Management - ✅ COMPLETED
+- ✅ **Created comprehensive 'duplicates' CLI command suite**
+  - `duplicates find` - Find potential duplicates for a specific transaction
+  - `duplicates list` - List all transactions with duplicate information
+  - `duplicates show` - Show detailed duplicate information for a transaction
+  - `duplicates confirm/reject` - Manually confirm or reject duplicate matches
+  - `duplicates detect` - Run automatic detection on import batches
+- ✅ **User-friendly table output with confidence percentages and status indicators**
+- ✅ **Integration with existing transaction and import workflows**
+
+### Smart Duplicate Detection Features - ✅ COMPLETED
+- ✅ **Multi-criteria matching algorithm**
+  - Amount tolerance (configurable, default ±€0.01)
+  - Date tolerance (configurable, default ±3 days)
+  - Description text similarity using PostgreSQL pg_trgm extension
+  - Cross-source detection (bank vs payslip, bank1 vs bank2)
+- ✅ **Confidence-based categorization**
+  - Exact matches (95%+): Same amount, same date, high text similarity
+  - Probable matches (80%+): Close amount/date, good text similarity
+  - Possible matches (60%+): Within tolerances but less certain
+- ✅ **Automatic processing options**
+  - Auto-confirm exact matches for high-confidence scenarios
+  - Batch processing for efficient import workflows
+  - Manual review workflow for uncertain matches
+
+### Example Use Cases Solved - ✅ COMPLETED
+- ✅ **Salary transactions**: Payslip import + bank statement import detection
+- ✅ **Bank transfers**: Transfer from Bank A to Bank B appearing in both statements
+- ✅ **Card transactions**: Deferred card vs immediate bank account detection
+- ✅ **Manual vs imported**: Preventing duplicates between manual entry and imports
+
+### Duplicate Transaction Hiding and Merging - ✅ COMPLETED
+- ✅ **Database schema for duplicate tracking**
+  - Added is_duplicate boolean field to transactions table
+  - Added merged_into_transaction_id foreign key for tracking merge relationships
+  - Created indexes for efficient filtering and lookups
+- ✅ **Updated all financial views to exclude duplicates**
+  - Modified v_account_balances to exclude confirmed duplicates
+  - Updated v_balance_sheet_accounts to filter out hidden transactions
+  - Modified v_income_statement_accounts to exclude duplicates from calculations
+  - Created v_all_transactions_with_duplicate_status for administrative purposes
+- ✅ **PostgreSQL functions for duplicate management**
+  - fn_hide_duplicate_transaction() for marking transactions as duplicates
+  - fn_unhide_duplicate_transaction() for undoing merges
+  - Automatic status updates in transaction_matches table
+- ✅ **Enhanced DeduplicationService**
+  - merge_duplicate_transactions() for hiding duplicate transactions
+  - unhide_duplicate_transaction() for undoing merges
+  - Convenience methods for CLI integration
+- ✅ **CLI commands for duplicate management**
+  - 'duplicates merge' command with primary-id and duplicate-id parameters
+  - 'duplicates unmerge' command for unhiding transactions
+  - Complete help documentation and argument validation
+- ✅ **Data integrity and migration safety**
+  - Fixed migration rollback dependencies (views before columns)
+  - Safe rollback to any migration level without dependency conflicts
+  - Preserved complete audit trail while hiding duplicates
+
+### Result: Complete Duplicate Transaction Management System - ✅ COMPLETED
+**When a duplicate is confirmed, it is now properly hidden from:**
+- ✅ Account balance calculations
+- ✅ Balance sheet reports  
+- ✅ Income statement reports
+- ✅ Cash flow calculations
+- ✅ All financial views and reports
+
+**While maintaining:**
+- ✅ Complete transaction history and audit trail
+- ✅ Ability to unhide/unmerge transactions
+- ✅ Proper foreign key relationships
+- ✅ Database integrity and rollback safety
+
+## Real-world transaction import (CSV, QIF, OFX) - ✅ COMPLETED
+
+### BoursoBank CSV Importer - ✅ COMPLETED
+- ✅ Created importer trait system for extensible bank support
+- ✅ Implemented BoursoBank-specific CSV parser with French format support
+- ✅ Added ImportService for processing transactions with double-entry bookkeeping
+- ✅ Automatic account categorization based on BoursoBank transaction categories
+- ✅ CLI command for importing bank CSV files
+- ✅ Import progress tracking and error reporting
+- ✅ Added full_path support to Account model for path-based account lookups
+- ✅ **Implemented proper French deferred debit card accounting**
+  - Card transactions (CARTE) create liability entries without affecting bank account
+  - Monthly settlements (Relevé différé) transfer liability to bank account
+  - Maintains proper double-entry bookkeeping for card transactions
+  - Added Liabilities account hierarchy for deferred card tracking
+
+### User Management CLI - ✅ COMPLETED
+- ✅ Added `users` CLI command with add, list, and get subcommands
+- ✅ User creation with name and display name
+- ✅ UUID lookup by username for easy reference in other commands
+- ✅ Table-formatted user listing
+
+
+## Reporting: balance sheets, income statements, net worth tracking
+
+Implement the actual reporting logic behind the CLI commands to generate meaningful financial reports from the database.
+
+### Balance Sheet - ✅ COMPLETED
+- ✅ Implemented balance sheet SQL function with account hierarchies
+- ✅ Created ReportService with balance_sheet method
+- ✅ CLI integration with table, JSON, and CSV output formats
+- ✅ Removed balance check validation from output
+- ✅ Modular design with separate reporting submodules
+
+### Income Statement - ✅ COMPLETED
+- ✅ Created SQL migration with fn_income_statement PostgreSQL function
+- ✅ Added IncomeStatementRow model to match SQL output
+- ✅ Implemented ReportService.income_statement method
+- ✅ CLI integration with user_id parameter and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Proper account ownership handling with percentage calculations
+- ✅ Modular design with reports/income_statement.rs submodule
+- ✅ **Fixed SQL function to display correct income values as positive amounts**
+- ✅ **Income accounts now show proper salary/income values instead of tiny decimals**
+
+### Account Ledger Reports - ✅ COMPLETED
+- ✅ Created SQL migration with fn_account_ledger PostgreSQL function
+- ✅ Added AccountLedgerRow model for transaction history display
+- ✅ Implemented ReportService.account_ledger method with running balance calculation
+- ✅ CLI integration with account path lookup and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Comprehensive transaction history with debit/credit separation
+- ✅ Running balance calculation showing account progression over time
+- ✅ Summary statistics including transaction count and totals
+- ✅ Modular design with reports/account_ledger.rs submodule
+- ✅ **Perfect for personal finance audit trails and transaction tracking**
+
+### Cash Flow Statement - ✅ COMPLETED
+- ✅ Created SQL migration with fn_cash_flow_statement PostgreSQL function
+- ✅ Added CashFlowRow model for cash flow activity display
+- ✅ Implemented ReportService.cash_flow_statement method
+- ✅ CLI integration with user parameter and date range support
+- ✅ Support for table, JSON, and CSV output formats
+- ✅ Proper activity categorization (Operating, Investing, Financing)
+- ✅ Cash flow calculation with positive/negative flow indication
+- ✅ Comprehensive summary with net change calculations
+- ✅ Modular design with reports/cash_flow.rs submodule
+- ✅ **Successfully tested with real transaction data**
+- ✅ **All output formats working correctly for data export**
+
+## Create reporting command - ✅ DONE
+
+- general balance ✅
+- income vs expense ✅
+- performance of assets ✅
+- allocation ✅
+- net worth summary ✅
+
+All of these for entire familly and by user ✅
+
+
+## Transaction search and filtering - ✅ COMPLETED
+
+Added CLI commands to search/filter transactions by date range, account, amount, or description:
+- ✅ `transactions list` command with date filtering (--from, --to)
+- ✅ Account path filtering (--account) using LIKE queries
+- ✅ User-based filtering (--user-id)
+- ✅ Flexible output formats: table, JSON, CSV
+- ✅ Transaction limit control (--limit)
+- ✅ `transactions show` command for detailed transaction view
+- ✅ Complete journal entry details with balance verification
+- ✅ Integrated with existing TransactionService and database views
+
+## Batch Account Creation - ✅ COMPLETED
+
+Enhanced `accounts create` command for batch account creation:
+- ✅ Command-line arguments support (--name, --account-type, --subtype, --parent, etc.)
+- ✅ Maintains backward compatibility with interactive mode
+- ✅ Enables full automation of account structure setup
+- ✅ PowerShell scripts updated to use automated account creation
+- ✅ Complete hands-off BoursoBank import process
+
+## Default Account Ownership - ✅ COMPLETED
+
+Implemented automatic account ownership assignment for better consistency:
+- ✅ Added `get_first_user()` method to UserService for default owner selection
+- ✅ Modified `create_account()` to automatically assign 100% ownership to first user
+- ✅ Deterministic ownership: uses oldest user by creation date as default
+- ✅ Maintains backward compatibility with existing code
+- ✅ Preserves `create_account_with_ownership()` for custom ownership scenarios
+- ✅ All accounts now have ownership records for consistency and audit trail
+- ✅ Single-user friendly: no manual ownership setup required
+- ✅ Multi-user ready: easy to modify ownership later
+
+## File Import Tracking and Duplicate Prevention - ✅ COMPLETED
+
+### Core File Tracking System - ✅ COMPLETED
+- ✅ **Created comprehensive file import tracking database schema**
+  - Added imported_files table with hash-based deduplication
+  - File metadata tracking: path, name, size, hash (SHA-256), import source
+  - Import context: batch ID, user, timestamp, transaction count, notes
+  - Unique constraints on file hash and (file_path, import_source) combination
+  - Efficient indexes for hash, source, batch, and timestamp lookups
+- ✅ **Implemented FileImportService in Rust**
+  - SHA-256 file hashing for reliable duplicate detection
+  - is_file_already_imported() and is_file_path_already_imported() checks
+  - record_file_import() for comprehensive file metadata storage
+  - prepare_file_metadata() for consistent file preparation
+  - list_imported_files() with filtering by import source
+- ✅ **Integrated file tracking into all importers**
+  - Modified ImportService to check for duplicate files before processing
+  - Automatic file hash calculation and duplicate detection
+  - Clear error messages when attempting to import duplicate files
+  - File tracking occurs only after successful transaction imports
+  - Cross-source duplicate detection (same file, different sources)
+
+### Import Source Integration - ✅ COMPLETED
+- ✅ **BoursoBank importer**: Full file tracking integration
+- ✅ **SocieteGenerale importer**: Complete duplicate file prevention
+- ✅ **Payslip importer**: File-level deduplication support
+- ✅ **All future importers**: Automatic file tracking via ImportService
+
+### User Experience Improvements - ✅ COMPLETED
+- ✅ **Clear duplicate file detection messages**
+  - Shows when file was previously imported
+  - Indicates how many transactions were imported from that file
+  - Displays import source and timestamp for context
+- ✅ **Comprehensive audit trail**
+  - Every imported file is tracked with full metadata
+  - Import batch correlation for grouped operations
+  - User attribution for all import operations
+- ✅ **Database view for import history (v_imported_files_history)**
+  - User-friendly view joining file data with user information
+  - Ordered by import timestamp for chronological review
+
+### Reliability and Data Integrity - ✅ COMPLETED
+- ✅ **Hash-based duplicate detection**: Prevents same file content from being imported twice
+- ✅ **Path-based duplicate detection**: Prevents same file path from being imported multiple times per source
+- ✅ **Transaction-level safety**: File tracking only occurs after successful transaction creation
+- ✅ **Cross-import source awareness**: Different sources can import same file if needed
+- ✅ **Rollback safety**: Migration includes proper down migration for schema rollback
+
