@@ -8,7 +8,6 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 pub struct PayslipImportService {
-    pool: PgPool,
     transaction_service: TransactionService,
     account_service: AccountService,
     user_service: UserService,
@@ -19,9 +18,8 @@ impl PayslipImportService {
         let transaction_service = TransactionService::new(pool.clone());
         let account_service = AccountService::new(pool.clone());
         let user_service = UserService::new(pool.clone());
-        
+
         Self {
-            pool,
             transaction_service,
             account_service,
             user_service,
@@ -38,17 +36,20 @@ impl PayslipImportService {
     ) -> Result<ImportResult> {
         // Import the payslip data
         let payslip = importer.import_from_file(file_path).await?;
-        
+
         // Get the user
-        let user = self.user_service.get_user_by_name(user_name).await?
-            .ok_or_else(|| crate::error::CoreError::NotFound(format!("User not found: {}", user_name)))?;
+        let user = self
+            .user_service
+            .get_user_by_name(user_name)
+            .await?
+            .ok_or_else(|| {
+                crate::error::CoreError::NotFound(format!("User not found: {}", user_name))
+            })?;
 
         // Convert payslip to transaction
-        let transaction_id = self.create_payslip_transaction(
-            &payslip,
-            destination_account_path,
-            user.id,
-        ).await?;
+        let transaction_id = self
+            .create_payslip_transaction(&payslip, destination_account_path, user.id)
+            .await?;
 
         Ok(ImportResult {
             payslip_info: PayslipInfo {
@@ -74,27 +75,36 @@ impl PayslipImportService {
         destination_account_path: &str,
         user_id: Uuid,
     ) -> Result<Uuid> {
-        let mut journal_entries = Vec::new();        // Ensure destination account exists (the checking account where net pay goes)
-        let destination_account = self.account_service
+        let mut journal_entries = Vec::new(); // Ensure destination account exists (the checking account where net pay goes)
+        let destination_account = self
+            .account_service
             .get_account_by_path(destination_account_path)
-            .await?;        // Create journal entries for each payslip line item (except NetPay which is handled separately)
+            .await?; // Create journal entries for each payslip line item (except NetPay which is handled separately)
         for line_item in &payslip.line_items {
             // Skip NetPay line items as they are handled by the destination account
-            if matches!(line_item.item_type, crate::importers::PayslipItemType::NetPay) {
+            if matches!(
+                line_item.item_type,
+                crate::importers::PayslipItemType::NetPay
+            ) {
                 continue;
             }
-            
-            let account_path = line_item.account_mapping
+
+            let account_path = line_item
+                .account_mapping
                 .as_ref()
                 .map(|s| s.as_str())
-                .unwrap_or(line_item.item_type.suggested_account_path());// Get or create the account for this line item
-            let account = self.account_service.get_account_by_path(account_path).await.or_else(|_| {
-                // Account not found
-                Err(crate::error::CoreError::NotFound(format!(
-                    "Account not found: {}. Please create this account first.",
-                    account_path
-                )))
-            })?;            // Determine debit/credit based on account type and item type
+                .unwrap_or(line_item.item_type.suggested_account_path()); // Get or create the account for this line item
+            let account = self
+                .account_service
+                .get_account_by_path(account_path)
+                .await
+                .or_else(|_| {
+                    // Account not found
+                    Err(crate::error::CoreError::NotFound(format!(
+                        "Account not found: {}. Please create this account first.",
+                        account_path
+                    )))
+                })?; // Determine debit/credit based on account type and item type
             let amount = match account.account_type {
                 crate::models::AccountType::Income => {
                     // Income accounts are credited (increased) by income items
@@ -114,17 +124,18 @@ impl PayslipImportService {
                         account.account_type, account_path
                     )));
                 }
-            };            journal_entries.push(NewJournalEntry {
+            };
+            journal_entries.push(NewJournalEntry {
                 account_id: account.id,
                 amount,
                 memo: Some(line_item.description.clone()),
             });
-        }        // Add the destination account entry (net salary to checking account)
+        } // Add the destination account entry (net salary to checking account)
         journal_entries.push(NewJournalEntry {
             account_id: destination_account.id,
             amount: payslip.net_salary,
             memo: Some(format!("Net salary - {}", payslip.employer_name)),
-        });        // Create the transaction
+        }); // Create the transaction
         let transaction_request = NewTransaction {
             description: format!(
                 "Payslip - {} ({} to {})",
@@ -142,7 +153,8 @@ impl PayslipImportService {
             entries: journal_entries,
         };
 
-        let result = self.transaction_service
+        let result = self
+            .transaction_service
             .create_transaction(transaction_request)
             .await?;
 

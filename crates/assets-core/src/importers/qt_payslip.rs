@@ -161,14 +161,16 @@ impl PayslipImporter for QtPayslipImporter {
         }
 
         // 7. Navigo transport reimbursement
-        if let Some(navigo) = navigo_reimbursement {            line_items.push(PayslipLineItem {
+        if let Some(navigo) = navigo_reimbursement {
+            line_items.push(PayslipLineItem {
                 item_type: PayslipItemType::TransportReimbursement,
                 description: "Transport reimbursement (Navigo)".to_string(),
                 amount: navigo.amount,
                 is_employer_contribution: false,
                 account_mapping: Some("Income:Benefits:Transports".to_string()),
                 raw_data: HashMap::new(),
-            });        }
+            });
+        }
 
         // 8. Net à payer (configurable account - using default for now)
         line_items.push(PayslipLineItem {
@@ -460,7 +462,7 @@ impl QtPayslipImporter {
             let line = line.trim();
 
             // Look for "Titres-restaurant" line (employee contribution)
-            if line.contains("Titres-restaurant") {
+            if line.contains("Titres-restaurant") || line.contains("Tickets restaurant") {
                 // Extract all amounts from this line
                 let amounts = self.extract_all_amounts_from_line(line);
                 println!("🎫 Titres-restaurant line: {}", line);
@@ -528,7 +530,8 @@ impl QtPayslipImporter {
                     // In the table format, the Navigo reimbursement amount is typically
                     // the first significant amount (should be around 88.80)
                     let amount = amounts[0];
-                    println!("🚇 Found Navigo reimbursement: {} €", amount);                    return Ok(Some(PayslipLineItem {
+                    println!("🚇 Found Navigo reimbursement: {} €", amount);
+                    return Ok(Some(PayslipLineItem {
                         item_type: PayslipItemType::TransportReimbursement,
                         description: "Transport reimbursement (Navigo)".to_string(),
                         amount,
