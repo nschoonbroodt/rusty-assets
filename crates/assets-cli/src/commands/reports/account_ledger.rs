@@ -16,22 +16,19 @@ pub fn print_account_ledger_table(
 
     // Create header
     println!();
+    println!("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
+    println!("┃                             📋 ACCOUNT LEDGER                                  ┃");
     println!(
-        "┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓"
-    );
-    println!(
-        "┃                             📋 ACCOUNT LEDGER                               ┃"
-    );
-    println!(
-        "┃                        {} - {}                         ┃",
+        "┃                        {} - {}                            ┃",
         start_date.format("%B %d, %Y"),
         end_date.format("%B %d, %Y")
     );
-    println!(
-        "┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛"
-    );
+    println!("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛");
     println!();
-    println!("Account: {}", account.full_path.as_ref().unwrap_or(&account.name));
+    println!(
+        "Account: {}",
+        account.full_path.as_ref().unwrap_or(&account.name)
+    );
     println!();
 
     if data.is_empty() {
@@ -40,7 +37,14 @@ pub fn print_account_ledger_table(
     }
 
     // Set up table headers
-    let mut headers = vec!["Date", "Description", "Reference", "Memo", "Debit", "Credit"];
+    let mut headers = vec![
+        "Date",
+        "Description",
+        "Reference",
+        "Memo",
+        "Debit",
+        "Credit",
+    ];
     if show_balance {
         headers.push("Balance");
     }
@@ -48,11 +52,7 @@ pub fn print_account_ledger_table(
     table.set_header(
         headers
             .iter()
-            .map(|h| {
-                Cell::new(h)
-                    .add_attribute(Attribute::Bold)
-                    .fg(Color::Blue)
-            })
+            .map(|h| Cell::new(h).add_attribute(Attribute::Bold).fg(Color::Blue))
             .collect::<Vec<_>>(),
     );
 
@@ -67,12 +67,14 @@ pub fn print_account_ledger_table(
                 format!("€ {:.2}", row.debit_amount)
             } else {
                 String::new()
-            }).set_alignment(CellAlignment::Right),
+            })
+            .set_alignment(CellAlignment::Right),
             Cell::new(if row.credit_amount > Decimal::ZERO {
                 format!("€ {:.2}", row.credit_amount)
             } else {
                 String::new()
-            }).set_alignment(CellAlignment::Right),
+            })
+            .set_alignment(CellAlignment::Right),
         ];
 
         if show_balance {
@@ -83,7 +85,7 @@ pub fn print_account_ledger_table(
                         Color::Green
                     } else {
                         Color::Red
-                    })
+                    }),
             );
         }
 
@@ -95,14 +97,17 @@ pub fn print_account_ledger_table(
     // Show summary
     let total_debits: Decimal = data.iter().map(|r| r.debit_amount).sum();
     let total_credits: Decimal = data.iter().map(|r| r.credit_amount).sum();
-    
+
     println!();
     println!("📊 Summary: {} transactions found", data.len());
     println!("   Total Debits:  € {:.2}", total_debits);
     println!("   Total Credits: € {:.2}", total_credits);
-    
+
     if show_balance && !data.is_empty() {
-        println!("   Ending Balance: € {:.2}", data.last().unwrap().running_balance);
+        println!(
+            "   Ending Balance: € {:.2}",
+            data.last().unwrap().running_balance
+        );
     }
 
     println!("💡 Tip: Use --format=csv or --format=json for data export");
@@ -147,7 +152,9 @@ pub fn print_account_ledger_csv(
     _end_date: NaiveDate,
 ) -> Result<()> {
     // Print CSV header
-    println!("Date,Transaction ID,Description,Reference,Memo,Debit Amount,Credit Amount,Running Balance");
+    println!(
+        "Date,Transaction ID,Description,Reference,Memo,Debit Amount,Credit Amount,Running Balance"
+    );
 
     // Print data rows
     for row in data {
