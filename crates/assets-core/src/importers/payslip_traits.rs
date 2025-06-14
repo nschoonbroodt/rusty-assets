@@ -42,13 +42,13 @@ pub struct PayslipLineItem {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PayslipItemType {
-    // Income items (credits to the employee)
+pub enum PayslipItemType {    // Income items (credits to the employee)
     BaseSalary,
     Overtime,
     Bonus,
     Commission,
     Allowance,
+    TransportReimbursement,
     OtherIncome,
     
     // Tax deductions (debits from employee)
@@ -57,12 +57,12 @@ pub enum PayslipItemType {
     Medicare,
     UnemploymentTax,
     OtherTax,
-    
-    // Benefit deductions (debits from employee for benefits)
+      // Benefit deductions (debits from employee for benefits)
     HealthInsurance,
     RetirementContribution,
     LifeInsurance,
     UnionDues,
+    MealVouchers,
     OtherDeduction,
     
     // Employer contributions (not affecting employee net pay)
@@ -71,6 +71,9 @@ pub enum PayslipItemType {
     EmployerSocialSecurity,
     EmployerUnemployment,
     OtherEmployerContribution,
+    
+    // Net pay (final amount paid to employee)
+    NetPay,
 }
 
 impl PayslipItemType {
@@ -80,9 +83,9 @@ impl PayslipItemType {
             // Income accounts
             PayslipItemType::BaseSalary => "Income:Salary:Base Salary",
             PayslipItemType::Overtime => "Income:Salary:Overtime",
-            PayslipItemType::Bonus => "Income:Salary:Bonus",
-            PayslipItemType::Commission => "Income:Salary:Commission",
+            PayslipItemType::Bonus => "Income:Salary:Bonus",            PayslipItemType::Commission => "Income:Salary:Commission",
             PayslipItemType::Allowance => "Income:Salary:Allowance",
+            PayslipItemType::TransportReimbursement => "Income:Benefits:Transport",
             PayslipItemType::OtherIncome => "Income:Salary:Other",
             
             // Tax expense accounts
@@ -93,10 +96,9 @@ impl PayslipItemType {
             PayslipItemType::OtherTax => "Expenses:Taxes:Other",
             
             // Benefit expense accounts
-            PayslipItemType::HealthInsurance => "Expenses:Benefits:Health Insurance",
-            PayslipItemType::RetirementContribution => "Expenses:Benefits:Retirement",
-            PayslipItemType::LifeInsurance => "Expenses:Benefits:Life Insurance",
+            PayslipItemType::HealthInsurance => "Expenses:Benefits:Health Insurance",            PayslipItemType::RetirementContribution => "Expenses:Benefits:Retirement",            PayslipItemType::LifeInsurance => "Expenses:Benefits:Life Insurance",
             PayslipItemType::UnionDues => "Expenses:Benefits:Union Dues",
+            PayslipItemType::MealVouchers => "Expenses:Benefits:Meal Vouchers",
             PayslipItemType::OtherDeduction => "Expenses:Benefits:Other",
             
             // Employer contribution accounts (these are "income" to show total compensation)
@@ -105,17 +107,20 @@ impl PayslipItemType {
             PayslipItemType::EmployerSocialSecurity => "Income:Benefits:Social Security",
             PayslipItemType::EmployerUnemployment => "Income:Benefits:Unemployment",
             PayslipItemType::OtherEmployerContribution => "Income:Benefits:Other",
+            
+            // Net pay - configurable account
+            PayslipItemType::NetPay => "Assets:Current Assets:Checking",
         }
     }
-    
-    /// Check if this item affects the employee's net pay
+      /// Check if this item affects the employee's net pay
     pub fn affects_net_pay(&self) -> bool {
         !matches!(self, 
             PayslipItemType::EmployerHealthInsurance |
             PayslipItemType::EmployerRetirement |
             PayslipItemType::EmployerSocialSecurity |
             PayslipItemType::EmployerUnemployment |
-            PayslipItemType::OtherEmployerContribution
+            PayslipItemType::OtherEmployerContribution |
+            PayslipItemType::NetPay // NetPay is the result, not a contributor
         )
     }
 }

@@ -145,6 +145,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "csv",
+ "dotenv",
  "encoding_rs",
  "regex",
  "rust_decimal",

@@ -141,7 +141,7 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
                 .await?
         }
         "qt" => {
-            let importer = QtPayslipImporter::new()?;
+            let importer = QtPayslipImporter::new();
             payslip_import_service
                 .import_payslip(&importer, &args.file, &args.account, &args.user)
                 .await?

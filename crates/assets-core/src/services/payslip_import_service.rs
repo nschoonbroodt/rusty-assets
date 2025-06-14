@@ -77,10 +77,14 @@ impl PayslipImportService {
         let mut journal_entries = Vec::new();        // Ensure destination account exists (the checking account where net pay goes)
         let destination_account = self.account_service
             .get_account_by_path(destination_account_path)
-            .await?;
-
-        // Create journal entries for each payslip line item
-        for line_item in &payslip.line_items {            let account_path = line_item.account_mapping
+            .await?;        // Create journal entries for each payslip line item (except NetPay which is handled separately)
+        for line_item in &payslip.line_items {
+            // Skip NetPay line items as they are handled by the destination account
+            if matches!(line_item.item_type, crate::importers::PayslipItemType::NetPay) {
+                continue;
+            }
+            
+            let account_path = line_item.account_mapping
                 .as_ref()
                 .map(|s| s.as_str())
                 .unwrap_or(line_item.item_type.suggested_account_path());// Get or create the account for this line item
