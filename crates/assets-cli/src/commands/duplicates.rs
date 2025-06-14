@@ -1,6 +1,6 @@
 use anyhow::Result;
 use assets_core::{
-    Database, DeduplicationService, MatchStatus, MatchType, TransactionComparisonDetails,
+    Database, DeduplicationService, MatchStatus, MatchType,
 };
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
