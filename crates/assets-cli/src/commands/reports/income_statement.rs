@@ -9,7 +9,7 @@ use serde_json;
 pub(super) fn print_income_statement_table(data: &[IncomeStatementRow]) -> Result<()> {
     println!();
     println!("┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓");
-    println!("┃                             📊 INCOME STATEMENT                              ┃");
+    println!("┃                             📊 INCOME STATEMENT                                ┃");
     println!("┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛");
     println!();
 
