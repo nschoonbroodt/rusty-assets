@@ -1,0 +1,1 @@
+DROP VIEW IF EXISTS v_transactions_with_duplicates;

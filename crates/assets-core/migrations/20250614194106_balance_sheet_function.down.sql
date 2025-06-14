@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS balance_sheet_data(report_date DATE);

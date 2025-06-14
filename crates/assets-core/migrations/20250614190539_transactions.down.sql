@@ -1,0 +1,9 @@
+DROP INDEX IF EXISTS idx_transactions_is_duplicate;
+DROP INDEX IF EXISTS idx_transactions_merged_into;
+DROP INDEX IF EXISTS idx_transactions_import_source;
+DROP INDEX IF EXISTS idx_transactions_import_batch;
+DROP INDEX IF EXISTS idx_transactions_external_ref;
+DROP INDEX IF EXISTS idx_transactions_amount_date;
+DROP INDEX IF EXISTS idx_transactions_created_by;
+DROP INDEX IF EXISTS idx_transactions_date;
+DROP TABLE IF EXISTS transactions;
