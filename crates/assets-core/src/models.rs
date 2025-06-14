@@ -131,6 +131,10 @@ pub struct NewTransaction {
     pub transaction_date: DateTime<Utc>,
     pub created_by: Option<Uuid>, // User creating the transaction
     pub entries: Vec<NewJournalEntry>,
+    // Import tracking fields
+    pub import_source: Option<String>,
+    pub import_batch_id: Option<Uuid>,
+    pub external_reference: Option<String>,
 }
 
 /// Helper struct for creating new journal entries

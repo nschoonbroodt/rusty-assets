@@ -16,7 +16,6 @@ impl ImportService {
             transaction_service: TransactionService::new(db),
         }
     }
-
     /// Import transactions using the specified importer
     pub async fn import_transactions<T: TransactionImporter>(
         &self,
@@ -25,8 +24,14 @@ impl ImportService {
         target_account_path: &str,
         user_id: Uuid,
     ) -> Result<ImportSummary> {
+        // Generate a batch ID for this import
+        let import_batch_id = Uuid::new_v4();
+        let import_source = self.get_import_source_name(importer);
+
         println!("📁 Importing from: {}", file_path);
         println!("🏦 Target account: {}", target_account_path);
+        println!("📦 Import batch ID: {}", import_batch_id);
+        println!("🔍 Import source: {}", import_source);
 
         // Verify target account exists
         let target_account = self
@@ -40,10 +45,15 @@ impl ImportService {
         let mut skipped_count = 0;
         let mut errors = Vec::new();
         let total_count = imported.len();
-
         for imported_tx in imported {
             match self
-                .create_transaction_from_import(&imported_tx, &target_account.id, user_id)
+                .create_transaction_from_import(
+                    &imported_tx,
+                    &target_account.id,
+                    user_id,
+                    import_batch_id,
+                    &import_source,
+                )
                 .await
             {
                 Ok(_) => {
@@ -70,10 +80,11 @@ impl ImportService {
         imported: &ImportedTransaction,
         target_account_id: &Uuid,
         user_id: Uuid,
+        import_batch_id: Uuid,
+        import_source: &str,
     ) -> Result<Uuid> {
         // Convert naive date to DateTime<Utc>
         let transaction_date = imported.date_op.and_hms_opt(12, 0, 0).unwrap().and_utc();
-
         let new_transaction = if self.is_card_transaction(&imported.description) {
             // Handle deferred debit card transactions
             let card_account_id = self.get_or_create_deferred_card_account().await?;
@@ -84,7 +95,7 @@ impl ImportService {
             // Card purchase: Expense account (debit) / Card liability account (credit)
             // The bank account is not immediately affected
             let abs_amount = imported.amount.abs();
-            TransactionService::create_simple_transaction(
+            TransactionService::create_simple_transaction_with_import(
                 imported.description.clone(),
                 expense_account_id, // debit (expense)
                 card_account_id,    // credit (increase liability)
@@ -92,6 +103,9 @@ impl ImportService {
                 transaction_date,
                 None,
                 Some(user_id),
+                Some(import_source.to_string()),
+                Some(import_batch_id),
+                Some(imported.description.clone()),
             )
         } else if self.is_card_settlement_transaction(&imported.description) {
             // Handle monthly card settlement
@@ -99,7 +113,7 @@ impl ImportService {
 
             // Card settlement: Card liability account (debit) / Bank account (credit)
             let abs_amount = imported.amount.abs();
-            TransactionService::create_simple_transaction(
+            TransactionService::create_simple_transaction_with_import(
                 imported.description.clone(),
                 card_account_id,    // debit (reduce liability)
                 *target_account_id, // credit (money out of bank)
@@ -107,6 +121,9 @@ impl ImportService {
                 transaction_date,
                 None,
                 Some(user_id),
+                Some(import_source.to_string()),
+                Some(import_batch_id),
+                Some(imported.description.clone()),
             )
         } else {
             // Handle regular transactions (not card-related)
@@ -114,7 +131,7 @@ impl ImportService {
 
             if imported.amount > Decimal::ZERO {
                 // Money coming in: debit target account, credit other account
-                TransactionService::create_simple_transaction(
+                TransactionService::create_simple_transaction_with_import(
                     imported.description.clone(),
                     *target_account_id, // debit (money in)
                     other_account_id,   // credit (income source)
@@ -122,11 +139,14 @@ impl ImportService {
                     transaction_date,
                     None,
                     Some(user_id),
+                    Some(import_source.to_string()),
+                    Some(import_batch_id),
+                    Some(imported.description.clone()),
                 )
             } else {
                 // Money going out: debit other account, credit target account
                 let abs_amount = imported.amount.abs();
-                TransactionService::create_simple_transaction(
+                TransactionService::create_simple_transaction_with_import(
                     imported.description.clone(),
                     other_account_id,   // debit (expense)
                     *target_account_id, // credit (money out)
@@ -134,6 +154,9 @@ impl ImportService {
                     transaction_date,
                     None,
                     Some(user_id),
+                    Some(import_source.to_string()),
+                    Some(import_batch_id),
+                    Some(imported.description.clone()),
                 )
             }
         };
@@ -153,11 +176,12 @@ impl ImportService {
         // Handle monthly card settlement transactions
         if self.is_card_settlement_transaction(&imported.description) {
             return self.get_or_create_deferred_card_account().await;
-        }
-
-        // Handle internal transfers (VIR transactions) - these go to other accounts
+        } // Handle internal transfers (VIR transactions) - these go to other accounts
         if self.is_internal_transfer(&imported.description) {
             return self.get_or_create_transfers_pending_account().await;
+        } // Handle salary payments - use receivable account to clear accrual
+        if self.is_salary_payment(&imported.description) && imported.amount > Decimal::ZERO {
+            return self.get_or_create_salary_receivable_account().await;
         }
 
         // Map BoursoBank categories to our account structure
@@ -348,6 +372,61 @@ impl ImportService {
                 Ok(fallback_account.id)
             }
         }
+    }
+
+    /// Get or create the salary receivable account
+    async fn get_or_create_salary_receivable_account(&self) -> Result<Uuid> {
+        match self
+            .account_service
+            .get_account_by_path("Assets:Salary Receivable")
+            .await
+        {
+            Ok(account) => Ok(account.id),
+            Err(_) => {
+                // Create the account if it doesn't exist
+                let parent = self.account_service.get_account_by_path("Assets").await?;
+                let new_account = crate::models::NewAccount {
+                    name: "Salary Receivable".to_string(),
+                    parent_id: Some(parent.id),
+                    account_type: crate::models::AccountType::Asset,
+                    account_subtype: crate::models::AccountSubtype::OtherAsset,
+                    symbol: None,
+                    quantity: None,
+                    average_cost: None,
+                    address: None,
+                    purchase_date: None,
+                    purchase_price: None,
+                    currency: "EUR".to_string(),
+                    notes: Some("Accrued salary payments to be received".to_string()),
+                };
+                let account = self.account_service.create_account(new_account).await?;
+                Ok(account.id)
+            }
+        }
+    }
+
+    /// Get a clean import source name from the importer type
+    fn get_import_source_name<T: TransactionImporter>(&self, importer: &T) -> String {
+        let description = importer.format_description();
+        // Extract just the bank name from format description
+        if description.contains("BoursoBank") {
+            "BoursoBank".to_string()
+        } else if description.contains("Société Générale") {
+            "SocieteGenerale".to_string()
+        } else {
+            "Unknown".to_string()
+        }
+    }
+
+    /// Check if a transaction description indicates a salary payment
+    fn is_salary_payment(&self, description: &str) -> bool {
+        let description_lower = description.to_lowercase();
+
+        // Check for Qt Company salary patterns
+        description_lower.contains("qt company") ||
+        description_lower.contains("the qt company") ||
+        // Add other salary payment patterns as needed
+        (description_lower.contains("vir sepa") && description_lower.contains("qt"))
     }
 }
 

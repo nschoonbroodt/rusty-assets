@@ -290,8 +290,7 @@ impl SampleDataService {
         }
 
         // Sample transactions - use names as keys for account_ids map
-        let transactions = vec![
-            // 1. Salary payment
+        let transactions = vec![            // 1. Salary payment
             NewTransaction {
                 description: "Monthly salary payment".to_string(),
                 reference: Some("PAY-2025-01".to_string()),
@@ -309,6 +308,9 @@ impl SampleDataService {
                         memo: Some("Monthly salary".to_string()),
                     },
                 ],
+                import_source: None,
+                import_batch_id: None,
+                external_reference: None,
             },
             // 2. Grocery purchase
             NewTransaction {
@@ -326,8 +328,10 @@ impl SampleDataService {
                         account_id: account_ids["Credit Card"],
                         amount: Decimal::from_str("-150.00").unwrap(),
                         memo: Some("Grocery payment".to_string()),
-                    },
-                ],
+                    },                ],
+                import_source: None,
+                import_batch_id: None,
+                external_reference: None,
             },
             // 3. Restaurant meal
             NewTransaction {
@@ -347,6 +351,9 @@ impl SampleDataService {
                         memo: Some("Restaurant payment".to_string()),
                     },
                 ],
+                import_source: None,
+                import_batch_id: None,
+                external_reference: None,
             },
             // 4. Gas purchase
             NewTransaction {
@@ -366,6 +373,9 @@ impl SampleDataService {
                         memo: Some("Gas payment".to_string()),
                     },
                 ],
+                import_source: None,
+                import_batch_id: None,
+                external_reference: None,
             },
         ]; // Create each transaction
         for transaction in transactions {

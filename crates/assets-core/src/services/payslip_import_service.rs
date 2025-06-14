@@ -134,8 +134,7 @@ impl PayslipImportService {
         journal_entries.push(NewJournalEntry {
             account_id: destination_account.id,
             amount: payslip.net_salary,
-            memo: Some(format!("Net salary - {}", payslip.employer_name)),
-        }); // Create the transaction
+            memo: Some(format!("Net salary - {}", payslip.employer_name)),        }); // Create the transaction
         let transaction_request = NewTransaction {
             description: format!(
                 "Payslip - {} ({} to {})",
@@ -151,6 +150,9 @@ impl PayslipImportService {
             transaction_date: payslip.pay_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
             created_by: Some(user_id),
             entries: journal_entries,
+            import_source: Some("Payslip".to_string()),
+            import_batch_id: None, // Payslips are imported individually
+            external_reference: Some(format!("PAYSLIP-{}", payslip.pay_date.format("%Y%m%d"))),
         };
 
         let result = self

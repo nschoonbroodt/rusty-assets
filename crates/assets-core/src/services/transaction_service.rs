@@ -31,11 +31,10 @@ impl TransactionService {
         }
 
         let mut tx = self.pool.begin().await?; // Insert transaction header
-        let transaction_id = Uuid::new_v4();
-        let transaction = sqlx::query_as::<_, Transaction>(
+        let transaction_id = Uuid::new_v4();        let transaction = sqlx::query_as::<_, Transaction>(
             r#"
-            INSERT INTO transactions (id, description, reference, transaction_date, created_by)
-            VALUES ($1, $2, $3, $4, $5)
+            INSERT INTO transactions (id, description, reference, transaction_date, created_by, import_source, import_batch_id, external_reference)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING id, description, reference, transaction_date, created_by, created_at
             "#,
         )
@@ -44,6 +43,9 @@ impl TransactionService {
         .bind(&new_transaction.reference)
         .bind(new_transaction.transaction_date)
         .bind(new_transaction.created_by)
+        .bind(&new_transaction.import_source)
+        .bind(&new_transaction.import_batch_id)
+        .bind(&new_transaction.external_reference)
         .fetch_one(&mut *tx)
         .await?; // Insert journal entries
         let mut entries = Vec::new();
@@ -369,6 +371,41 @@ impl TransactionService {
         transaction_date: DateTime<Utc>,
         reference: Option<String>,
         created_by: Option<Uuid>,
+    ) -> NewTransaction {        NewTransaction {
+            description,
+            reference,
+            transaction_date,
+            created_by,
+            entries: vec![
+                NewJournalEntry {
+                    account_id: debit_account_id,
+                    amount,
+                    memo: None,
+                },
+                NewJournalEntry {
+                    account_id: credit_account_id,
+                    amount: -amount,
+                    memo: None,
+                },
+            ],
+            import_source: None,
+            import_batch_id: None,
+            external_reference: None,
+        }
+    }
+
+    /// Helper: Create a simple two-account transaction with import metadata
+    pub fn create_simple_transaction_with_import(
+        description: String,
+        debit_account_id: Uuid,
+        credit_account_id: Uuid,
+        amount: Decimal,
+        transaction_date: DateTime<Utc>,
+        reference: Option<String>,
+        created_by: Option<Uuid>,
+        import_source: Option<String>,
+        import_batch_id: Option<Uuid>,
+        external_reference: Option<String>,
     ) -> NewTransaction {
         NewTransaction {
             description,
@@ -387,6 +424,9 @@ impl TransactionService {
                     memo: None,
                 },
             ],
+            import_source,
+            import_batch_id,
+            external_reference,
         }
     }
 }

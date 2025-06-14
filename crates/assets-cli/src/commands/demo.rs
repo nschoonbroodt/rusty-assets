@@ -65,9 +65,7 @@ pub async fn demo_double_entry() -> Result<()> {
     use assets_core::{NewJournalEntry, NewTransaction};
     let stock_price = Decimal::from_str("2500.00")?;
     let trading_fee = Decimal::from_str("9.99")?;
-    let total_cost = stock_price + trading_fee;
-
-    let investment_transaction = NewTransaction {
+    let total_cost = stock_price + trading_fee;    let investment_transaction = NewTransaction {
         description: "Purchase 15 shares of AAPL with trading fee".to_string(),
         reference: Some("TXN-20250611-001".to_string()),
         transaction_date: Utc::now(),
@@ -83,15 +81,17 @@ pub async fn demo_double_entry() -> Result<()> {
             NewJournalEntry {
                 account_id: Uuid::new_v4(), // Trading fees expense account
                 amount: trading_fee,        // +€9.99
-                memo: Some("Brokerage trading fee".to_string()),
-            },
+                memo: Some("Brokerage trading fee".to_string()),            },
             // Credit: Checking Account (Asset decreases)
             NewJournalEntry {
                 account_id: Uuid::new_v4(), // Checking account
                 amount: -total_cost,        // -€2,509.99
-                memo: Some("Total payment for stock purchase".to_string()),
+                memo: Some("Stock purchase payment".to_string()),
             },
         ],
+        import_source: None,
+        import_batch_id: None,
+        external_reference: None,
     };
 
     println!("   Debit:  AAPL Stock          +€2,500.00");

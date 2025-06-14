@@ -283,8 +283,7 @@ impl QtPayslipImporter {
                 if let (Some(&month_num), Ok(year)) = (
                     french_months.get(month_str.as_str()),
                     year_str.parse::<i32>(),
-                ) {
-                    return Ok(NaiveDate::from_ymd_opt(year, month_num, 1)
+                ) {                    return Ok(NaiveDate::from_ymd_opt(year, month_num, 25)
                         .ok_or_else(|| CoreError::ImportError("Invalid date".to_string()))?);
                 }
             }

@@ -1,5 +1,61 @@
 # Actual Todo
 
+## Duplicate Transaction Detection and Management - ✅ COMPLETED
+
+### Core Deduplication System - ✅ COMPLETED
+- ✅ **Created comprehensive transaction deduplication database schema**
+  - Added import metadata fields (import_source, import_batch_id, external_reference) to transactions table
+  - Created transaction_matches table to track duplicate relationships
+  - Added confidence scoring and match type classification (Exact, Probable, Possible)
+  - Added status tracking (Pending, Confirmed, Rejected) for user review
+- ✅ **Implemented SQL function for intelligent duplicate detection**
+  - Smart matching algorithm using amount tolerance, date range, and text similarity
+  - Configurable thresholds for flexible detection
+  - Cross-source duplicate detection (prevents matching within same import source)
+  - Confidence scoring based on multiple criteria (amount, date, description similarity)
+- ✅ **Built comprehensive DeduplicationService in Rust**
+  - find_potential_duplicates() with configurable tolerances
+  - create_transaction_match() for manual and automatic match creation
+  - update_match_status() for confirm/reject workflows
+  - detect_duplicates_for_batch() for automatic detection on import batches
+  - get_transactions_with_duplicates() for overview and management
+- ✅ **Extended import services to track source metadata**
+  - Updated NewTransaction model with import tracking fields
+  - Modified ImportService to generate batch IDs and track import sources
+  - Updated PayslipImportService to include source information
+  - All new transactions now include import provenance for deduplication
+
+### CLI Interface for Duplicate Management - ✅ COMPLETED
+- ✅ **Created comprehensive 'duplicates' CLI command suite**
+  - `duplicates find` - Find potential duplicates for a specific transaction
+  - `duplicates list` - List all transactions with duplicate information
+  - `duplicates show` - Show detailed duplicate information for a transaction
+  - `duplicates confirm/reject` - Manually confirm or reject duplicate matches
+  - `duplicates detect` - Run automatic detection on import batches
+- ✅ **User-friendly table output with confidence percentages and status indicators**
+- ✅ **Integration with existing transaction and import workflows**
+
+### Smart Duplicate Detection Features - ✅ COMPLETED
+- ✅ **Multi-criteria matching algorithm**
+  - Amount tolerance (configurable, default ±€0.01)
+  - Date tolerance (configurable, default ±3 days)
+  - Description text similarity using PostgreSQL pg_trgm extension
+  - Cross-source detection (bank vs payslip, bank1 vs bank2)
+- ✅ **Confidence-based categorization**
+  - Exact matches (95%+): Same amount, same date, high text similarity
+  - Probable matches (80%+): Close amount/date, good text similarity
+  - Possible matches (60%+): Within tolerances but less certain
+- ✅ **Automatic processing options**
+  - Auto-confirm exact matches for high-confidence scenarios
+  - Batch processing for efficient import workflows
+  - Manual review workflow for uncertain matches
+
+### Example Use Cases Solved - ✅ COMPLETED
+- ✅ **Salary transactions**: Payslip import + bank statement import detection
+- ✅ **Bank transfers**: Transfer from Bank A to Bank B appearing in both statements
+- ✅ **Card transactions**: Deferred card vs immediate bank account detection
+- ✅ **Manual vs imported**: Preventing duplicates between manual entry and imports
+
 ## Review balance sheet account sign conventions
 
 The balance sheet is showing some asset accounts (BoursoBank, SG) with negative balances, which doesn't follow standard accounting conventions. Need to review:

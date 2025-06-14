@@ -1106,9 +1106,7 @@ pub async fn set_account_opening_balance(
         AccountType::Asset => (amount, -amount), // Debit asset, Credit opening balance
         AccountType::Liability => (-amount, amount), // Credit liability, Debit opening balance
         _ => return Err(anyhow::anyhow!("Opening balances are only supported for Asset and Liability accounts")),
-    };
-
-    let transaction = NewTransaction {
+    };    let transaction = NewTransaction {
         description: format!("Opening balance for {}", account.name),
         reference: Some("OPENING".to_string()),
         transaction_date: transaction_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
@@ -1125,6 +1123,9 @@ pub async fn set_account_opening_balance(
                 memo: Some(format!("Opening balance for {}", account.name)),
             },
         ],
+        import_source: None,
+        import_batch_id: None,
+        external_reference: None,
     };
 
     // Validate the transaction balances
