@@ -163,6 +163,12 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
                 .import_payslip(&importer, &args.file, &destinations, &args.user)
                 .await?
         }
+        "mathworks" => {
+            let importer = assets_core::importers::MathWorksPayslipImporter::new();
+            payslip_import_service
+                .import_payslip(&importer, &args.file, &destinations, &args.user)
+                .await?
+        }
         _ => {
             return Err(anyhow::anyhow!(
                 "Unknown payslip importer: {}. Available: generic, qt",
