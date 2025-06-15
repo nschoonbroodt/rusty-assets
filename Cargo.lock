@@ -126,6 +126,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "assets-core",
+ "assets-demo",
  "chrono",
  "clap",
  "comfy-table",
@@ -160,6 +161,15 @@ dependencies = [
  "thiserror",
  "tokio",
  "uuid",
+]
+
+[[package]]
+name = "assets-demo"
+version = "0.1.0"
+dependencies = [
+ "assets-core",
+ "log",
+ "tokio",
 ]
 
 [[package]]
