@@ -133,6 +133,7 @@ impl SocietegeneraleCsvRecord {
 }
 
 fn categorize_sg_transaction(libelle: &str, detail: &str) -> String {
+    // TODO: Improve categorization
     let text = format!("{} {}", libelle, detail).to_lowercase();
 
     // Bank transfers and internal operations
