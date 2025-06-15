@@ -4,7 +4,8 @@ use rust_decimal::Decimal;
 
 mod commands;
 use commands::{
-    accounts::*, db::*, demo::*, duplicates::*, import::*, prices, reports::*, transactions::*, users::*,
+    accounts::*, db::*, demo::*, duplicates::*, import::*, prices, reports::*, transactions::*,
+    users::*,
 };
 
 #[derive(Parser)]
@@ -50,7 +51,8 @@ enum Commands {
     Transactions {
         #[command(subcommand)]
         action: TransactionCommands,
-    },    /// Import bank transactions
+    },
+    /// Import bank transactions
     Import {
         #[command(subcommand)]
         action: ImportCommands,
@@ -121,7 +123,7 @@ enum AccountCommands {
         /// Account path (e.g., "Assets:Current Assets:BoursoBank")
         account_path: String,
         /// Opening balance amount
-        #[arg(long)]
+        #[arg(long, allow_hyphen_values = true)]
         amount: Decimal,
         /// Date for the opening balance (default: January 1st of current year)
         #[arg(long)]
@@ -296,7 +298,8 @@ async fn main() -> Result<()> {
             ReportCommands::InvestmentPerformance { params } => {
                 generate_investment_performance(params).await?;
             }
-        },        Commands::Users { action } => handle_user_command(action).await?,
+        },
+        Commands::Users { action } => handle_user_command(action).await?,
         Commands::Transactions { action } => handle_transaction_command(action).await?,
         Commands::Import { action } => handle_import_command(action).await?,
         Commands::Duplicates { action } => handle_duplicate_command(action).await?,

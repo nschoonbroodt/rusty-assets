@@ -279,72 +279,6 @@ impl ImportService {
     }
     async fn determine_other_account(&self, imported: &ImportedTransaction) -> Result<Uuid> {
         // Modified to put everything in the account
-
-        /*/
-
-        // Handle deferred debit card transactions
-        if self.is_card_transaction(&imported.description) {
-            return self.get_or_create_deferred_card_account().await;
-        }
-
-        // Handle monthly card settlement transactions
-        if self.is_card_settlement_transaction(&imported.description) {
-            return self.get_or_create_deferred_card_account().await;
-        } // Handle internal transfers (VIR transactions) - these go to other accounts
-        if self.is_internal_transfer(&imported.description) {
-            return self.get_or_create_transfers_pending_account().await;
-        } // Handle salary payments - use receivable account to clear accrual
-        if self.is_salary_payment(&imported.description) && imported.amount > Decimal::ZERO {
-            return self.get_or_create_salary_receivable_account().await;
-        }
-
-        // Map BoursoBank categories to our account structure
-        let account_path = match (
-            &imported.category_parent,
-            &imported.category,
-            imported.amount > Decimal::ZERO,
-        ) {
-            // Income categories
-            (Some(parent), _, true) if parent.contains("Virements reçus") => "Income:Salary",
-            (Some(parent), _, true) if parent.contains("Revenus d'épargne") => "Income:Investment",
-
-            // Expense categories based on BoursoBank categorization
-            (Some(parent), Some(category), false) => match parent.as_str() {
-                "Vie quotidienne" => match category.as_str() {
-                    "Alimentation" => "Expenses:Food:Groceries",
-                    "Vêtements et accessoires" => "Expenses:Personal:Clothing",
-                    "Bricolage et jardinage" => "Expenses:Home:Maintenance",
-                    "Equipements sportifs et artistiques" => "Expenses:Personal:Sports",
-                    _ => "Expenses:Personal:Other",
-                },
-                "Loisirs et sorties" => match category.as_str() {
-                    "Restaurants, bars, discothèques…" => "Expenses:Food:Restaurants",
-                    _ => "Expenses:Entertainment",
-                },
-                "Voyages & Transports" => match category.as_str() {
-                    "Hébergement (hôtels, camping…)" => "Expenses:Travel:Accommodation",
-                    "Taxis" => "Expenses:Transportation:Taxi",
-                    "Transports quotidiens (métro, bus…)" => "Expenses:Transportation:Public",
-                    _ => "Expenses:Travel",
-                },
-                "Auto & Moto" => match category.as_str() {
-                    "Carburant" => "Expenses:Transportation:Fuel",
-                    "Parking" => "Expenses:Transportation:Parking",
-                    "Péages" => "Expenses:Transportation:Tolls",
-                    _ => "Expenses:Transportation:Other",
-                },
-                "Abonnements & téléphonie" => "Expenses:Utilities:Subscriptions",
-                "Logement" => "Expenses:Housing:Mortgage",
-                "Services financiers & professionnels" => "Expenses:Financial:Fees",
-                "Dépenses d'épargne" => "Assets:Savings:Insurance",
-                "Mouvements internes débiteurs" => "Assets:Transfers:Pending",
-                _ => "Expenses:Uncategorized",
-            },
-
-            // Fallback
-            (_, _, true) => "Income:Other",
-            (_, _, false) => "Expenses:Uncategorized",
-        };*/
         let account_path = "Equity:Uncategorized";
 
         // Try to get the account, create if it doesn't exist
@@ -457,70 +391,6 @@ impl ImportService {
             }
         }
     }
-    /// Check if a transaction description indicates an internal transfer
-    fn is_internal_transfer(&self, description: &str) -> bool {
-        // Only catch actual internal transfers between your own accounts
-        description.contains("Virement interne") 
-            || description.contains("Versement initial")
-            || description.starts_with("VIR INST")  // VIR INST = internal institutional transfer
-            || (description.starts_with("VIR ") && description.contains("depuis")) // VIR depuis = from another account
-    }
-
-    /// Get or create the transfers pending account for internal transfers
-    async fn get_or_create_transfers_pending_account(&self) -> Result<Uuid> {
-        let transfers_account_path = "Assets:Transfers:Pending";
-
-        match self
-            .account_service
-            .get_account_by_path(transfers_account_path)
-            .await
-        {
-            Ok(account) => Ok(account.id),
-            Err(_) => {
-                // Account doesn't exist, create it or use fallback
-                println!(
-                    "⚠️  Transfers account '{}' doesn't exist. Using fallback.",
-                    transfers_account_path
-                );
-                let fallback_account = self
-                    .account_service
-                    .get_account_by_path("Expenses:Uncategorized")
-                    .await?;
-                Ok(fallback_account.id)
-            }
-        }
-    }
-
-    /// Get or create the salary receivable account
-    async fn get_or_create_salary_receivable_account(&self) -> Result<Uuid> {
-        match self
-            .account_service
-            .get_account_by_path("Assets:Salary Receivable")
-            .await
-        {
-            Ok(account) => Ok(account.id),
-            Err(_) => {
-                // Create the account if it doesn't exist
-                let parent = self.account_service.get_account_by_path("Assets").await?;
-                let new_account = crate::models::NewAccount {
-                    name: "Salary Receivable".to_string(),
-                    parent_id: Some(parent.id),
-                    account_type: crate::models::AccountType::Asset,
-                    account_subtype: crate::models::AccountSubtype::OtherAsset,
-                    symbol: None,
-                    quantity: None,
-                    average_cost: None,
-                    address: None,
-                    purchase_date: None,
-                    purchase_price: None,
-                    currency: "EUR".to_string(),
-                    notes: Some("Accrued salary payments to be received".to_string()),
-                };
-                let account = self.account_service.create_account(new_account).await?;
-                Ok(account.id)
-            }
-        }
-    }
 
     /// Get a clean import source name from the importer type
     fn get_import_source_name<T: TransactionImporter>(&self, importer: &T) -> String {
@@ -533,17 +403,6 @@ impl ImportService {
         } else {
             "Unknown".to_string()
         }
-    }
-
-    /// Check if a transaction description indicates a salary payment
-    fn is_salary_payment(&self, description: &str) -> bool {
-        let description_lower = description.to_lowercase();
-
-        // Check for Qt Company salary patterns
-        description_lower.contains("qt company") ||
-        description_lower.contains("the qt company") ||
-        // Add other salary payment patterns as needed
-        (description_lower.contains("vir sepa") && description_lower.contains("qt"))
     }
 }
 
