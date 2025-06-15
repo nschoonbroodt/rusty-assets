@@ -98,7 +98,7 @@ async fn import_boursobank(args: BoursoBankArgs) -> Result<()> {
     let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
-    let importer = BoursoBankImporter::new(args.account.clone());
+    let importer = BoursoBankImporter::new();
 
     let summary = import_service
         .import_transactions(&importer, &args.file, &args.account, user_id)
@@ -122,7 +122,7 @@ async fn import_sg(args: SgArgs) -> Result<()> {
     let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
-    let importer = SocietegeneraleImporter::new(args.account.clone());
+    let importer = SocietegeneraleImporter::new();
 
     let summary = import_service
         .import_transactions(&importer, &args.file, &args.account, user_id)

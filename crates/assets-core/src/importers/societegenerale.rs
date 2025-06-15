@@ -7,15 +7,11 @@ use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-pub struct SocietegeneraleImporter {
-    pub default_account_path: String,
-}
+pub struct SocietegeneraleImporter {}
 
 impl SocietegeneraleImporter {
-    pub fn new(default_account_path: String) -> Self {
-        Self {
-            default_account_path,
-        }
+    pub fn new() -> Self {
+        Self {}
     }
 }
 
