@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use regex::Regex;
 use rust_decimal::Decimal;
+use rust_decimal::prelude::FromPrimitive;
 use std::collections::HashMap;
 use std::process::Command;
 use std::str::FromStr;
@@ -266,6 +267,9 @@ impl QtPayslipImporter {
                 // The employee deduction should be one of the larger amounts
                 if let Some(&amount) = amounts.iter().find(|&&a| a > Decimal::new(50, 0)) {
                     employee_contribution = amount;
+                    employer_contribution = employee_contribution
+                        .checked_mul(Decimal::from_f64(7.26 / 4.84).unwrap())
+                        .unwrap();
                     println!("🎫 Found tickets restaurant employee: {} €", amount);
                 }
 

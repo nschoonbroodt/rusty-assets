@@ -57,7 +57,6 @@ pub struct SgArgs {
 #[derive(Args)]
 pub struct PayslipArgs {
     /// Path to the payslip file to import
-    #[arg(short, long)]
     file: String,
     /// Username (instead of UUID)
     #[arg(short, long)]
@@ -70,7 +69,7 @@ pub struct PayslipArgs {
     main_account: String,
     #[arg(short = 's', long = "social-contributions")]
     social_contributions_expense: String,
-    #[arg(short = 'i', long = "imcome-taxes")]
+    #[arg(short = 'i', long = "income-taxes")]
     revenue_taxes_expense: String,
     #[arg(short = 'm', long = "meal-vouchers")]
     meal_vouchers_account: String,

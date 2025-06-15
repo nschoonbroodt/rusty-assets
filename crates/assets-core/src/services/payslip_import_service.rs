@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::importers::{ImportedPayslip, PayslipImporter};
 use crate::models::{NewJournalEntry, NewTransaction};
 use crate::services::{AccountService, TransactionService, UserService};
-use chrono::NaiveDate;
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -77,7 +76,7 @@ impl PayslipImportService {
         destination_account: &DestinationAccount,
         user_id: Uuid,
     ) -> Result<Uuid> {
-        let mut entries = vec![
+        let entries = vec![
             (
                 &destination_account.fixed_gross,
                 -payslip.gross_fixed_salary,
