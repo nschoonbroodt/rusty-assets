@@ -3,6 +3,7 @@ use crate::importers::{ImportedTransaction, TransactionImporter};
 use crate::services::{
     AccountService, DeduplicationService, FileImportService, TransactionService,
 };
+use log::{error, info, warn};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -34,10 +35,10 @@ impl ImportService {
         let import_batch_id = Uuid::new_v4();
         let import_source = self.get_import_source_name(importer);
 
-        println!("📁 Importing from: {}", file_path);
-        println!("🏦 Target account: {}", target_account_path);
-        println!("📦 Import batch ID: {}", import_batch_id);
-        println!("🔍 Import source: {}", import_source);
+        info!("📁 Importing from: {}", file_path);
+        info!("🏦 Target account: {}", target_account_path);
+        info!("📦 Import batch ID: {}", import_batch_id);
+        info!("🔍 Import source: {}", import_source);
 
         // Check if file has already been imported
         let file_hash = FileImportService::calculate_file_hash(file_path)?;
@@ -51,6 +52,7 @@ impl ImportService {
                 .get_imported_file_by_hash(&file_hash)
                 .await?
             {
+                error!("File already imported: {}", existing_file.file_name);
                 return Err(crate::error::CoreError::ImportError(format!(
                     "File already imported on {} from source '{}'. {} transactions were imported. File: {}",
                     existing_file.imported_at.format("%Y-%m-%d %H:%M:%S"),
@@ -69,7 +71,7 @@ impl ImportService {
 
         // Import raw transactions
         let imported = importer.import_from_file(file_path).await?;
-        println!("📊 Found {} transactions", imported.len());
+        info!("📊 Found {} transactions", imported.len());
 
         let mut created_count = 0;
         let mut skipped_count = 0;
@@ -89,7 +91,7 @@ impl ImportService {
                 Ok(_) => {
                     created_count += 1;
                     if created_count % 10 == 0 {
-                        println!("  ✅ Processed {} transactions...", created_count);
+                        info!("  ✅ Processed {} transactions...", created_count);
                     }
                 }
                 Err(e) => {
@@ -115,10 +117,10 @@ impl ImportService {
             self.file_import_service
                 .record_file_import(file_metadata)
                 .await?;
-            println!("📝 File import recorded in database");
+            info!("📝 File import recorded in database");
 
             // Automatically run duplicate detection on the imported batch
-            println!("🔍 Running automatic duplicate detection...");
+            info!("🔍 Running automatic duplicate detection...");
             match self
                 .deduplication_service
                 .detect_duplicates_for_batch(import_batch_id, true) // Auto-confirm exact matches
@@ -154,25 +156,25 @@ impl ImportService {
                             })
                             .count();
 
-                        println!("🎯 Detected {} potential duplicate(s):", matches.len());
+                        info!("🎯 Detected {} potential duplicate(s):", matches.len());
                         if exact_count > 0 {
-                            println!("   📌 {} exact match(es) - auto-confirmed", exact_count);
+                            info!("   📌 {} exact match(es) - auto-confirmed", exact_count);
                         }
                         if probable_count > 0 {
-                            println!("   🟡 {} probable match(es) - needs review", probable_count);
+                            info!("   🟡 {} probable match(es) - needs review", probable_count);
                         }
                         if possible_count > 0 {
-                            println!("   🟠 {} possible match(es) - needs review", possible_count);
+                            info!("   🟠 {} possible match(es) - needs review", possible_count);
                         }
-                        println!("💡 Use 'assets-cli duplicates list --only-duplicates' to review");
+                        info!("💡 Use 'assets-cli duplicates list --only-duplicates' to review");
                     } else {
-                        println!("✅ No duplicates detected in this import");
+                        info!("✅ No duplicates detected in this import");
                     }
                 }
                 Err(e) => {
-                    println!("⚠️  Duplicate detection failed: {}", e);
-                    println!(
-                        "   Import was successful, but you may want to run 'assets-cli duplicates detect' manually"
+                    warn!("Duplicate detection failed: {}", e);
+                    warn!(
+                        "Import was successful, but you may want to run 'assets-cli duplicates detect' manually"
                     );
                 }
             }
@@ -379,8 +381,8 @@ impl ImportService {
             Err(_) => {
                 // Account doesn't exist, create it
                 // For now, return a fallback account - in production you'd want to create the hierarchy
-                println!(
-                    "⚠️  Deferred card account '{}' doesn't exist. Using fallback.",
+                warn!(
+                    "Deferred card account '{}' doesn't exist. Using fallback.",
                     card_account_path
                 );
                 let fallback_account = self
@@ -416,17 +418,17 @@ pub struct ImportSummary {
 
 impl ImportSummary {
     pub fn print_summary(&self) {
-        println!("\n📊 Import Summary:");
-        println!("   Total transactions: {}", self.total);
-        println!("   Created: ✅ {}", self.created);
+        info!("\n📊 Import Summary:");
+        info!("   Total transactions: {}", self.total);
+        info!("   Created: ✅ {}", self.created);
         if self.skipped > 0 {
-            println!("   Skipped: ⚠️ {}", self.skipped);
+            info!("   Skipped: ⚠️ {}", self.skipped);
         }
 
         if !self.errors.is_empty() {
-            println!("\n❌ Errors:");
+            error!("\n❌ Errors:");
             for error in &self.errors {
-                println!("   {}", error);
+                error!("   {}", error);
             }
         }
     }

@@ -2,6 +2,7 @@ use crate::error::{CoreError, Result};
 use crate::importers::{ImportedPayslip, PayslipImporter};
 use async_trait::async_trait;
 use chrono::NaiveDate;
+use log::{debug, info, warn};
 use regex::Regex;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
@@ -22,7 +23,7 @@ impl PayslipImporter for MathWorksPayslipImporter {
     }
 
     async fn import_from_file(&self, file_path: &str) -> Result<ImportedPayslip> {
-        println!("🧮 Importing MathWorks Payslip from PDF...");
+        info!("Importing MathWorks Payslip from PDF...");
 
         let text = self.extract_text_from_pdf(file_path)?;
         let pay_date = self.extract_pay_date(&text)?;
@@ -33,8 +34,8 @@ impl PayslipImporter for MathWorksPayslipImporter {
         let total_gross = gross_fixed_salary + gross_variable_salary.values().sum::<Decimal>();
 
         if (imported_total_gross_salary - total_gross).abs() > Decimal::new(1, 0) {
-            println!(
-                "⚠️  Warning: Total gross salary ({}) doesn't match reported total gross ({})",
+            warn!(
+                "Total gross salary ({}) doesn't match reported total gross ({})",
                 total_gross, imported_total_gross_salary
             );
             gross_variable_salary.insert(
@@ -52,22 +53,22 @@ impl PayslipImporter for MathWorksPayslipImporter {
 
         let net_paid_salary = self.extract_net_paid_salary(&text)?;
 
-        println!("✅ Successfully extracted MathWorks payslip data:");
-        println!("   Pay date: {}", pay_date);
-        println!("   Base Salary: {}", gross_fixed_salary);
-        println!("   Variable Salary: {:?}", gross_variable_salary);
-        println!("   Total Gross Salary: {}", imported_total_gross_salary);
-        println!(
+        info!("✅ Successfully extracted MathWorks payslip data:");
+        debug!("   Pay date: {}", pay_date);
+        debug!("   Base Salary: {}", gross_fixed_salary);
+        debug!("   Variable Salary: {:?}", gross_variable_salary);
+        info!("   Total Gross Salary: {}", imported_total_gross_salary);
+        debug!(
             "   Total Social Contributions: {}",
             total_social_contributions
         );
-        println!("   Total Revenue Taxes: {}", total_revenue_taxes);
-        println!("   Additional Benefits: {:?}", additional_benefits);
-        println!(
+        debug!("   Total Revenue Taxes: {}", total_revenue_taxes);
+        debug!("   Additional Benefits: {:?}", additional_benefits);
+        debug!(
             "   Meal Vouchers: Employee {} | Employer {}",
             meal_vouchers_employee_contribution, meal_vouchers_employer_contribution
         );
-        println!("   Net Paid Salary: {}", net_paid_salary); // Sanity check - verify the calculation
+        info!("   Net Paid Salary: {}", net_paid_salary); // Sanity check - verify the calculation
 
         let calculated_net =
             imported_total_gross_salary - total_social_contributions - total_revenue_taxes
@@ -75,8 +76,8 @@ impl PayslipImporter for MathWorksPayslipImporter {
                 - meal_vouchers_employee_contribution;
 
         if (calculated_net - net_paid_salary).abs() > Decimal::new(1, 0) {
-            println!(
-                "⚠️  Warning: Calculated net ({}) doesn't match reported net ({})",
+            warn!(
+                "Calculated net ({}) doesn't match reported net ({})",
                 calculated_net, net_paid_salary
             );
         }
@@ -369,8 +370,8 @@ impl MathWorksPayslipImporter {
                     .filter_map(|m| self.parse_french_decimal(m.as_str()).ok())
                     .collect();
 
-                println!("🎫 Meal vouchers line: {}", line);
-                println!("🎫 Found amounts: {:?}", amounts);
+                info!("🎫 Meal vouchers line: {}", line);
+                info!("🎫 Found amounts: {:?}", amounts);
 
                 // In MathWorks format, typically we see:
                 // Titres-restaurant    19,00    2,9400    55,86    83,60
@@ -429,9 +430,15 @@ mod tests {
     use super::*;
     use crate::importers::PayslipImporter;
 
+    fn init_test_logging() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     #[tokio::test]
     #[ignore = "Only run this test if you have the payslips available"]
     async fn test_mathworks_payslip_importer() {
+        // TODO: is this test actually failing?
+        init_test_logging();
         let importer = MathWorksPayslipImporter::new();
 
         let value = 1;
@@ -442,11 +449,11 @@ mod tests {
         if importer.can_handle_file(&file_path).unwrap() {
             let result = importer.import_from_file(&file_path).await;
             match result {
-                Ok(payslip) => println!("Payslip {}: {:#?}", value, payslip),
-                Err(e) => println!("Failed to import payslip {}: {}", value, e),
+                Ok(payslip) => debug!("Payslip {}: {:#?}", value, payslip),
+                Err(e) => debug!("Failed to import payslip {}: {}", value, e),
             }
         } else {
-            println!("Cannot handle file: {}", file_path);
+            debug!("Cannot handle file: {}", file_path);
         }
     }
 }

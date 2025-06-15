@@ -2,6 +2,7 @@ use crate::error::{CoreError, Result};
 use crate::importers::{ImportedPayslip, PayslipImporter};
 use async_trait::async_trait;
 use chrono::NaiveDate;
+use log::{debug, info};
 use regex::Regex;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
@@ -23,7 +24,7 @@ impl PayslipImporter for QtPayslipImporter {
     }
 
     async fn import_from_file(&self, file_path: &str) -> Result<ImportedPayslip> {
-        println!("💰 Importing Qt Payslip from PDF...");
+        info!("💰 Importing Qt Payslip from PDF...");
 
         let text = self.extract_text_from_pdf(file_path)?;
         let pay_date = self.extract_period(&text)?;
@@ -39,25 +40,25 @@ impl PayslipImporter for QtPayslipImporter {
         let (meal_vouchers_employee_contribution, meal_vouchers_employer_contribution) =
             self.extract_tickets_restaurant(&text)?;
 
-        println!("✅ Successfully extracted simplified payslip data:");
-        println!("   Pay day: {}", pay_date);
-        println!("   Total Gross Salary: {}", total_gross);
-        println!("   Fixed Gross Salary: {}", gross_fixed_salary);
-        println!("   Variable Gross Salary: {:?}", gross_variable_salary);
+        info!("✅ Successfully extracted simplified payslip data:");
+        debug!("   Pay day: {}", pay_date);
+        info!("   Total Gross Salary: {}", total_gross);
+        debug!("   Fixed Gross Salary: {}", gross_fixed_salary);
+        debug!("   Variable Gross Salary: {:?}", gross_variable_salary);
 
-        println!(
+        debug!(
             "   Total Social Contributions: {}",
             total_social_contributions
         );
-        println!("   Total Revenue Taxes: {}", total_revenue_taxes);
+        debug!("   Total Revenue Taxes: {}", total_revenue_taxes);
 
-        println!("   Additional benefits: {:?}", additional_benefits);
-        println!(
+        debug!("   Additional benefits: {:?}", additional_benefits);
+        debug!(
             "   Meal Vouchers Contribution: Employee {}\tEmployer {}",
             meal_vouchers_employee_contribution, meal_vouchers_employer_contribution
         );
 
-        println!("   Net Paid Salary: {}", net_paid_salary);
+        info!("   Net Paid Salary: {}", net_paid_salary);
 
         // TODO: sanity check of amounts
         assert_eq!(
@@ -259,8 +260,8 @@ impl QtPayslipImporter {
             if line.contains("Titres-restaurant") || line.contains("Tickets restaurant") {
                 // Extract all amounts from this line
                 let amounts = self.extract_all_amounts_from_line(line);
-                println!("🎫 Titres-restaurant line: {}", line);
-                println!("🎫 Found amounts: {:?}", amounts);
+                info!("🎫 Titres-restaurant line: {}", line);
+                info!("🎫 Found amounts: {:?}", amounts);
 
                 // In the table format, amounts are structured:
                 // Base, Taux, A déduire (employee), employer part, etc.
@@ -270,14 +271,14 @@ impl QtPayslipImporter {
                     employer_contribution = employee_contribution
                         .checked_mul(Decimal::from_f64(7.26 / 4.84).unwrap())
                         .unwrap();
-                    println!("🎫 Found tickets restaurant employee: {} €", amount);
+                    info!("🎫 Found tickets restaurant employee: {} €", amount);
                 }
 
                 // Look for employer amount (typically in the rightmost columns)
                 if let Some(&emp_amount) = amounts.last() {
                     if emp_amount > Decimal::new(100, 0) {
                         employer_contribution = emp_amount;
-                        println!("🎫 Found tickets restaurant employer: {} €", emp_amount);
+                        info!("🎫 Found tickets restaurant employer: {} €", emp_amount);
                     }
                 }
             }
@@ -358,44 +359,52 @@ mod tests {
     use super::*;
     use crate::importers::PayslipImporter;
 
+    fn init_test_logging() {
+        let _ = env_logger::builder().is_test(true).try_init();
+    }
+
     #[tokio::test]
     #[ignore = "Only run this test if you have the payslips available"]
     async fn test_qt_payslip_importer_february() {
+        init_test_logging();
         let importer = QtPayslipImporter::new();
         let result = importer
             .import_from_file("../../perso/Qt/2025/Bulletins 02_2025.pdf")
             .await
             .unwrap();
-        println!("{:#?}", result);
+        debug!("{:#?}", result);
     }
     #[tokio::test]
     #[ignore = "Only run this test if you have the payslips available"]
     async fn test_qt_payslip_importer_march() {
+        init_test_logging();
         let importer = QtPayslipImporter::new();
         let result = importer
             .import_from_file("../../perso/Qt/2025/Bulletins 03_2025.pdf")
             .await
             .unwrap();
-        println!("{:#?}", result);
+        debug!("{:#?}", result);
     }
     #[tokio::test]
     #[ignore = "Only run this test if you have the payslips available"]
     async fn test_qt_payslip_importer_april() {
+        init_test_logging();
         let importer = QtPayslipImporter::new();
         let result = importer
             .import_from_file("../../perso/Qt/2025/Bulletins 04_2025.pdf")
             .await
             .unwrap();
-        println!("{:#?}", result);
+        debug!("{:#?}", result);
     }
     #[tokio::test]
     #[ignore = "Only run this test if you have the payslips available"]
     async fn test_qt_payslip_importer_may() {
+        init_test_logging();
         let importer = QtPayslipImporter::new();
         let result = importer
             .import_from_file("../../perso/Qt/2025/Bulletins 05_2025.pdf")
             .await
             .unwrap();
-        println!("{:#?}", result);
+        debug!("{:#?}", result);
     }
 }

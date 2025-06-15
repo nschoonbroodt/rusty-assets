@@ -222,6 +222,7 @@ enum DemoCommands {
 async fn main() -> Result<()> {
     // Load environment variables
     dotenv::dotenv().ok();
+    env_logger::init();
 
     let cli = Cli::parse();
     match cli.command {

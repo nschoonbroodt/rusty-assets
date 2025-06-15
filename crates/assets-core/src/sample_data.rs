@@ -1,5 +1,6 @@
 use crate::database::Database;
 use crate::error::Result;
+use log::{debug, error, info};
 use sqlx::Row;
 use uuid::Uuid;
 
@@ -14,7 +15,7 @@ impl SampleDataService {
 
     /// Create sample categories for expense tracking
     pub async fn create_sample_categories(&self) -> Result<()> {
-        println!("📊 Creating sample categories...");
+        info!("📊 Creating sample categories...");
 
         // Main categories
         let categories = vec![
@@ -78,13 +79,13 @@ impl SampleDataService {
             }
         }
 
-        println!("✅ Sample categories created");
+        info!("✅ Sample categories created");
         Ok(())
     }
 
     /// Create sample chart of accounts
     pub async fn create_sample_accounts(&self) -> Result<()> {
-        println!("🏦 Creating sample chart of accounts...");
+        info!("🏦 Creating sample chart of accounts...");
 
         // Assets (1000-1999)
         let asset_accounts = vec![
@@ -160,12 +161,12 @@ impl SampleDataService {
             .await?;
         }
 
-        println!("✅ Sample chart of accounts created");
+        info!("✅ Sample chart of accounts created");
         Ok(())
     }
     /// Create sample users
     pub async fn create_sample_users(&self) -> Result<()> {
-        println!("👥 Creating sample users...");
+        info!("👥 Creating sample users...");
 
         let users = vec![("you", "You"), ("spouse", "Spouse")];
 
@@ -181,13 +182,13 @@ impl SampleDataService {
             .await?;
         }
 
-        println!("✅ Sample users created");
+        info!("✅ Sample users created");
         Ok(())
     }
 
     /// Create sample ownership relationships
     pub async fn create_sample_ownership(&self) -> Result<()> {
-        println!("🤝 Creating sample ownership relationships..."); // Get user IDs
+        info!("🤝 Creating sample ownership relationships..."); // Get user IDs
         let you_id: Option<Uuid> = sqlx::query("SELECT id FROM users WHERE name = 'you'")
             .fetch_optional(self.db.pool())
             .await?
@@ -249,13 +250,13 @@ impl SampleDataService {
             }
         }
 
-        println!("✅ Sample ownership relationships created");
+        info!("✅ Sample ownership relationships created");
         Ok(())
     }
 
     /// Create sample transactions with journal entries
     pub async fn create_sample_transactions(&self) -> Result<()> {
-        println!("💸 Creating sample transactions...");
+        info!("💸 Creating sample transactions...");
 
         use crate::models::{NewJournalEntry, NewTransaction};
         use crate::services::TransactionService;
@@ -290,7 +291,8 @@ impl SampleDataService {
         }
 
         // Sample transactions - use names as keys for account_ids map
-        let transactions = vec![            // 1. Salary payment
+        let transactions = vec![
+            // 1. Salary payment
             NewTransaction {
                 description: "Monthly salary payment".to_string(),
                 reference: Some("PAY-2025-01".to_string()),
@@ -328,7 +330,8 @@ impl SampleDataService {
                         account_id: account_ids["Credit Card"],
                         amount: Decimal::from_str("-150.00").unwrap(),
                         memo: Some("Grocery payment".to_string()),
-                    },                ],
+                    },
+                ],
                 import_source: None,
                 import_batch_id: None,
                 external_reference: None,
@@ -381,73 +384,73 @@ impl SampleDataService {
         for transaction in transactions {
             let description = transaction.description.clone();
             match transaction_service.create_transaction(transaction).await {
-                Ok(_) => println!("   ✅ Created transaction: {}", description),
-                Err(e) => println!("   ❌ Failed to create transaction: {}", e),
+                Ok(_) => debug!("   ✅ Created transaction: {}", description),
+                Err(e) => error!("   ❌ Failed to create transaction: {}", e),
             }
         }
 
-        println!("✅ Sample transactions created");
+        info!("✅ Sample transactions created");
         Ok(())
     }
 
     /// Create a complete sample dataset (all of the above)
     pub async fn create_full_sample_dataset(&self) -> Result<()> {
-        println!("🎯 Creating complete sample dataset...");
-        println!("====================================\n");
+        info!("🎯 Creating complete sample dataset...");
+        info!("====================================\n");
         self.create_sample_categories().await?;
         self.create_sample_accounts().await?;
         self.create_sample_users().await?;
         self.create_sample_ownership().await?;
         self.create_sample_transactions().await?;
         self.create_sample_transactions().await?;
-        println!("\n🎉 Complete sample dataset created successfully!");
-        println!("\n📋 What was created:");
-        println!("   • Sample categories and subcategories");
-        println!("   • Chart of accounts (Assets, Liabilities, Equity, Income, Expenses)");
-        println!("   • Sample users (You, Spouse)");
-        println!("   • Ownership relationships (joint and individual accounts)");
-        println!("   • Sample transactions with journal entries");
-        println!("\n🧪 **TESTING COMMANDS** - Try these to explore the system:");
-        println!("\n📊 **Account & Balance Commands:**");
-        println!(
+        info!("\n🎉 Complete sample dataset created successfully!");
+        info!("\n📋 What was created:");
+        info!("   • Sample categories and subcategories");
+        info!("   • Chart of accounts (Assets, Liabilities, Equity, Income, Expenses)");
+        info!("   • Sample users (You, Spouse)");
+        info!("   • Ownership relationships (joint and individual accounts)");
+        info!("   • Sample transactions with journal entries");
+        info!("\n🧪 **TESTING COMMANDS** - Try these to explore the system:");
+        info!("\n📊 **Account & Balance Commands:**");
+        info!(
             "   cargo run -- accounts tree              # Beautiful hierarchical chart of accounts"
         );
-        println!("   cargo run -- accounts list              # Flat account list");
-        println!(
+        info!("   cargo run -- accounts list              # Flat account list");
+        info!(
             "   cargo run -- accounts balance           # All account balances from transactions"
         );
-        println!(
+        info!(
             "   cargo run -- accounts ownership \"Joint Checking Account\"    # Show joint account ownership (use name)"
         );
-        println!("\n🎭 **Demo & Educational Commands:**");
-        println!("   cargo run -- demo double-entry          # Learn double-entry bookkeeping");
-        println!("   cargo run -- demo account-types         # Understand debit/credit behavior");
-        println!("   cargo run -- demo multi-user            # Multi-user finance examples");
-        println!("   cargo run -- demo ownership             # Ownership split scenarios");
-        println!("   cargo run -- demo categories            # Category hierarchy examples");
-        println!("\n🏗️  **Data Creation Commands:**");
-        println!("   cargo run -- demo create-deep-accounts  # Create 4-level account hierarchy");
-        println!("   cargo run -- demo create-deep-categories # Create nested category examples");
-        println!("\n👥 **User Context Commands:**");
-        println!("   cargo run --user you -- accounts balance    # Your perspective only");
-        println!("   cargo run --user spouse -- accounts balance # Spouse's perspective only");
-        println!("   cargo run --user family -- accounts balance # Combined family view (default)");
-        println!("\n🗄️  **Database Commands:**");
-        println!("   cargo run -- db status                  # Check database connection");
-        println!("   cargo run -- db init                    # Reinitialize database");
-        println!("\n🎯 **Quick Test Sequence:**");
-        println!("   1. cargo run -- demo create-deep-accounts");
-        println!("   2. cargo run -- accounts tree");
-        println!("   3. cargo run -- accounts balance");
-        println!("   4. cargo run -- demo double-entry");
-        println!("   5. cargo run --user you -- accounts balance");
+        info!("\n🎭 **Demo & Educational Commands:**");
+        info!("   cargo run -- demo double-entry          # Learn double-entry bookkeeping");
+        info!("   cargo run -- demo account-types         # Understand debit/credit behavior");
+        info!("   cargo run -- demo multi-user            # Multi-user finance examples");
+        info!("   cargo run -- demo ownership             # Ownership split scenarios");
+        info!("   cargo run -- demo categories            # Category hierarchy examples");
+        info!("\n🏗️  **Data Creation Commands:**");
+        info!("   cargo run -- demo create-deep-accounts  # Create 4-level account hierarchy");
+        info!("   cargo run -- demo create-deep-categories # Create nested category examples");
+        info!("\n👥 **User Context Commands:**");
+        info!("   cargo run --user you -- accounts balance    # Your perspective only");
+        info!("   cargo run --user spouse -- accounts balance # Spouse's perspective only");
+        info!("   cargo run --user family -- accounts balance # Combined family view (default)");
+        info!("\n🗄️  **Database Commands:**");
+        info!("   cargo run -- db status                  # Check database connection");
+        info!("   cargo run -- db init                    # Reinitialize database");
+        info!("\n🎯 **Quick Test Sequence:**");
+        info!("   1. cargo run -- demo create-deep-accounts");
+        info!("   2. cargo run -- accounts tree");
+        info!("   3. cargo run -- accounts balance");
+        info!("   4. cargo run -- demo double-entry");
+        info!("   5. cargo run --user you -- accounts balance");
 
         Ok(())
     }
 
     /// Create deep category hierarchies to demonstrate unlimited nesting
     pub async fn create_deep_category_hierarchy(&self) -> Result<()> {
-        println!("🗂️  Creating deep category hierarchy example...");
+        info!("🗂️  Creating deep category hierarchy example...");
 
         // Create the deep hierarchy: Expense->Home->Deco->Furniture->Sofa
         let hierarchy = vec![
@@ -480,7 +483,7 @@ impl SampleDataService {
             .execute(self.db.pool())
             .await?;
 
-            println!("   ✅ Created: {}", name);
+            info!("   ✅ Created: {}", name);
         }
 
         // Create transportation hierarchy
@@ -515,13 +518,13 @@ impl SampleDataService {
             .await?;
         }
 
-        println!("✅ Deep category hierarchies created!");
+        info!("✅ Deep category hierarchies created!");
         Ok(())
     }
 
     /// Create deep account hierarchies to demonstrate unlimited nesting
     pub async fn create_deep_account_hierarchy(&self) -> Result<()> {
-        println!("🏗️  Creating deep account hierarchy example...");
+        info!("🏗️  Creating deep account hierarchy example...");
 
         let mut tx = self.db.pool().begin().await?;
 
@@ -844,7 +847,7 @@ impl SampleDataService {
         .await?; // Typically not a category itself
 
         tx.commit().await?;
-        println!("✅ Deep account hierarchy created successfully.");
+        info!("✅ Deep account hierarchy created successfully.");
         Ok(())
     }
     /// Create sample price data for investment accounts
@@ -854,7 +857,7 @@ impl SampleDataService {
         use rust_decimal::prelude::FromPrimitive;
         use std::str::FromStr;
 
-        println!("📈 Creating sample price data...");
+        info!("📈 Creating sample price data...");
 
         // Sample symbols with realistic prices in EUR
         let sample_prices = vec![
@@ -901,14 +904,14 @@ impl SampleDataService {
             }
         }
 
-        println!("✅ Sample price data created for {} symbols", symbols_count);
-        println!("   Data covers the last 30 days with 3-day intervals");
+        info!("✅ Sample price data created for {} symbols", symbols_count);
+        info!("   Data covers the last 30 days with 3-day intervals");
         Ok(())
     }
 
     /// Remove all sample data (useful for cleanup)
     pub async fn clear_sample_data(&self) -> Result<()> {
-        println!("🧹 Clearing all sample data...");
+        info!("🧹 Clearing all sample data...");
 
         // Order matters due to foreign key constraints
         sqlx::query("DELETE FROM account_ownership")
@@ -924,7 +927,7 @@ impl SampleDataService {
             .execute(self.db.pool())
             .await?;
 
-        println!("✅ Sample data cleared");
+        info!("✅ Sample data cleared");
         Ok(())
     }
 }
