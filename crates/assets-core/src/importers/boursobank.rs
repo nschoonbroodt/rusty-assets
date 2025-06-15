@@ -40,6 +40,8 @@ impl TransactionImporter for BoursoBankImporter {
         "BoursoBank CSV format: dateOp;dateVal;label;category;categoryParent;supplierFound;amount;comment;accountNum;accountLabel;accountbalance"
     }
 
+    /// Check if the file is a valid BoursoBank CSV file
+    /// Verify that it's a CSV file with the expected headers
     fn can_handle_file(&self, file_path: &str) -> Result<bool> {
         if !file_path.ends_with(".csv") {
             return Ok(false);
