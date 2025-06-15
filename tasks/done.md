@@ -556,3 +556,50 @@ Implemented automatic account ownership assignment for better consistency:
 - ✅ **Cross-import source awareness**: Different sources can import same file if needed
 - ✅ **Rollback safety**: Migration includes proper down migration for schema rollback
 
+## ✅ Internal Transfer Detection and Merging - DONE
+
+**COMPLETED**: Implemented CLI command to detect and interactively merge internal transfer transactions that were recorded through Equity:Uncategorized into direct transfers between real accounts.
+
+**Features Implemented**:
+- ✅ Added `transactions merge-transfers` CLI subcommand with date range filtering
+- ✅ Detection logic to find transaction pairs with same date and description involving Equity:Uncategorized
+- ✅ Validation that pairs have opposite amounts (one positive, one negative)
+- ✅ Interactive confirmation for each potential merge
+- ✅ Automatic creation of new direct transfer transactions with descriptive names
+- ✅ Safe deletion of original transactions after successful merge
+- ✅ Support for `--auto-confirm` flag for batch processing
+- ✅ Added `delete_transaction` method to TransactionService
+- ✅ Fixed SQL query in `get_transactions_with_filters_and_accounts` to include all required fields
+
+**Usage Examples**:
+```bash
+# Interactive merge for specific date range
+cargo run --bin assets-cli -- transactions merge-transfers --user nicolas --from 2025-01-01 --to 2025-12-31
+
+# Auto-confirm all merges
+cargo run --bin assets-cli -- transactions merge-transfers --user nicolas --auto-confirm
+```
+
+**Example Transformation**:
+```
+Before:
+Tx1: VIR Versement initial LDD
+  - Assets:Bourso:Courant: -100.00
+  - Equity:Uncategorized: +100.00
+Tx2: VIR Versement initial LDD  
+  - Assets:Bourso:LDD: +100.00
+  - Equity:Uncategorized: -100.00
+
+After:
+Tx3: Internal Transfer: Courant → LDD
+  - Assets:Bourso:Courant: -100.00
+  - Assets:Bourso:LDD: +100.00
+```
+
+**Technical Implementation**:
+- Groups transactions by date and description involving Equity:Uncategorized
+- Validates transaction pairs have exactly 2 entries with opposite amounts
+- Uses TransactionService::create_simple_transaction for new transfers
+- Ensures atomic operations with proper error handling
+- Maintains transaction history and audit trail
+

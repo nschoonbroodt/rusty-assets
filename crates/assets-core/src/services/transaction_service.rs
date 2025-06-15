@@ -252,12 +252,12 @@ impl TransactionService {
         to_date: Option<DateTime<Utc>>,
         account_path: Option<&str>,
         user_id: Option<Uuid>,
-        limit: u32,
-    ) -> Result<Vec<TransactionWithEntriesAndAccounts>> {
+        limit: u32,    ) -> Result<Vec<TransactionWithEntriesAndAccounts>> {
         // Build the base query
         let mut query = String::from(
             r#"
-            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_by, t.created_at
+            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_by, t.created_at, 
+                   t.import_source, t.import_batch_id, t.external_reference, t.is_duplicate, t.merged_into_transaction_id
             FROM transactions t
             "#,
         );
@@ -358,6 +358,28 @@ impl TransactionService {
         }
 
         Ok(result)
+    }
+
+    /// Delete a transaction and all its journal entries
+    pub async fn delete_transaction(&self, transaction_id: Uuid) -> Result<()> {
+        let mut tx = self.pool.begin().await?;
+
+        // Delete journal entries first (due to foreign key constraint)
+        sqlx::query("DELETE FROM journal_entries WHERE transaction_id = $1")
+            .bind(transaction_id)
+            .execute(&mut *tx)
+            .await?;
+
+        // Delete the transaction
+        let result = sqlx::query("DELETE FROM transactions WHERE id = $1")
+            .bind(transaction_id)
+            .execute(&mut *tx)
+            .await?;        if result.rows_affected() == 0 {
+            return Err(crate::error::CoreError::NotFound(format!("Transaction {}", transaction_id)));
+        }
+
+        tx.commit().await?;
+        Ok(())
     }
 
     /// Helper: Create a simple two-account transaction (most common case)

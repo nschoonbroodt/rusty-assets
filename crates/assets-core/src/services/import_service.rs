@@ -1,6 +1,8 @@
 use crate::error::Result;
 use crate::importers::{ImportedTransaction, TransactionImporter};
-use crate::services::{AccountService, FileImportService, TransactionService, DeduplicationService};
+use crate::services::{
+    AccountService, DeduplicationService, FileImportService, TransactionService,
+};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
@@ -11,7 +13,8 @@ pub struct ImportService {
     deduplication_service: DeduplicationService,
 }
 
-impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
+impl ImportService {
+    pub fn new(db: sqlx::PgPool) -> Self {
         Self {
             account_service: AccountService::new(db.clone()),
             transaction_service: TransactionService::new(db.clone()),
@@ -108,7 +111,8 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
                     "Imported {} transactions, skipped {}",
                     created_count, skipped_count
                 )),
-            )?;            self.file_import_service
+            )?;
+            self.file_import_service
                 .record_file_import(file_metadata)
                 .await?;
             println!("📝 File import recorded in database");
@@ -122,10 +126,34 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
             {
                 Ok(matches) => {
                     if !matches.is_empty() {
-                        let exact_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Exact)).count();
-                        let probable_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Probable)).count();
-                        let possible_count = matches.iter().filter(|m| matches!(m.match_type, crate::services::deduplication_service::MatchType::Possible)).count();
-                        
+                        let exact_count = matches
+                            .iter()
+                            .filter(|m| {
+                                matches!(
+                                    m.match_type,
+                                    crate::services::deduplication_service::MatchType::Exact
+                                )
+                            })
+                            .count();
+                        let probable_count = matches
+                            .iter()
+                            .filter(|m| {
+                                matches!(
+                                    m.match_type,
+                                    crate::services::deduplication_service::MatchType::Probable
+                                )
+                            })
+                            .count();
+                        let possible_count = matches
+                            .iter()
+                            .filter(|m| {
+                                matches!(
+                                    m.match_type,
+                                    crate::services::deduplication_service::MatchType::Possible
+                                )
+                            })
+                            .count();
+
                         println!("🎯 Detected {} potential duplicate(s):", matches.len());
                         if exact_count > 0 {
                             println!("   📌 {} exact match(es) - auto-confirmed", exact_count);
@@ -143,7 +171,9 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
                 }
                 Err(e) => {
                     println!("⚠️  Duplicate detection failed: {}", e);
-                    println!("   Import was successful, but you may want to run 'assets-cli duplicates detect' manually");
+                    println!(
+                        "   Import was successful, but you may want to run 'assets-cli duplicates detect' manually"
+                    );
                 }
             }
         }
@@ -192,12 +222,12 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
             let card_account_id = self.get_or_create_deferred_card_account().await?;
 
             // Card settlement: Card liability account (debit) / Bank account (credit)
-            let abs_amount = imported.amount.abs();
+            let amount = -imported.amount;
             TransactionService::create_simple_transaction_with_import(
                 imported.description.clone(),
                 card_account_id,    // debit (reduce liability)
                 *target_account_id, // credit (money out of bank)
-                abs_amount,
+                amount,
                 transaction_date,
                 None,
                 Some(user_id),
@@ -248,6 +278,10 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
         Ok(transaction_with_entries.transaction.id)
     }
     async fn determine_other_account(&self, imported: &ImportedTransaction) -> Result<Uuid> {
+        // Modified to put everything in the account
+
+        /*/
+
         // Handle deferred debit card transactions
         if self.is_card_transaction(&imported.description) {
             return self.get_or_create_deferred_card_account().await;
@@ -310,7 +344,8 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
             // Fallback
             (_, _, true) => "Income:Other",
             (_, _, false) => "Expenses:Uncategorized",
-        };
+        };*/
+        let account_path = "Equity:Uncategorized";
 
         // Try to get the account, create if it doesn't exist
         match self.account_service.get_account_by_path(account_path).await {
@@ -385,9 +420,11 @@ impl ImportService {    pub fn new(db: sqlx::PgPool) -> Self {
 
     /// Check if a transaction description indicates a deferred debit card transaction
     fn is_card_transaction(&self, description: &str) -> bool {
-        description.starts_with("CARTE ") && 
+        (description.starts_with("CARTE ") && 
         // Exclude the monthly settlement transaction
-        !description.contains("Relevé différé Carte")
+        !description.contains("Relevé différé Carte"))
+            || description.starts_with("AVOIR ")
+            || description.starts_with("RETRAIT DAB ")
     }
 
     /// Check if a transaction description indicates a monthly card settlement

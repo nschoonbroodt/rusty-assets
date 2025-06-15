@@ -25,6 +25,23 @@ pub enum TransactionCommands {
     Show {
         /// Transaction ID to show
         id: String,
+    },    /// Detect and interactively merge potential internal transfers
+    MergeTransfers {
+        /// Date range start (YYYY-MM-DD format)
+        #[arg(long)]
+        from: Option<String>,
+        /// Date range end (YYYY-MM-DD format)  
+        #[arg(long)]
+        to: Option<String>,
+        /// Username for context
+        #[arg(long)]
+        user: String,
+        /// Automatically confirm all merges without prompting
+        #[arg(long)]
+        auto_confirm: bool,
+        /// Allow merging transactions with same date/amount but different descriptions
+        #[arg(long)]
+        allow_different_descriptions: bool,
     },
 }
 
@@ -64,7 +81,9 @@ enum OutputFormat {
 pub async fn handle_transaction_command(command: TransactionCommands) -> Result<()> {
     match command {
         TransactionCommands::List(args) => list_transactions(args).await,
-        TransactionCommands::Show { id } => show_transaction(&id).await,
+        TransactionCommands::Show { id } => show_transaction(&id).await,        TransactionCommands::MergeTransfers { from, to, user, auto_confirm, allow_different_descriptions } => {
+            merge_internal_transfers(from, to, &user, auto_confirm, allow_different_descriptions).await
+        }
     }
 }
 
@@ -270,4 +289,226 @@ fn escape_csv(s: &str) -> String {
     } else {
         s.to_string()
     }
+}
+
+async fn merge_internal_transfers(
+    from: Option<String>,
+    to: Option<String>, 
+    username: &str,
+    auto_confirm: bool,
+    allow_different_descriptions: bool,
+) -> Result<()> {
+    println!("🔄 Internal Transfer Detection");
+    println!("=============================\n");
+
+    let db = Database::from_env().await?;
+    let transaction_service = TransactionService::new(db.pool().clone());
+    
+    // Parse date filters
+    let from_date = if let Some(from_str) = &from {
+        Some(parse_date(from_str)?)
+    } else {
+        None
+    };
+    
+    let to_date = if let Some(to_str) = &to {
+        Some(parse_date(to_str)?)
+    } else {
+        None
+    };
+
+    // Get user ID
+    let user_id = get_user_id_by_name(username).await?;    // Find potential internal transfers using SQL
+    let potential_transfers = find_potential_internal_transfers(&db, from_date.map(|d| d.date_naive()), to_date.map(|d| d.date_naive()), allow_different_descriptions).await?;
+    
+    if potential_transfers.is_empty() {
+        println!("✅ No potential internal transfers found.");
+        return Ok(());
+    }
+    
+    println!("🔍 Found {} potential internal transfer groups:", potential_transfers.len());
+    println!();
+    
+    for (i, group) in potential_transfers.iter().enumerate() {
+        display_transfer_group(i + 1, group);
+        
+        if !auto_confirm {
+            println!("Do you want to merge this transfer group? (y/N): ");
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+            
+            if input.trim().to_lowercase() != "y" {
+                println!("❌ Skipping this group.\n");
+                continue;
+            }
+        }
+        
+        // Perform the merge
+        match merge_transfer_group(&transaction_service, group, user_id).await {
+            Ok(new_transaction_id) => {
+                println!("✅ Successfully merged transfer group into transaction: {}", new_transaction_id);
+            }
+            Err(e) => {
+                println!("❌ Failed to merge transfer group: {}", e);
+            }
+        }
+        println!();
+    }
+    
+    Ok(())
+}
+
+#[derive(Debug)]
+struct PotentialTransfer {
+    transaction_id: Uuid,
+    description: String,
+    amount: Decimal,
+    date: DateTime<Utc>,
+    non_equity_account: String,
+    non_equity_account_id: Uuid,
+}
+
+#[derive(Debug)]
+struct TransferGroup {
+    date: DateTime<Utc>,
+    amount: Decimal,
+    transfers: Vec<PotentialTransfer>,
+}
+
+async fn find_potential_internal_transfers(
+    db: &Database,
+    from_date: Option<NaiveDate>,
+    to_date: Option<NaiveDate>,
+    allow_different_descriptions: bool,
+) -> Result<Vec<TransferGroup>> {
+    // For now, let's create a simpler implementation without direct sqlx access
+    // We'll get transactions with entries and filter in Rust
+    
+    let transaction_service = TransactionService::new(db.pool().clone());
+    
+    // Get transactions in date range
+    let from_datetime = from_date.map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc());
+    let to_datetime = to_date.map(|d| d.and_hms_opt(23, 59, 59).unwrap().and_utc());    let transactions = transaction_service
+        .get_transactions_with_filters_and_accounts(from_datetime, to_datetime, None, None, 1000)
+        .await?;
+    
+    let mut potential_transfers = Vec::new();    // Find transactions that involve Equity:Uncategorized
+    for tx in transactions {
+        let has_equity = tx.entries.iter().any(|e| e.account_path == "Equity:Uncategorized");
+        if !has_equity {
+            continue;        }
+        
+        // Find the non-equity account and amount
+        for entry in &tx.entries {
+            if entry.account_path != "Equity:Uncategorized" {
+                potential_transfers.push(PotentialTransfer {
+                    transaction_id: tx.transaction.id,
+                    description: tx.transaction.description.clone(),
+                    amount: entry.amount,
+                    date: tx.transaction.transaction_date,
+                    non_equity_account: entry.account_path.clone(),
+                    non_equity_account_id: entry.account_id,
+                });
+            }
+        }    }
+      // Group by date and description to find matching transaction pairs
+    let mut groups = std::collections::HashMap::new();
+    for transfer in potential_transfers {
+        let key = if allow_different_descriptions {
+            // Group by date and amount only (ignore description differences)
+            (transfer.date.date_naive(), "".to_string(), transfer.amount.abs())
+        } else {
+            // Group by date and description (exact match required)
+            (transfer.date.date_naive(), transfer.description.clone(), Decimal::ZERO)
+        };
+        groups.entry(key).or_insert_with(Vec::new).push(transfer);
+    }    // Filter groups with exactly 2 transfers (potential internal transfers)
+    let transfer_groups: Vec<TransferGroup> = groups
+        .into_iter()
+        .filter_map(|((_date, _description, _amount), transfers)| {
+            if transfers.len() == 2 {
+                // Check if one is positive and one is negative (opposite movements)
+                let positive_count = transfers.iter().filter(|t| t.amount > Decimal::ZERO).count();
+                let negative_count = transfers.iter().filter(|t| t.amount < Decimal::ZERO).count();
+                
+                // Check if the amounts are opposite (one +X, one -X)
+                let amount1 = transfers[0].amount;
+                let amount2 = transfers[1].amount;
+                
+                if positive_count == 1 && negative_count == 1 && amount1 == -amount2 {
+                    Some(TransferGroup {
+                        date: transfers[0].date,
+                        amount: amount1.abs(),
+                        transfers,
+                    })
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect();
+    
+    Ok(transfer_groups)
+}
+
+fn display_transfer_group(group_num: usize, group: &TransferGroup) {
+    println!("📋 Group {}: {} - Amount: €{:.2}", 
+        group_num, 
+        group.date.format("%Y-%m-%d"), 
+        group.amount
+    );
+    
+    for (i, transfer) in group.transfers.iter().enumerate() {
+        let sign = if transfer.amount > Decimal::ZERO { "+" } else { "" };
+        println!("  {}. {} → {} ({}€{:.2})",
+            i + 1,
+            truncate_string(&transfer.description, 40),
+            truncate_string(&transfer.non_equity_account, 30),
+            sign,
+            transfer.amount
+        );
+    }
+    println!();
+}
+
+async fn merge_transfer_group(
+    transaction_service: &TransactionService,
+    group: &TransferGroup,
+    user_id: Uuid,
+) -> Result<Uuid> {
+    // Find the source (negative amount) and destination (positive amount) accounts
+    let source = group.transfers.iter().find(|t| t.amount < Decimal::ZERO)
+        .ok_or_else(|| anyhow::anyhow!("No source account found"))?;
+    let destination = group.transfers.iter().find(|t| t.amount > Decimal::ZERO)
+        .ok_or_else(|| anyhow::anyhow!("No destination account found"))?;
+    
+    // Create the merged transaction description
+    let new_description = format!("Internal Transfer: {} → {}", 
+        source.non_equity_account.split(':').last().unwrap_or(&source.non_equity_account),
+        destination.non_equity_account.split(':').last().unwrap_or(&destination.non_equity_account)
+    );
+    
+    // Create a new internal transfer transaction
+    let new_transaction = TransactionService::create_simple_transaction(
+        new_description,
+        destination.non_equity_account_id, // debit (destination receives money)
+        source.non_equity_account_id,     // credit (source sends money)
+        group.amount,
+        group.date,
+        None,
+        Some(user_id),
+    );
+    
+    // Create the transaction in the database
+    let created_transaction = transaction_service.create_transaction(new_transaction).await?;
+    let new_transaction_id = created_transaction.transaction.id;
+    
+    // Delete the original transactions
+    for transfer in &group.transfers {
+        transaction_service.delete_transaction(transfer.transaction_id).await?;
+    }
+    
+    Ok(new_transaction_id)
 }
