@@ -25,206 +25,72 @@ impl PayslipImporter for QtPayslipImporter {
         println!("💰 Importing Qt Payslip from PDF...");
 
         let text = self.extract_text_from_pdf(file_path)?;
+        let pay_date = self.extract_period(&text)?;
 
-        println!("{text:?}");
-        todo!();
-    }
-    /*
-        // Extract basic information
-        let employee_name = self.extract_employee_name(&text);
-        let period = self.extract_period(&text)?;
-        let (gross_salary, net_salary) = self.extract_summary_amounts(&text)?;
+        let (total_gross, net_paid_salary) = self.extract_summary_amounts(&text)?;
+        let gross_fixed_salary = self.extract_base_salary(&text)?;
+        let gross_variable_salary = self.extract_variable(&text)?;
 
-        // Extract the 8 key components only
-        let base_salary = self.extract_base_salary(&text)?;
-        let commission = self.extract_commission(&text)?;
-        let social_contributions = self.extract_social_contributions_total(&text)?;
-        let income_tax = self.extract_income_tax(&text)?;
-        let (ticket_employee, ticket_employer) = self.extract_tickets_restaurant(&text)?;
-        let navigo_reimbursement = self.extract_navigo_reimbursement(&text)?;
+        let total_social_contributions = self.extract_social_contributions_total(&text)?;
+        let total_revenue_taxes = self.extract_revenue_taxes_total(&text)?;
 
-        // Calculate amounts for verification
-        let income_tax_amount = income_tax
-            .as_ref()
-            .map(|item| item.amount)
-            .unwrap_or(Decimal::ZERO);
-        let ticket_employee_amount = ticket_employee
-            .as_ref()
-            .map(|item| item.amount)
-            .unwrap_or(Decimal::ZERO);
-        let navigo_amount = navigo_reimbursement
-            .as_ref()
-            .map(|item| item.amount)
-            .unwrap_or(Decimal::ZERO);
-
-        // Calculate expected net pay: Base + Commission - Social - Tax - TR_Employee + Navigo
-        let expected_net = base_salary + commission
-            - social_contributions
-            - income_tax_amount
-            - ticket_employee_amount
-            + navigo_amount;
-
-        println!("\n=== SIMPLIFIED PAYSLIP BREAKDOWN ===");
-        println!("Base salary: {} €", base_salary);
-        println!("Commissions: {} €", commission);
-        println!("Social contributions: {} €", social_contributions);
-        println!("Income tax (PAS): {} €", income_tax_amount);
-        println!(
-            "Tickets restaurant (employee): {} €",
-            ticket_employee_amount
-        );
-        if let Some(ref ticket_emp) = ticket_employer {
-            println!("Tickets restaurant (employer): {} €", ticket_emp.amount);
-        }
-        println!("Navigo reimbursement: {} €", navigo_amount);
-        println!("Expected net pay: {} €", expected_net);
-        println!("Actual net pay: {} €", net_salary);
-        println!("Difference: {} €", (expected_net - net_salary).abs());
-        println!("=== END BREAKDOWN ===\n");
-
-        // Create simplified line items
-        let mut line_items = Vec::new();
-
-        // 1. Base salary
-        line_items.push(PayslipLineItem {
-            item_type: PayslipItemType::BaseSalary,
-            description: "Base salary".to_string(),
-            amount: base_salary,
-            is_employer_contribution: false,
-            account_mapping: Some("Income:Salary:Base".to_string()),
-            raw_data: HashMap::new(),
-        });
-
-        // 2. Commissions
-        line_items.push(PayslipLineItem {
-            item_type: PayslipItemType::Commission,
-            description: "Commissions".to_string(),
-            amount: commission,
-            is_employer_contribution: false,
-            account_mapping: Some("Income:Salary:Variable".to_string()),
-            raw_data: HashMap::new(),
-        });
-
-        // 3. Social contributions
-        line_items.push(PayslipLineItem {
-            item_type: PayslipItemType::SocialSecurity,
-            description: "Social contributions".to_string(),
-            amount: social_contributions,
-            is_employer_contribution: false,
-            account_mapping: Some("Expenses:Taxes:SocialContributions".to_string()),
-            raw_data: HashMap::new(),
-        });
-
-        // 4. Income tax
-        if let Some(tax) = income_tax {
-            line_items.push(PayslipLineItem {
-                item_type: PayslipItemType::IncomeTax,
-                description: "Income tax (PAS)".to_string(),
-                amount: tax.amount,
-                is_employer_contribution: false,
-                account_mapping: Some("Expenses:Taxes:IR".to_string()),
-                raw_data: HashMap::new(),
-            });
-        }
-
-        // 5. Employee contribution to meal vouchers
-        if let Some(ticket_emp) = ticket_employee {
-            line_items.push(PayslipLineItem {
-                item_type: PayslipItemType::MealVouchers,
-                description: "Meal vouchers (employee)".to_string(),
-                amount: ticket_emp.amount,
-                is_employer_contribution: false,
-                account_mapping: Some("Assets:Meal Voucher".to_string()),
-                raw_data: HashMap::new(),
-            });
-        }
-
-        // 6. Employer contribution to meal vouchers (dual account)
-        if let Some(ticket_empr) = ticket_employer {
-            // Asset side
-            line_items.push(PayslipLineItem {
-                item_type: PayslipItemType::MealVouchers,
-                description: "Meal vouchers (employer) - Asset".to_string(),
-                amount: ticket_empr.amount,
-                is_employer_contribution: true,
-                account_mapping: Some("Assets:Meal Voucher".to_string()),
-                raw_data: HashMap::new(),
-            });
-            // Income side
-            line_items.push(PayslipLineItem {
-                item_type: PayslipItemType::MealVouchers,
-                description: "Meal vouchers (employer) - Benefit".to_string(),
-                amount: ticket_empr.amount,
-                is_employer_contribution: true,
-                account_mapping: Some("Income:Benefits:Meal Voucher".to_string()),
-                raw_data: HashMap::new(),
-            });
-        }
-
-        // 7. Navigo transport reimbursement
-        if let Some(navigo) = navigo_reimbursement {
-            line_items.push(PayslipLineItem {
-                item_type: PayslipItemType::TransportReimbursement,
-                description: "Transport reimbursement (Navigo)".to_string(),
-                amount: navigo.amount,
-                is_employer_contribution: false,
-                account_mapping: Some("Income:Benefits:Transports".to_string()),
-                raw_data: HashMap::new(),
-            });
-        }
-
-        // 8. Net à payer (configurable account - using default for now)
-        line_items.push(PayslipLineItem {
-            item_type: PayslipItemType::NetPay,
-            description: "Net à payer".to_string(),
-            amount: net_salary,
-            is_employer_contribution: false,
-            account_mapping: None, // Will be set by the service using the destination account
-            raw_data: HashMap::new(),
-        });
-
-        // Create raw data map
-        let mut raw_data = HashMap::new();
-        raw_data.insert("pdf_file".to_string(), file_path.to_string());
-        raw_data.insert(
-            "text_sample".to_string(),
-            text[..text.len().min(500)].to_string(),
-        );
-        raw_data.insert("base_salary".to_string(), base_salary.to_string());
-        raw_data.insert("commission".to_string(), commission.to_string());
-        raw_data.insert(
-            "social_contributions".to_string(),
-            social_contributions.to_string(),
-        );
-        raw_data.insert("income_tax".to_string(), income_tax_amount.to_string());
-        raw_data.insert(
-            "ticket_employee".to_string(),
-            ticket_employee_amount.to_string(),
-        );
-        raw_data.insert(
-            "navigo_reimbursement".to_string(),
-            navigo_amount.to_string(),
-        );
-        raw_data.insert("expected_net".to_string(), expected_net.to_string());
+        let additional_benefits = self.extract_additional_benefits(&text)?;
+        let (meal_vouchers_employee_contribution, meal_vouchers_employer_contribution) =
+            self.extract_tickets_restaurant(&text)?;
 
         println!("✅ Successfully extracted simplified payslip data:");
-        println!("   Employee: {}", employee_name);
-        println!("   Period: {}", period);
-        println!("   Gross: {} €", gross_salary);
-        println!("   Net: {} €", net_salary);
+        println!("   Pay day: {}", pay_date);
+        println!("   Total Gross Salary: {}", total_gross);
+        println!("   Fixed Gross Salary: {}", gross_fixed_salary);
+        println!("   Variable Gross Salary: {:?}", gross_variable_salary);
+
+        println!(
+            "   Total Social Contributions: {}",
+            total_social_contributions
+        );
+        println!("   Total Revenue Taxes: {}", total_revenue_taxes);
+
+        println!("   Additional benefits: {:?}", additional_benefits);
+        println!(
+            "   Meal Vouchers Contribution: Employee {}\tEmployer {}",
+            meal_vouchers_employee_contribution, meal_vouchers_employer_contribution
+        );
+
+        println!("   Net Paid Salary: {}", net_paid_salary);
+
+        // TODO: sanity check of amounts
+        assert_eq!(
+            total_gross,
+            gross_fixed_salary
+                + gross_variable_salary
+                    .iter()
+                    .map(|(_, v)| *v)
+                    .sum::<Decimal>(),
+            "Total gross salary should match fixed + variable"
+        );
+        assert_eq!(
+            net_paid_salary,
+            total_gross
+                - total_social_contributions
+                - total_revenue_taxes
+                - meal_vouchers_employee_contribution
+                + additional_benefits.iter().map(|(_, v)| *v).sum::<Decimal>(),
+            "Net salary should match gross - contributions - taxes + benefits"
+        );
 
         Ok(ImportedPayslip {
-            pay_date: period,
-            pay_period_start: period,
-            pay_period_end: period,
-            employee_name,
+            pay_date: pay_date,
             employer_name: "The Qt Company".to_string(),
-            gross_salary,
-            net_salary,
-            line_items,
-            raw_data,
+            gross_fixed_salary,
+            gross_variable_salary,
+            total_social_contributions,
+            total_revenue_taxes,
+            additional_benefits,
+            meal_vouchers_employee_contribution,
+            meal_vouchers_employer_contribution,
+            net_paid_salary,
         })
-    }*/
+    }
 }
 
 impl QtPayslipImporter {
@@ -256,42 +122,30 @@ impl QtPayslipImporter {
         Ok(text)
     }
 
-    /// Extract employee name from the payslip text
-    fn extract_employee_name(&self, _text: &str) -> String {
-        // For simplicity, return a default name - could be enhanced later
-        "Unknown Employee".to_string()
-    }
-
     /// Extract payslip period from the text
     fn extract_period(&self, text: &str) -> Result<NaiveDate> {
-        // Look for patterns like "Avril 2025" or "April 2025"
+        // Look for patterns like "Paiement le"
         for line in text.lines() {
-            if let Some(captures) = Regex::new(r"(?i)(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre|january|february|march|april|may|june|july|august|september|october|november|december)\s+(\d{4})")
-                .unwrap()
-                .captures(line) {
-                let month_str = captures.get(1).unwrap().as_str().to_lowercase();
-                let year_str = captures.get(2).unwrap().as_str();
-
-                let french_months = HashMap::from([
-                    ("janvier", 1), ("février", 2), ("mars", 3), ("avril", 4),
-                    ("mai", 5), ("juin", 6), ("juillet", 7), ("août", 8),
-                    ("septembre", 9), ("octobre", 10), ("novembre", 11), ("décembre", 12),
-                    ("january", 1), ("february", 2), ("march", 3), ("april", 4),
-                    ("may", 5), ("june", 6), ("july", 7), ("august", 8),
-                    ("september", 9), ("october", 10), ("november", 11), ("december", 12),
-                ]);
-
-                if let (Some(&month_num), Ok(year)) = (
-                    french_months.get(month_str.as_str()),
-                    year_str.parse::<i32>(),
-                ) {                    return Ok(NaiveDate::from_ymd_opt(year, month_num, 25)
-                        .ok_or_else(|| CoreError::ImportError("Invalid date".to_string()))?);
+            if line.contains("Paiement le") {
+                // Extract the date from the line
+                let date_regex = Regex::new(r"(\d{1,2}/\d{1,2}/\d{4})").unwrap();
+                if let Some(capture) = date_regex.captures(line) {
+                    let date =
+                        NaiveDate::parse_from_str(capture.get(1).unwrap().as_str(), "%d/%m/%Y")
+                            .map_err(|_| {
+                                CoreError::ImportError(format!(
+                                    "Failed to parse date from line: '{}'",
+                                    line
+                                ))
+                            })?;
+                    return Ok(date);
                 }
             }
         }
-
         // Fallback to current date if period can't be parsed
-        Ok(chrono::Utc::now().naive_utc().date())
+        Err(CoreError::ImportError(
+            "Could not extract payslip period".to_string(),
+        ))
     }
 
     /// Parse French decimal format (handles spaces and commas)
@@ -380,17 +234,64 @@ impl QtPayslipImporter {
         ))
     }
 
-    /// Extract commission from payslip
-    fn extract_commission(&self, text: &str) -> Result<Decimal> {
+    /// Extract gross variable from payslip
+    fn extract_variable(&self, text: &str) -> Result<HashMap<String, Decimal>> {
+        let mut result = HashMap::<String, Decimal>::new();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Commissions") {
                 if let Some(amount) = self.extract_amount_from_line(line) {
-                    return Ok(amount);
+                    result.insert("Commissions".to_string(), amount);
                 }
             }
         }
-        Ok(Decimal::ZERO) // Return zero if no commission found
+        Ok(result) // Return zero if no commission found
+    }
+    fn extract_tickets_restaurant(&self, text: &str) -> Result<(Decimal, Decimal)> {
+        let mut employee_contribution = Decimal::ZERO;
+        let mut employer_contribution = Decimal::ZERO;
+
+        for line in text.lines() {
+            let line = line.trim();
+
+            // Look for "Titres-restaurant" or "Tickets restaurant" line
+            if line.contains("Titres-restaurant") || line.contains("Tickets restaurant") {
+                // Extract all amounts from this line
+                let amounts = self.extract_all_amounts_from_line(line);
+                println!("🎫 Titres-restaurant line: {}", line);
+                println!("🎫 Found amounts: {:?}", amounts);
+
+                // In the table format, amounts are structured:
+                // Base, Taux, A déduire (employee), employer part, etc.
+                // The employee deduction should be one of the larger amounts
+                if let Some(&amount) = amounts.iter().find(|&&a| a > Decimal::new(50, 0)) {
+                    employee_contribution = amount;
+                    println!("🎫 Found tickets restaurant employee: {} €", amount);
+                }
+
+                // Look for employer amount (typically in the rightmost columns)
+                if let Some(&emp_amount) = amounts.last() {
+                    if emp_amount > Decimal::new(100, 0) {
+                        employer_contribution = emp_amount;
+                        println!("🎫 Found tickets restaurant employer: {} €", emp_amount);
+                    }
+                }
+            }
+        }
+
+        Ok((employee_contribution, employer_contribution))
+    }
+    fn extract_additional_benefits(&self, text: &str) -> Result<HashMap<String, Decimal>> {
+        let mut result = HashMap::<String, Decimal>::new();
+        for line in text.lines() {
+            let line = line.trim();
+            if line.contains("Forfait mensuel NAVIGO") {
+                if let Some(amount) = self.extract_amount_from_line(line) {
+                    result.insert("Forfait mensuel NAVIGO".to_string(), amount);
+                }
+            }
+        }
+        Ok(result) // Return zero if no commission found
     }
     /// Extract total social contributions (from "Total des cotisations et contributions" line)
     fn extract_social_contributions_total(&self, text: &str) -> Result<Decimal> {
@@ -410,6 +311,22 @@ impl QtPayslipImporter {
             "Could not find 'Total des cotisations et contributions' line".to_string(),
         ))
     }
+    fn extract_revenue_taxes_total(&self, text: &str) -> Result<Decimal> {
+        for line in text.lines() {
+            let line = line.trim();
+
+            if line.contains("sur le revenu prélevé") {
+                // Extract the amount from this line
+                if let Some(amount) = self.extract_amount_from_line(line) {
+                    return Ok(amount);
+                }
+            }
+        }
+
+        Err(CoreError::ImportError(
+            "Could not find 'Impot sur le revenu' line".to_string(),
+        ))
+    }
 
     /// Extract all amounts from a line using regex
     fn extract_all_amounts_from_line(&self, line: &str) -> Vec<Decimal> {
@@ -424,128 +341,6 @@ impl QtPayslipImporter {
 
         amounts
     }
-
-    /*     /// Extract income tax (PAS - Prélèvement à la Source)
-    fn extract_income_tax(&self, text: &str) -> Result<Option<PayslipLineItem>> {
-        for line in text.lines() {
-            let line = line.trim();
-
-            // Handle encoding variations: "prélevé" might appear as "prΘlevΘ" or similar
-            if line.contains("Imp⌠t sur le revenu pr")
-                || line.contains("Impôt sur le revenu pr")
-                || line.contains("Impot sur le revenu pr")
-            {
-                let amounts = self.extract_all_amounts_from_line(line);
-                if let Some(&amount) = amounts.last() {
-                    return Ok(Some(PayslipLineItem {
-                        item_type: PayslipItemType::IncomeTax,
-                        description: "Income tax (PAS)".to_string(),
-                        amount,
-                        is_employer_contribution: false,
-                        account_mapping: Some("Expenses:Taxes:IR".to_string()),
-                        raw_data: HashMap::new(),
-                    }));
-                }
-            }
-        }
-        Ok(None)
-    }
-    /// Extract tickets restaurant (meal vouchers) employee and employer contributions
-    fn extract_tickets_restaurant(
-        &self,
-        text: &str,
-    ) -> Result<(Option<PayslipLineItem>, Option<PayslipLineItem>)> {
-        let mut employee_amount = None;
-        let mut employer_amount = None;
-
-        for line in text.lines() {
-            let line = line.trim();
-
-            // Look for "Titres-restaurant" line (employee contribution)
-            if line.contains("Titres-restaurant") || line.contains("Tickets restaurant") {
-                // Extract all amounts from this line
-                let amounts = self.extract_all_amounts_from_line(line);
-                println!("🎫 Titres-restaurant line: {}", line);
-                println!("🎫 Found amounts: {:?}", amounts);
-
-                // In the table format, amounts are structured:
-                // Base, Taux, A déduire (employee), employer part, etc.
-                // The employee deduction should be one of the larger amounts
-                if let Some(&amount) = amounts.iter().find(|&&a| a > Decimal::new(50, 0)) {
-                    employee_amount = Some(amount);
-                    println!("🎫 Found tickets restaurant employee: {} €", amount);
-                }
-
-                // Look for employer amount (typically in the rightmost columns)
-                if let Some(&emp_amount) = amounts.last() {
-                    if emp_amount > Decimal::new(100, 0) {
-                        employer_amount = Some(emp_amount);
-                        println!("🎫 Found tickets restaurant employer: {} €", emp_amount);
-                    }
-                }
-            }
-        }
-
-        let employee_item = if let Some(amount) = employee_amount {
-            Some(PayslipLineItem {
-                item_type: PayslipItemType::MealVouchers,
-                description: "Meal vouchers (employee)".to_string(),
-                amount,
-                is_employer_contribution: false,
-                account_mapping: Some("Assets:Meal Voucher".to_string()),
-                raw_data: HashMap::new(),
-            })
-        } else {
-            None
-        };
-
-        let employer_item = if let Some(amount) = employer_amount {
-            Some(PayslipLineItem {
-                item_type: PayslipItemType::MealVouchers,
-                description: "Meal vouchers (employer)".to_string(),
-                amount,
-                is_employer_contribution: true,
-                account_mapping: Some("Assets:Meal Voucher".to_string()),
-                raw_data: HashMap::new(),
-            })
-        } else {
-            None
-        };
-
-        Ok((employee_item, employer_item))
-    }
-    /// Extract Navigo transport reimbursement
-    fn extract_navigo_reimbursement(&self, text: &str) -> Result<Option<PayslipLineItem>> {
-        for line in text.lines() {
-            let line = line.trim();
-
-            // Look for "Forfait mensuel NAVIGO" line
-            if line.contains("Forfait mensuel NAVIGO") {
-                // Extract all amounts from this line
-                let amounts = self.extract_all_amounts_from_line(line);
-                println!("🚇 Navigo line: {}", line);
-                println!("🚇 Found amounts: {:?}", amounts);
-
-                if !amounts.is_empty() {
-                    // In the table format, the Navigo reimbursement amount is typically
-                    // the first significant amount (should be around 88.80)
-                    let amount = amounts[0];
-                    println!("🚇 Found Navigo reimbursement: {} €", amount);
-                    return Ok(Some(PayslipLineItem {
-                        item_type: PayslipItemType::TransportReimbursement,
-                        description: "Transport reimbursement (Navigo)".to_string(),
-                        amount,
-                        is_employer_contribution: false,
-                        account_mapping: Some("Income:Benefits:Transports".to_string()),
-                        raw_data: HashMap::new(),
-                    }));
-                }
-            }
-        }
-
-        // If not found, return None (no Navigo reimbursement this month)
-        Ok(None)
-    }*/
 }
 
 impl Default for QtPayslipImporter {
@@ -560,12 +355,43 @@ mod tests {
     use crate::importers::PayslipImporter;
 
     #[tokio::test]
-    async fn test_qt_payslip_importer() {
+    #[ignore = "Only run this test if you have the payslips available"]
+    async fn test_qt_payslip_importer_february() {
         let importer = QtPayslipImporter::new();
-        importer
-            .import_from_file("perso/Qt/2025/Bulletin 2025_04.pdf")
+        let result = importer
+            .import_from_file("../../perso/Qt/2025/Bulletins 02_2025.pdf")
             .await
             .unwrap();
-        // Add tests for the importer here
+        println!("{:#?}", result);
+    }
+    #[tokio::test]
+    #[ignore = "Only run this test if you have the payslips available"]
+    async fn test_qt_payslip_importer_march() {
+        let importer = QtPayslipImporter::new();
+        let result = importer
+            .import_from_file("../../perso/Qt/2025/Bulletins 03_2025.pdf")
+            .await
+            .unwrap();
+        println!("{:#?}", result);
+    }
+    #[tokio::test]
+    #[ignore = "Only run this test if you have the payslips available"]
+    async fn test_qt_payslip_importer_april() {
+        let importer = QtPayslipImporter::new();
+        let result = importer
+            .import_from_file("../../perso/Qt/2025/Bulletins 04_2025.pdf")
+            .await
+            .unwrap();
+        println!("{:#?}", result);
+    }
+    #[tokio::test]
+    #[ignore = "Only run this test if you have the payslips available"]
+    async fn test_qt_payslip_importer_may() {
+        let importer = QtPayslipImporter::new();
+        let result = importer
+            .import_from_file("../../perso/Qt/2025/Bulletins 05_2025.pdf")
+            .await
+            .unwrap();
+        println!("{:#?}", result);
     }
 }

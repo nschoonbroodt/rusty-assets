@@ -2,6 +2,7 @@ use crate::error::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
+use std::collections::HashMap;
 
 #[async_trait]
 pub trait PayslipImporter {
@@ -27,16 +28,13 @@ pub trait PayslipImporter {
 #[derive(Debug, Clone)]
 pub struct ImportedPayslip {
     pub pay_date: NaiveDate,
-    pub pay_period_start: NaiveDate,
-    pub pay_period_end: NaiveDate,
-    pub employee_name: String,
     pub employer_name: String,
     pub gross_fixed_salary: Decimal,
-    pub gross_variable_salary: Vec<(String, Decimal)>, // e.g. vec![(String::from("Bonus"), Decimal::new(5000, 2))],
+    pub gross_variable_salary: HashMap<String, Decimal>, // e.g. HashMap<String, Decimal> { "Commission".to_string() => Decimal::new(5000, 2) }
     pub total_social_contributions: Decimal,
     pub total_revenue_taxes: Decimal,
-    pub additional_benefits: Vec<(String, Decimal)>, // e.g. vec![(String::from("Transport Reimbursement"), Decimal::new(2000, 2))],
-    pub meal_vouchers_employee_contribution: Decimal, // Employee's part of meal vouchers
-    pub meal_vouchers_employer_contribution: Decimal, // Employer's part of meal vouchers
+    pub additional_benefits: HashMap<String, Decimal>, // e.g. HashMap<String, Decimal> { "Transport Reimbursement".to_string() => Decimal::new(2000, 2) },
+    pub meal_vouchers_employee_contribution: Decimal,  // Employee's part of meal vouchers
+    pub meal_vouchers_employer_contribution: Decimal,  // Employer's part of meal vouchers
     pub net_paid_salary: Decimal,
 }
