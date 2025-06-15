@@ -1,5 +1,5 @@
 use crate::error::{CoreError, Result};
-use crate::importers::{ImportedPayslip, PayslipImporter, PayslipItemType, PayslipLineItem};
+use crate::importers::{ImportedPayslip, PayslipImporter};
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use regex::Regex;
@@ -8,16 +8,13 @@ use std::collections::HashMap;
 use std::process::Command;
 use std::str::FromStr;
 
-/// Qt Company Payslip Importer - Simplified Version
-/// Extracts only the essential 8 components as requested by the user
-pub struct QtPayslipImporter {
-    // Add configuration options later if needed
-}
+/// Qt Company Payslip Importer
+pub struct QtPayslipImporter {}
 
 #[async_trait]
 impl PayslipImporter for QtPayslipImporter {
     fn format_description(&self) -> &'static str {
-        "Qt Company PDF payslip format (simplified, 8 key components)"
+        "Qt Company PDF payslip format"
     }
 
     fn can_handle_file(&self, file_path: &str) -> Result<bool> {
@@ -25,10 +22,14 @@ impl PayslipImporter for QtPayslipImporter {
     }
 
     async fn import_from_file(&self, file_path: &str) -> Result<ImportedPayslip> {
-        println!("💰 Importing Qt Payslip from PDF (simplified extraction)...");
+        println!("💰 Importing Qt Payslip from PDF...");
 
         let text = self.extract_text_from_pdf(file_path)?;
 
+        println!("{text:?}");
+        todo!();
+    }
+    /*
         // Extract basic information
         let employee_name = self.extract_employee_name(&text);
         let period = self.extract_period(&text)?;
@@ -223,7 +224,7 @@ impl PayslipImporter for QtPayslipImporter {
             line_items,
             raw_data,
         })
-    }
+    }*/
 }
 
 impl QtPayslipImporter {
@@ -424,7 +425,7 @@ impl QtPayslipImporter {
         amounts
     }
 
-    /// Extract income tax (PAS - Prélèvement à la Source)
+    /*     /// Extract income tax (PAS - Prélèvement à la Source)
     fn extract_income_tax(&self, text: &str) -> Result<Option<PayslipLineItem>> {
         for line in text.lines() {
             let line = line.trim();
@@ -544,11 +545,27 @@ impl QtPayslipImporter {
 
         // If not found, return None (no Navigo reimbursement this month)
         Ok(None)
-    }
+    }*/
 }
 
 impl Default for QtPayslipImporter {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::importers::PayslipImporter;
+
+    #[tokio::test]
+    async fn test_qt_payslip_importer() {
+        let importer = QtPayslipImporter::new();
+        importer
+            .import_from_file("perso/Qt/2025/Bulletin 2025_04.pdf")
+            .await
+            .unwrap();
+        // Add tests for the importer here
     }
 }

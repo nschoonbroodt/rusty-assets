@@ -134,7 +134,8 @@ impl PayslipImportService {
         journal_entries.push(NewJournalEntry {
             account_id: destination_account.id,
             amount: payslip.net_salary,
-            memo: Some(format!("Net salary - {}", payslip.employer_name)),        }); // Create the transaction
+            memo: Some(format!("Net salary - {}", payslip.employer_name)),
+        }); // Create the transaction
         let transaction_request = NewTransaction {
             description: format!(
                 "Payslip - {} ({} to {})",

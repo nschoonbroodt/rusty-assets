@@ -2,7 +2,6 @@ use crate::error::Result;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use rust_decimal::Decimal;
-use std::collections::HashMap;
 
 #[async_trait]
 pub trait PayslipImporter {
@@ -16,7 +15,15 @@ pub trait PayslipImporter {
     fn can_handle_file(&self, file_path: &str) -> Result<bool>;
 }
 
-/// Represents a complete payslip with all line items
+/// Represents payslip with the following data: (this is French oriented ;-) )
+/// - pay date and period
+/// - employee and employer names
+/// - gross fixed and variable salary (anything irregular goes to variable: Commission, Bonus, Vacation, etc.)
+/// - Social Contributions to be deducted
+/// - Revenue taxes to be deducted
+/// - additional benefits (untaxed) such as transport reimbursement,
+/// - meal vouchers: deduced part from the employee and part paid by the employer
+/// - Net salary to be paid
 #[derive(Debug, Clone)]
 pub struct ImportedPayslip {
     pub pay_date: NaiveDate,
@@ -24,103 +31,12 @@ pub struct ImportedPayslip {
     pub pay_period_end: NaiveDate,
     pub employee_name: String,
     pub employer_name: String,
-    pub gross_salary: Decimal,
-    pub net_salary: Decimal,
-    pub line_items: Vec<PayslipLineItem>,
-    pub raw_data: HashMap<String, String>,
-}
-
-/// Individual line item on a payslip (salary, tax, deduction, benefit, etc.)
-#[derive(Debug, Clone)]
-pub struct PayslipLineItem {
-    pub item_type: PayslipItemType,
-    pub description: String,
-    pub amount: Decimal,
-    pub is_employer_contribution: bool, // For benefits paid by employer
-    pub account_mapping: Option<String>, // Suggested account path
-    pub raw_data: HashMap<String, String>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum PayslipItemType {    // Income items (credits to the employee)
-    BaseSalary,
-    Overtime,
-    Bonus,
-    Commission,
-    Allowance,
-    TransportReimbursement,
-    OtherIncome,
-    
-    // Tax deductions (debits from employee)
-    IncomeTax,
-    SocialSecurity,
-    Medicare,
-    UnemploymentTax,
-    OtherTax,
-      // Benefit deductions (debits from employee for benefits)
-    HealthInsurance,
-    RetirementContribution,
-    LifeInsurance,
-    UnionDues,
-    MealVouchers,
-    OtherDeduction,
-    
-    // Employer contributions (not affecting employee net pay)
-    EmployerHealthInsurance,
-    EmployerRetirement,
-    EmployerSocialSecurity,
-    EmployerUnemployment,
-    OtherEmployerContribution,
-    
-    // Net pay (final amount paid to employee)
-    NetPay,
-}
-
-impl PayslipItemType {
-    /// Get the suggested account path for this item type
-    pub fn suggested_account_path(&self) -> &'static str {
-        match self {
-            // Income accounts
-            PayslipItemType::BaseSalary => "Income:Salary:Base Salary",
-            PayslipItemType::Overtime => "Income:Salary:Overtime",
-            PayslipItemType::Bonus => "Income:Salary:Bonus",            PayslipItemType::Commission => "Income:Salary:Commission",
-            PayslipItemType::Allowance => "Income:Salary:Allowance",
-            PayslipItemType::TransportReimbursement => "Income:Benefits:Transport",
-            PayslipItemType::OtherIncome => "Income:Salary:Other",
-            
-            // Tax expense accounts
-            PayslipItemType::IncomeTax => "Expenses:Taxes:Income Tax",
-            PayslipItemType::SocialSecurity => "Expenses:Taxes:Social Security",
-            PayslipItemType::Medicare => "Expenses:Taxes:Medicare",
-            PayslipItemType::UnemploymentTax => "Expenses:Taxes:Unemployment",
-            PayslipItemType::OtherTax => "Expenses:Taxes:Other",
-            
-            // Benefit expense accounts
-            PayslipItemType::HealthInsurance => "Expenses:Benefits:Health Insurance",            PayslipItemType::RetirementContribution => "Expenses:Benefits:Retirement",            PayslipItemType::LifeInsurance => "Expenses:Benefits:Life Insurance",
-            PayslipItemType::UnionDues => "Expenses:Benefits:Union Dues",
-            PayslipItemType::MealVouchers => "Expenses:Benefits:Meal Vouchers",
-            PayslipItemType::OtherDeduction => "Expenses:Benefits:Other",
-            
-            // Employer contribution accounts (these are "income" to show total compensation)
-            PayslipItemType::EmployerHealthInsurance => "Income:Benefits:Health Insurance",
-            PayslipItemType::EmployerRetirement => "Income:Benefits:Retirement",
-            PayslipItemType::EmployerSocialSecurity => "Income:Benefits:Social Security",
-            PayslipItemType::EmployerUnemployment => "Income:Benefits:Unemployment",
-            PayslipItemType::OtherEmployerContribution => "Income:Benefits:Other",
-            
-            // Net pay - configurable account
-            PayslipItemType::NetPay => "Assets:Current Assets:Checking",
-        }
-    }
-      /// Check if this item affects the employee's net pay
-    pub fn affects_net_pay(&self) -> bool {
-        !matches!(self, 
-            PayslipItemType::EmployerHealthInsurance |
-            PayslipItemType::EmployerRetirement |
-            PayslipItemType::EmployerSocialSecurity |
-            PayslipItemType::EmployerUnemployment |
-            PayslipItemType::OtherEmployerContribution |
-            PayslipItemType::NetPay // NetPay is the result, not a contributor
-        )
-    }
+    pub gross_fixed_salary: Decimal,
+    pub gross_variable_salary: Vec<(String, Decimal)>, // e.g. vec![(String::from("Bonus"), Decimal::new(5000, 2))],
+    pub total_social_contributions: Decimal,
+    pub total_revenue_taxes: Decimal,
+    pub additional_benefits: Vec<(String, Decimal)>, // e.g. vec![(String::from("Transport Reimbursement"), Decimal::new(2000, 2))],
+    pub meal_vouchers_employee_contribution: Decimal, // Employee's part of meal vouchers
+    pub meal_vouchers_employer_contribution: Decimal, // Employer's part of meal vouchers
+    pub net_paid_salary: Decimal,
 }
