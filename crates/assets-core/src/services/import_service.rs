@@ -204,12 +204,12 @@ impl ImportService {
 
             // Card purchase: Expense account (debit) / Card liability account (credit)
             // The bank account is not immediately affected
-            let abs_amount = imported.amount.abs();
+            let amount = -imported.amount;
             TransactionService::create_simple_transaction_with_import(
                 imported.description.clone(),
                 expense_account_id, // debit (expense)
                 card_account_id,    // credit (increase liability)
-                abs_amount,
+                amount,
                 transaction_date,
                 None,
                 Some(user_id),
