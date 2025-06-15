@@ -201,24 +201,17 @@ enum ReportCommands {
 #[cfg(feature = "demo")]
 #[derive(Subcommand)]
 enum DemoCommands {
-    // /// Demonstrate double-entry bookkeeping examples
-    // DoubleEntry,
-    // /// Show account types and their normal balance behavior
-    // AccountTypes,
-    // /// Multi-user examples with shared ownership
-    // MultiUser,
-    // /// Show ownership examples
-    // Ownership,
-    // /// Demonstrate nested category hierarchies
-    // Categories,
-    // /// Create sample users and accounts with database
-    // CreateSample,
-    // /// Create deep category hierarchy examples in database
-    // CreateDeepCategories,
-    // /// Create deep account hierarchy examples in database
-    // CreateDeepAccounts,
-    // /// Create sample price data for investments
-    // CreateSamplePrices,
+    /// Create basic household demo data with common accounts and transactions
+    BasicHousehold,
+
+    /// Create investment-focused demo data with brokerage accounts and stock transactions
+    Investment,
+
+    /// Create multi-user demo data showing joint vs individual ownership
+    JointFinances,
+
+    /// Create complete demo data combining all scenarios
+    Complete,
 }
 
 #[tokio::main]
@@ -308,17 +301,7 @@ async fn main() -> Result<()> {
         Commands::Import { action } => handle_import_command(action).await?,
         Commands::Duplicates { action } => handle_duplicate_command(action).await?,
         #[cfg(feature = "demo")]
-        Commands::Demo { action } => match action {
-            // DemoCommands::DoubleEntry => demo_double_entry().await?,
-            // DemoCommands::AccountTypes => show_account_types(),
-            // DemoCommands::MultiUser => show_multi_user_examples(),
-            // DemoCommands::Ownership => show_ownership_examples(),
-            // DemoCommands::Categories => show_category_examples().await?,
-            // DemoCommands::CreateSample => create_sample_data(&cli.user).await?,
-            // DemoCommands::CreateDeepCategories => create_deep_categories().await?,
-            // DemoCommands::CreateDeepAccounts => create_deep_accounts().await?,
-            // DemoCommands::CreateSamplePrices => create_sample_prices().await?,
-        },
+        Commands::Demo { action } => handle_demo_command(action).await?,
     }
     Ok(())
 }

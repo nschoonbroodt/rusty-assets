@@ -4,12 +4,12 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
-default = []
-demo = []
+default = ["demo"]
+demo = ["dep:assets-demo"]
 
 [dependencies]
 assets-core = { path = "../assets-core" }
-
+assets-demo = { path = "../assets-demo", optional = true }
 
 tokio = { version = "1.0", features = ["full"] }
 clap = { version = "4.0", features = ["derive"] }
@@ -25,6 +25,3 @@ serde_json = "1.0"
 comfy-table = "0.1" # Added comfy-table
 csv = "1.1" # Added csv
 env_logger = "0.11" # Added env_logger for logging
-
-[target.'cfg(feature = "demo")'.dependencies]
-assets-demo = { path = "../assets-demo" }

@@ -1,5 +1,6 @@
 pub mod accounts;
 pub mod db;
+#[cfg(feature = "demo")]
 pub mod demo;
 pub mod duplicates;
 pub mod import;
