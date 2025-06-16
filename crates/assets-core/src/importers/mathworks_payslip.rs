@@ -123,11 +123,12 @@ impl MathWorksPayslipImporter {
 
     /// Extract pay date from the text
     fn extract_pay_date(&self, text: &str) -> Result<NaiveDate> {
+        let date_regex = Regex::new(r"(\d{2}/\d{2}/\d{4})").unwrap();
+
         // Look for "Date de paiement" followed by a date
         for line in text.lines() {
             if line.contains("Date de paiement") {
                 // Extract date pattern dd/mm/yyyy
-                let date_regex = Regex::new(r"(\d{2}/\d{2}/\d{4})").unwrap();
                 if let Some(capture) = date_regex.captures(line) {
                     let date_str = capture.get(1).unwrap().as_str();
                     return NaiveDate::parse_from_str(date_str, "%d/%m/%Y").map_err(|_| {
@@ -155,11 +156,11 @@ impl MathWorksPayslipImporter {
 
     /// Extract base salary from payslip
     fn extract_base_salary(&self, text: &str) -> Result<Decimal> {
+        let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Salaire de base") {
                 // Look for amount patterns in the line
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
                 if let Some(amount_match) = amount_regex.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
@@ -172,11 +173,11 @@ impl MathWorksPayslipImporter {
 
     /// Extract total gross salary from payslip
     fn extract_total_gross_salary(&self, text: &str) -> Result<Decimal> {
+        let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Rémunération brute") {
                 // Look for amount patterns in the line
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
                 if let Some(amount_match) = amount_regex.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
@@ -189,21 +190,22 @@ impl MathWorksPayslipImporter {
 
     /// Extract variable salary components (bonuses, commissions, etc.)
     fn extract_variable_salary(&self, text: &str) -> Result<HashMap<String, Decimal>> {
+        // TODO: refactor this to avoid code duplication
+        let amount_regex1 = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
+        let amount_regex2 = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
         let mut result = HashMap::new(); // Look for Stakeholder bonus
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Stakeholder") {
                 // First try regex that handles thousands separators: "2 425,68"
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex1.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Stakeholder bonus".to_string(), amount);
                         continue;
                     }
                 }
                 // Fallback for amounts without thousands separator: "813,71"
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Stakeholder bonus".to_string(), amount);
                     }
@@ -211,8 +213,7 @@ impl MathWorksPayslipImporter {
             }
             // Look for vacation prime
             if line.contains("Prime de vacances") {
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Prime de vacances".to_string(), amount);
                     }
@@ -220,8 +221,7 @@ impl MathWorksPayslipImporter {
             }
             if line.contains("Indemnité compensatrice de Congés Payés") {
                 // First try regex that handles thousands separators: "2 425,68"
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex1.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert(
                             "Indemnité compensatrice de Congés Payés".to_string(),
@@ -231,8 +231,7 @@ impl MathWorksPayslipImporter {
                     }
                 }
                 // Fallback for amounts without thousands separator: "813,71"
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert(
                             "Indemnité compensatrice de Congés Payés".to_string(),
@@ -243,16 +242,14 @@ impl MathWorksPayslipImporter {
             }
             if line.contains("Indemnité compensatrice RTT") {
                 // First try regex that handles thousands separators: "2 425,68"
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex1.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Indemnité compensatrice RTT".to_string(), amount);
                         continue;
                     }
                 }
                 // Fallback for amounts without thousands separator: "813,71"
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Indemnité compensatrice RTT".to_string(), amount);
                     }
@@ -265,11 +262,11 @@ impl MathWorksPayslipImporter {
 
     /// Extract total social contributions
     fn extract_social_contributions_total(&self, text: &str) -> Result<Decimal> {
+        let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("TOTAL COTISATIONS & CONTRIBUTIONS SALARIALES") {
                 // Look for the amount at the end of the line
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
                 if let Some(amount_match) = amount_regex.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
@@ -283,34 +280,34 @@ impl MathWorksPayslipImporter {
     /// Extract revenue taxes (withholding tax)
     fn extract_revenue_taxes_total(&self, text: &str) -> Result<Decimal> {
         // Look for "Prélèvement à la source" in the calculation section with amount
+        let amount_regex1 = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
+        let amount_regex2 = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Prélèvement à la source") && line.contains("-") {
                 // Look for amounts with thousands separators: "- 1 270,44"
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex1.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
                 // Fallback for smaller amounts without thousands separator
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
             }
         }
 
         // Alternative: look for the detailed tax line at the bottom
+        let amount_regex1 = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
+        let amount_regex2 = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Impôt sur le revenu prélevé à la source") && !line.contains("%") {
                 // Look for amounts with thousands separators
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex1.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
                 // Fallback for smaller amounts
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
-                if let Some(amount_match) = amount_regex.find(line) {
+                if let Some(amount_match) = amount_regex2.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }
             }
@@ -324,6 +321,7 @@ impl MathWorksPayslipImporter {
     /// Extract additional benefits (transport, telework allowance, etc.)
     fn extract_additional_benefits(&self, text: &str) -> Result<HashMap<String, Decimal>> {
         let mut result = HashMap::new();
+        let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
 
         for line in text.lines() {
             let line = line.trim(); // Transport benefits - extract the benefit amount (last amount in the line)
@@ -336,7 +334,6 @@ impl MathWorksPayslipImporter {
 
             // Telework allowance
             if line.contains("Frais de télétravail") {
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
                 if let Some(amount_match) = amount_regex.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         result.insert("Telework Allowance".to_string(), amount);
@@ -360,11 +357,11 @@ impl MathWorksPayslipImporter {
         let mut employee_contribution = Decimal::ZERO;
         let mut employer_contribution = Decimal::ZERO;
 
+        let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Titres-restaurant") {
                 // Extract all amounts from the line
-                let amount_regex = Regex::new(r"(\d{1,3}[.,]\d{2})").unwrap();
                 let amounts: Vec<Decimal> = amount_regex
                     .find_iter(line)
                     .filter_map(|m| self.parse_french_decimal(m.as_str()).ok())
@@ -388,11 +385,11 @@ impl MathWorksPayslipImporter {
 
     /// Extract net paid salary
     fn extract_net_paid_salary(&self, text: &str) -> Result<Decimal> {
+        let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
         for line in text.lines() {
             let line = line.trim();
             if line.contains("Net payé en euros") {
                 // Look for the amount at the end of the line
-                let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})").unwrap();
                 if let Some(amount_match) = amount_regex.find(line) {
                     return self.parse_french_decimal(amount_match.as_str());
                 }

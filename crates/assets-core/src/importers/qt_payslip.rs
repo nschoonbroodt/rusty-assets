@@ -63,11 +63,7 @@ impl PayslipImporter for QtPayslipImporter {
         // TODO: sanity check of amounts
         assert_eq!(
             total_gross,
-            gross_fixed_salary
-                + gross_variable_salary
-                    .iter()
-                    .map(|(_, v)| *v)
-                    .sum::<Decimal>(),
+            gross_fixed_salary + gross_variable_salary.values().sum::<Decimal>(),
             "Total gross salary should match fixed + variable"
         );
         assert_eq!(
@@ -76,12 +72,12 @@ impl PayslipImporter for QtPayslipImporter {
                 - total_social_contributions
                 - total_revenue_taxes
                 - meal_vouchers_employee_contribution
-                + additional_benefits.iter().map(|(_, v)| *v).sum::<Decimal>(),
+                + additional_benefits.values().sum::<Decimal>(),
             "Net salary should match gross - contributions - taxes + benefits"
         );
 
         Ok(ImportedPayslip {
-            pay_date: pay_date,
+            pay_date,
             employer_name: "The Qt Company".to_string(),
             gross_fixed_salary,
             gross_variable_salary,
@@ -127,10 +123,10 @@ impl QtPayslipImporter {
     /// Extract payslip period from the text
     fn extract_period(&self, text: &str) -> Result<NaiveDate> {
         // Look for patterns like "Paiement le"
+        let date_regex = Regex::new(r"(\d{1,2}/\d{1,2}/\d{4})").unwrap();
         for line in text.lines() {
             if line.contains("Paiement le") {
                 // Extract the date from the line
-                let date_regex = Regex::new(r"(\d{1,2}/\d{1,2}/\d{4})").unwrap();
                 if let Some(capture) = date_regex.captures(line) {
                     let date =
                         NaiveDate::parse_from_str(capture.get(1).unwrap().as_str(), "%d/%m/%Y")
@@ -166,15 +162,13 @@ impl QtPayslipImporter {
         let mut gross_salary = None;
         let mut net_salary = None;
 
+        let amount_regex = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})(?:\s|$)").unwrap();
         for line in text.lines() {
             let line = line.trim();
 
             // Look for "Salaire brut" line followed by amount
             if line.contains("Salaire brut") {
-                if let Some(amount_match) = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})(?:\s|$)")
-                    .unwrap()
-                    .find(line)
-                {
+                if let Some(amount_match) = amount_regex.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         gross_salary = Some(amount);
                     }
@@ -183,10 +177,7 @@ impl QtPayslipImporter {
 
             // Look for "Net payé" line
             if line.contains("Net payé") {
-                if let Some(amount_match) = Regex::new(r"(\d{1,2}\s\d{3}[.,]\d{2})(?:\s|$)")
-                    .unwrap()
-                    .find(line)
-                {
+                if let Some(amount_match) = amount_regex.find(line) {
                     if let Ok(amount) = self.parse_french_decimal(amount_match.as_str()) {
                         net_salary = Some(amount);
                     }

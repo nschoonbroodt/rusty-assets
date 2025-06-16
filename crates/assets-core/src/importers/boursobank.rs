@@ -7,13 +7,8 @@ use rust_decimal::Decimal;
 use std::collections::HashMap;
 use std::str::FromStr;
 
+#[derive(Default)]
 pub struct BoursoBankImporter {}
-
-impl BoursoBankImporter {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 #[async_trait]
 impl TransactionImporter for BoursoBankImporter {

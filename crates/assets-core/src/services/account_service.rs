@@ -254,8 +254,8 @@ impl AccountService {
             "#,
         )
         .bind(&new_account.name)
-        .bind(&new_account.account_type)
-        .bind(&new_account.account_subtype)
+        .bind(new_account.account_type)
+        .bind(new_account.account_subtype)
         .bind(new_account.parent_id)
         .bind(&new_account.symbol)
         .bind(new_account.quantity)
@@ -302,7 +302,7 @@ impl AccountService {
             "#,
         )
         .bind(&new_account.name)
-        .bind(&new_account.account_type)
+        .bind(new_account.account_type)
         .bind(&new_account.account_subtype)
         .bind(new_account.parent_id)
         .bind(&new_account.symbol)

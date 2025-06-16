@@ -82,11 +82,7 @@ pub fn print_cash_flow_table(
                         format!("€ ({:.2})", row.cash_flow.abs())
                     };
 
-                    let display_name = if category_name == "Uncategorized" && rows.len() == 1 {
-                        &row.account_path
-                    } else {
-                        &row.account_path
-                    };
+                    let display_name = &row.account_path;
 
                     println!(
                         "     └─ {:42} {:>12}",

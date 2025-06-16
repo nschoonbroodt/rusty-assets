@@ -4,3 +4,7 @@ members = ["crates/assets-core", "crates/assets-cli", "crates/assets-demo"]
 
 [workspace.package]
 edition = "2021"
+
+[workspace.lints.clippy]
+# Deny all clippy warnings (strict mode)
+all = "deny"

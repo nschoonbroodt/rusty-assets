@@ -45,10 +45,8 @@ pub async fn list_accounts() -> Result<()> {
                     AccountType::Liability | AccountType::Equity | AccountType::Income => "💳",
                 };
                 println!(
-                    "   {} {} ({})",
-                    balance_indicator,
-                    account.name,
-                    format!("{:?}", account.account_subtype)
+                    "   {} {} ({:?})",
+                    balance_indicator, account.name, account.account_subtype
                 );
                 if let Some(notes) = &account.notes {
                     println!("      📝 {}", notes);
@@ -288,7 +286,7 @@ pub async fn create_account_interactive() -> Result<()> {
     let new_account = NewAccount {
         // code: code.clone(), // Code removed
         name: name.clone(),
-        account_type: account_type.clone(),
+        account_type,
         account_subtype,
         parent_id,
         symbol,
@@ -602,7 +600,7 @@ pub async fn create_account(
     // Create the account
     let new_account = NewAccount {
         name: name.unwrap().to_string(),
-        account_type: account_type.clone(),
+        account_type,
         account_subtype,
         parent_id,
         symbol: symbol.map(|s| s.to_string()),
@@ -840,6 +838,7 @@ pub async fn prompt_parent_account(
     }
 }
 
+#[allow(clippy::type_complexity)] // TODO: refactor this function to reduce complexity
 fn prompt_additional_fields(
     account_type: &AccountType,
     account_subtype: &AccountSubtype,
@@ -1031,7 +1030,9 @@ pub async fn set_account_opening_balance(
 
     // Find the account
     println!("🔍 Looking up account: {}", account_path);
-    let account = account_service.get_account_by_path(account_path).await
+    let account = account_service
+        .get_account_by_path(account_path)
+        .await
         .map_err(|_| anyhow::anyhow!("Account '{}' not found", account_path))?;
 
     // Find or use first user
@@ -1050,16 +1051,20 @@ pub async fn set_account_opening_balance(
     };
 
     // Find or create opening balance equity account
-    let opening_balance_account = match account_service.get_account_by_path("Equity:Opening Balance").await {
+    let opening_balance_account = match account_service
+        .get_account_by_path("Equity:Opening Balance")
+        .await
+    {
         Ok(account) => account,
         Err(_) => {
             println!("📝 Creating 'Equity:Opening Balance' account...");
-            
+
             // Find or create parent Equity account
             let equity_parent = match account_service.get_account_by_path("Equity").await {
                 Ok(account) => Some(account.id),
                 Err(_) => {
-                    println!("📝 Creating 'Equity' parent account...");                    let equity_account = NewAccount {
+                    println!("📝 Creating 'Equity' parent account...");
+                    let equity_account = NewAccount {
                         name: "Equity".to_string(),
                         account_type: AccountType::Equity,
                         account_subtype: AccountSubtype::OwnerEquity,
@@ -1075,7 +1080,8 @@ pub async fn set_account_opening_balance(
                     };
                     Some(account_service.create_account(equity_account).await?.id)
                 }
-            };            let opening_balance_new = NewAccount {
+            };
+            let opening_balance_new = NewAccount {
                 name: "Opening Balance".to_string(),
                 account_type: AccountType::Equity,
                 account_subtype: AccountSubtype::OpeningBalance,
@@ -1105,8 +1111,13 @@ pub async fn set_account_opening_balance(
     let (account_amount, opening_balance_amount) = match account.account_type {
         AccountType::Asset => (amount, -amount), // Debit asset, Credit opening balance
         AccountType::Liability => (-amount, amount), // Credit liability, Debit opening balance
-        _ => return Err(anyhow::anyhow!("Opening balances are only supported for Asset and Liability accounts")),
-    };    let transaction = NewTransaction {
+        _ => {
+            return Err(anyhow::anyhow!(
+                "Opening balances are only supported for Asset and Liability accounts"
+            ))
+        }
+    };
+    let transaction = NewTransaction {
         description: format!("Opening balance for {}", account.name),
         reference: Some("OPENING".to_string()),
         transaction_date: transaction_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
@@ -1130,7 +1141,9 @@ pub async fn set_account_opening_balance(
 
     // Validate the transaction balances
     if !transaction.is_balanced() {
-        return Err(anyhow::anyhow!("Opening balance transaction does not balance"));
+        return Err(anyhow::anyhow!(
+            "Opening balance transaction does not balance"
+        ));
     }
 
     // Create the transaction
@@ -1142,7 +1155,10 @@ pub async fn set_account_opening_balance(
     println!("   💰 Amount: € {:.2}", amount);
     println!("   📅 Date: {}", transaction_date);
     println!("   👤 User: {}", target_user.name);
-    println!("   🔗 Transaction ID: {}", created_transaction.transaction.id);
+    println!(
+        "   🔗 Transaction ID: {}",
+        created_transaction.transaction.id
+    );
     println!();
     println!("💡 Tip: Run 'cargo run -- reports balance-sheet' to see the updated balance sheet");
 

@@ -1,7 +1,5 @@
 use anyhow::Result;
-use assets_core::{
-    Database, DeduplicationService, MatchStatus, MatchType,
-};
+use assets_core::{Database, DeduplicationService, MatchStatus, MatchType};
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
 use uuid::Uuid;
@@ -307,7 +305,7 @@ async fn show_duplicates(args: ShowDuplicatesArgs) -> Result<()> {
             println!("   ID: {}", other_tx.id);
             println!(
                 "   Match ID: {} (use this to confirm/reject)\n",
-                match_record.id.to_string()[..8].to_string()
+                &match_record.id.to_string()[..8]
             );
         }
     }

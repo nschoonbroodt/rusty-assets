@@ -85,7 +85,7 @@ impl TransactionService {
         .bind(new_transaction.transaction_date)
         .bind(new_transaction.created_by)
         .bind(&new_transaction.import_source)
-        .bind(&new_transaction.import_batch_id)
+        .bind(new_transaction.import_batch_id)
         .bind(&new_transaction.external_reference)
         .fetch_one(&mut *tx)
         .await?; // Insert journal entries
@@ -464,6 +464,7 @@ impl TransactionService {
     }
 
     /// Helper: Create a simple two-account transaction with import metadata
+    #[allow(clippy::too_many_arguments)] // TODO: Refactor to reduce arguments
     pub fn create_simple_transaction_with_import(
         description: String,
         debit_account_id: Uuid,

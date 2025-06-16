@@ -97,7 +97,7 @@ impl ReportService {
         let rows = sqlx::query_as::<_, IncomeStatementRow>(
             "SELECT category_name, account_name, account_path, total_amount FROM fn_income_statement($1, $2, $3)", // Updated to include account_path
         )
-        .bind(&user_ids_array) // Bind as a slice
+        .bind(user_ids_array) // Bind as a slice
         .bind(start_date)
         .bind(end_date)
         .fetch_all(&self.pool)
@@ -135,7 +135,7 @@ impl ReportService {
         let rows = sqlx::query_as::<_, CashFlowRow>(
             "SELECT activity_type, category_name, account_name, account_path, cash_flow FROM fn_cash_flow_statement($1, $2, $3)",
         )
-        .bind(&user_ids_array)
+        .bind(user_ids_array)
         .bind(start_date)
         .bind(end_date)
         .fetch_all(&self.pool)

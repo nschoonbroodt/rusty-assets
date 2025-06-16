@@ -76,7 +76,7 @@ impl PayslipImportService {
         destination_account: &DestinationAccount,
         user_id: Uuid,
     ) -> Result<Uuid> {
-        let entries = vec![
+        let entries = [
             (
                 &destination_account.fixed_gross,
                 -payslip.gross_fixed_salary,
@@ -115,12 +115,12 @@ impl PayslipImportService {
                 let account = account_service
                     .get_account_by_path(path)
                     .await
-                    .or_else(|_| {
+                    .map_err(|_| {
                         // Account not found, create it
-                        Err(crate::error::CoreError::NotFound(format!(
+                        crate::error::CoreError::NotFound(format!(
                             "Account not found: {}. Please create this account first.",
                             path
-                        )))
+                        ))
                     })?;
                 Ok::<_, crate::error::CoreError>(NewJournalEntry {
                     account_id: account.id,

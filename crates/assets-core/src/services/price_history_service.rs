@@ -27,7 +27,7 @@ impl PriceHistoryService {
             RETURNING id, symbol, price, price_date, currency, source, created_at
             "#,
         )
-        .bind(&new_price.symbol.to_uppercase())
+        .bind(new_price.symbol.to_uppercase())
         .bind(new_price.price)
         .bind(new_price.price_date)
         .bind(&new_price.currency)

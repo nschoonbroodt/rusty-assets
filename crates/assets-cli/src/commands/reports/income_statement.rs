@@ -62,7 +62,7 @@ pub(super) fn print_income_statement_csv(data: &[IncomeStatementRow]) -> Result<
         return Ok(());
     }
     let mut wtr = csv::Writer::from_writer(std::io::stdout());
-    wtr.write_record(&["Category", "Account Name", "Total Amount"])?;
+    wtr.write_record(["Category", "Account Name", "Total Amount"])?;
     for row in data {
         wtr.serialize(row)?;
     }

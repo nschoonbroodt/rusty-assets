@@ -98,7 +98,7 @@ async fn import_boursobank(args: BoursoBankArgs) -> Result<()> {
     let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
-    let importer = BoursoBankImporter::new();
+    let importer = BoursoBankImporter::default();
 
     let summary = import_service
         .import_transactions(&importer, &args.file, &args.account, user_id)
@@ -122,7 +122,7 @@ async fn import_sg(args: SgArgs) -> Result<()> {
     let user_id = get_user_id_by_name(&args.user).await?;
 
     let import_service = ImportService::new(db.pool().clone());
-    let importer = SocietegeneraleImporter::new();
+    let importer = SocietegeneraleImporter::default();
 
     let summary = import_service
         .import_transactions(&importer, &args.file, &args.account, user_id)
@@ -191,8 +191,7 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
         result
             .payslip_info
             .gross_variable_salary
-            .iter()
-            .map(|(_, v)| v)
+            .values()
             .sum::<Decimal>()
     );
     println!(
@@ -208,8 +207,7 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
         result
             .payslip_info
             .additional_benefits
-            .iter()
-            .map(|(_, v)| v)
+            .values()
             .sum::<Decimal>()
     );
     println!("• Transaction ID: {}", result.transaction_id);
