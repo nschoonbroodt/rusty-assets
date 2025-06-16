@@ -1,3 +1,4 @@
+use bon::Builder;
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
@@ -287,7 +288,7 @@ pub enum UserContext {
 }
 
 /// New account data for creation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct NewAccount {
     pub name: String,
     pub account_type: AccountType,
@@ -305,6 +306,7 @@ pub struct NewAccount {
     pub purchase_price: Option<Decimal>,
 
     // General fields
+    #[builder(default = "EUR".to_owned())]
     pub currency: String,
     pub notes: Option<String>,
 }
