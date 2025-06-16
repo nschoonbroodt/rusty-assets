@@ -603,3 +603,46 @@ Tx3: Internal Transfer: Courant → LDD
 - Ensures atomic operations with proper error handling
 - Maintains transaction history and audit trail
 
+## ✅ Demo System Refactor and Basic Household Demo - DONE
+
+**COMPLETED**: Implemented a comprehensive demo system with ergonomic account creation and realistic sample data:
+
+**Code Structure & Architecture**:
+- ✅ Moved demo logic out of core library into feature-gated CLI module
+- ✅ Created `assets-demo` crate for sample data generation
+- ✅ Implemented bon builder pattern for `NewAccount` with `#[builder(into)]` and defaults
+- ✅ Added proper logging throughout demo code using log crate instead of println!
+- ✅ Created modular demo structure supporting multiple scenarios
+
+**Basic Household Demo**:
+- ✅ Created realistic French-style household chart of accounts with complete hierarchy:
+  - Assets: Current Assets (Main Checking, Savings Account, Emergency Fund)
+  - Liabilities: Credit Cards (Visa Card)
+  - Income: Employment (Salary)
+  - Expenses: Housing (Rent), Food (Groceries, Dining Out), Transportation (Gas, Car Insurance), Utilities (Electric, Internet, Phone), Personal (Clothing, Entertainment)
+- ✅ Implemented dynamic date handling (transactions relative to current date)
+- ✅ Created first transaction: Monthly salary deposit of €3,200.00 for previous month
+- ✅ Proper double-entry bookkeeping with debit/credit logic
+
+**Technical Implementation**:
+- ✅ Added chrono and rust_decimal dependencies to demo crate
+- ✅ Used `AccountService::get_account_by_path()` for ergonomic account lookup
+- ✅ Used `TransactionService::create_simple_transaction()` helper for clean transaction creation
+- ✅ Implemented proper error handling and transaction validation
+- ✅ CLI feature-gating with `#[cfg(feature = "demo")]` working correctly
+
+**CLI Integration**:
+- ✅ Demo commands integrated into main CLI: `cargo run -- demo basic-household`
+- ✅ Proper logging output showing progress and completion
+- ✅ Database migration and clean state handling
+- ✅ Verified working demo with account creation and transaction posting
+
+**Quality & Testing**:
+- ✅ Code compiles without warnings
+- ✅ Demo successfully creates complete chart of accounts (25+ accounts)  
+- ✅ First transaction correctly posted with proper accounting entries
+- ✅ Account tree and transaction listing verified through CLI commands
+- ✅ Ready for additional transaction scenarios and demo expansion
+
+**Next Steps Prepared**: Foundation laid for investment demo, joint finances demo, and complete demo scenarios
+
