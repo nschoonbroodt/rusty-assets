@@ -1,8 +1,9 @@
 use anyhow::Result;
 use assets_core::{Database, ReportService, UserService};
-use chrono::{Datelike, NaiveDate};
 use clap::{Args, ValueEnum};
 use uuid::Uuid;
+
+use crate::{DateRange, SingleDate};
 
 mod account_ledger;
 mod balance_sheet;
@@ -39,11 +40,10 @@ impl Default for OutputFormat {
 
 /// Generate balance sheet report
 pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
+    println!("{:?}", params);
     let db = Database::from_env().await?;
     let report_service = ReportService::new(db.pool().clone());
-    let report_date = params
-        .date
-        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date() + chrono::Duration::days(1));
+    let report_date = params.date.get_date();
     let balance_sheet_data = report_service.balance_sheet(report_date).await?;
 
     match params.format {
@@ -62,11 +62,8 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
     let db = Database::from_env().await?;
     let report_service = ReportService::new(db.pool().clone());
 
-    let today = chrono::Utc::now().naive_utc().date();
-    let start_date = params
-        .start_date
-        .unwrap_or_else(|| NaiveDate::from_ymd_opt(today.year(), 1, 1).unwrap_or(today)); // Used today.year()
-    let end_date = params.end_date.unwrap_or(today);
+    let (start_date, end_date) = params.date_range.range();
+
     let user_uuid = get_user_id_by_name(&params.user).await?;
 
     let income_statement_data = report_service
@@ -91,28 +88,23 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
 pub async fn generate_cash_flow_statement(params: CashFlowParams) -> Result<()> {
     let db = Database::from_env().await?;
     let report_service = ReportService::new(db.pool().clone());
-    
+
     // Get user ID from username
     let user_id = get_user_id_by_name(&params.user).await?;
-    
-    // Set default dates if not provided
-    let end_date = params
-        .end_date
-        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
-    let start_date = params
-        .start_date
-        .unwrap_or_else(|| {
-            // Default to first day of current month
-            let current_date = end_date;
-            chrono::NaiveDate::from_ymd_opt(current_date.year(), current_date.month(), 1).unwrap()
-        });
+
+    let (start_date, end_date) = params.date_range.range();
 
     let cash_flow_data = report_service
         .cash_flow_statement(start_date, end_date, user_id)
-        .await?;    match params.format {
-        OutputFormat::Json => cash_flow::print_cash_flow_json(&cash_flow_data, start_date, end_date)?,
+        .await?;
+    match params.format {
+        OutputFormat::Json => {
+            cash_flow::print_cash_flow_json(&cash_flow_data, start_date, end_date)?
+        }
         OutputFormat::Csv => cash_flow::print_cash_flow_csv(&cash_flow_data)?,
-        OutputFormat::Table => cash_flow::print_cash_flow_table(&cash_flow_data, start_date, end_date)?,
+        OutputFormat::Table => {
+            cash_flow::print_cash_flow_table(&cash_flow_data, start_date, end_date)?
+        }
     }
 
     Ok(())
@@ -120,7 +112,8 @@ pub async fn generate_cash_flow_statement(params: CashFlowParams) -> Result<()> 
 
 /// Generate trial balance report
 pub async fn generate_trial_balance(params: TrialBalanceParams) -> Result<()> {
-    todo!("Generate trial balance for date: {:?}", params.date);
+    let report_date = params.date.get_date();
+    todo!("Generate trial balance for date: {:?}", report_date);
 }
 
 /// Generate account ledger report
@@ -135,12 +128,7 @@ pub async fn generate_account_ledger(params: AccountLedgerParams) -> Result<()> 
         .map_err(|_| anyhow::anyhow!("Account '{}' not found", params.account_path))?;
 
     // Set default dates if not provided
-    let end_date = params
-        .end_date
-        .unwrap_or_else(|| chrono::Utc::now().naive_utc().date());
-    let start_date = params
-        .start_date
-        .unwrap_or_else(|| end_date - chrono::Duration::days(30)); // Default to last 30 days
+    let (start_date, end_date) = params.date_range.range();
 
     let ledger_data = report_service
         .account_ledger(account.id, start_date, end_date)
@@ -166,47 +154,50 @@ pub async fn generate_account_ledger(params: AccountLedgerParams) -> Result<()> 
 
 /// Generate net worth report over time
 pub async fn generate_net_worth_report(params: NetWorthParams) -> Result<()> {
+    let (start_date, end_date) = params.date_range.range();
     todo!(
         "Generate net worth report from {:?} to {:?}",
-        params.start_date,
-        params.end_date
+        start_date,
+        end_date
     );
 }
 
 /// Generate budget vs actual report
 pub async fn generate_budget_report(params: BudgetReportParams) -> Result<()> {
+    let (start_date, end_date) = params.date_range.range();
     todo!(
         "Generate budget vs actual report for period: {:?} to {:?}",
-        params.start_date,
-        params.end_date
+        start_date,
+        end_date
     );
 }
 
 /// Generate expense analysis report
 pub async fn generate_expense_analysis(params: ExpenseAnalysisParams) -> Result<()> {
+    let (start_date, end_date) = params.date_range.range();
     todo!(
         "Generate expense analysis from {:?} to {:?}, category: {:?}",
-        params.start_date,
-        params.end_date,
+        start_date,
+        end_date,
         params.category_filter
     );
 }
 
 /// Generate investment performance report
 pub async fn generate_investment_performance(params: InvestmentPerformanceParams) -> Result<()> {
+    let (start_date, end_date) = params.date_range.range();
     todo!(
         "Generate investment performance report from {:?} to {:?}",
-        params.start_date,
-        params.end_date
+        start_date,
+        end_date
     );
 }
 
 /// Parameters for balance sheet report
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct BalanceSheetParams {
-    /// Date for the balance sheet (default: tomorrow)
-    #[arg(long)]
-    pub date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date: SingleDate,
 
     /// Include zero balances
     #[arg(long)]
@@ -223,13 +214,8 @@ pub struct IncomeStatementParams {
     /// Username for the report
     #[arg(long)]
     pub user: String,
-    /// Start date for the period (YYYY-MM-DD)
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-    /// End date for the period (YYYY-MM-DD, default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
-
+    #[command(flatten)]
+    pub date_range: DateRange,
     /// Output format
     #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
     pub format: OutputFormat,
@@ -241,13 +227,8 @@ pub struct CashFlowParams {
     /// Username for the report
     #[arg(long)]
     pub user: String,
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
 
     /// Output format
     #[arg(long, value_enum, default_value_t = OutputFormat::Table)]
@@ -255,11 +236,10 @@ pub struct CashFlowParams {
 }
 
 /// Parameters for trial balance report
-#[derive(Args)]
+#[derive(Args, Debug)]
 pub struct TrialBalanceParams {
-    /// Date for the trial balance (default: today)
-    #[arg(long)]
-    pub date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date: SingleDate,
 
     /// Include zero balances
     #[arg(long)]
@@ -275,13 +255,8 @@ pub struct TrialBalanceParams {
 pub struct AccountLedgerParams {
     /// Account path (e.g., "Assets:Current Assets:Main Checking")
     pub account_path: String,
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
     /// Show running balance
     #[arg(long)]
     pub show_balance: bool,
@@ -294,13 +269,8 @@ pub struct AccountLedgerParams {
 /// Parameters for net worth report
 #[derive(Args)]
 pub struct NetWorthParams {
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
     /// Frequency: daily, weekly, monthly, yearly
     #[arg(long, default_value = "monthly")]
     pub frequency: String,
@@ -313,13 +283,8 @@ pub struct NetWorthParams {
 /// Parameters for budget report
 #[derive(Args)]
 pub struct BudgetReportParams {
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
 
     /// Budget name/version to compare against
     #[arg(long)]
@@ -336,13 +301,8 @@ pub struct BudgetReportParams {
 /// Parameters for expense analysis report
 #[derive(Args)]
 pub struct ExpenseAnalysisParams {
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
 
     /// Filter by category pattern
     #[arg(long)]
@@ -359,13 +319,8 @@ pub struct ExpenseAnalysisParams {
 /// Parameters for investment performance report
 #[derive(Args)]
 pub struct InvestmentPerformanceParams {
-    /// Start date for the period
-    #[arg(long)]
-    pub start_date: Option<NaiveDate>,
-
-    /// End date for the period (default: today)
-    #[arg(long)]
-    pub end_date: Option<NaiveDate>,
+    #[command(flatten)]
+    pub date_range: DateRange,
 
     /// Filter by symbol
     #[arg(long)]

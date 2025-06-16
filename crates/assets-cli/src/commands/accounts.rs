@@ -1017,11 +1017,10 @@ async fn prompt_account_ownership(user_service: &UserService) -> Result<Vec<(Uui
 pub async fn set_account_opening_balance(
     account_path: &str,
     amount: Decimal,
-    date: Option<chrono::NaiveDate>,
+    date: chrono::NaiveDate,
     user: Option<&str>,
 ) -> Result<()> {
     use assets_core::{NewJournalEntry, NewTransaction, TransactionService};
-    use chrono::{Datelike, Utc};
 
     let db = Database::from_env().await?;
     let account_service = AccountService::new(db.pool().clone());
@@ -1100,10 +1099,7 @@ pub async fn set_account_opening_balance(
     };
 
     // Use provided date or default to January 1st of current year
-    let transaction_date = date.unwrap_or_else(|| {
-        let current_year = Utc::now().year();
-        chrono::NaiveDate::from_ymd_opt(current_year, 1, 1).unwrap()
-    });
+    let transaction_date = date;
 
     // Create the opening balance transaction
     // For assets: Debit the account, Credit opening balance

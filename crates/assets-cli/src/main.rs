@@ -8,6 +8,8 @@ use commands::demo::*;
 use commands::{
     accounts::*, db::*, duplicates::*, import::*, prices, reports::*, transactions::*, users::*,
 };
+pub mod date_utils;
+pub use date_utils::*;
 
 #[derive(Parser)]
 #[command(name = "assets-cli")]
@@ -127,9 +129,9 @@ enum AccountCommands {
         /// Opening balance amount
         #[arg(long, allow_hyphen_values = true)]
         amount: Decimal,
-        /// Date for the opening balance (default: January 1st of current year)
+        /// Date for the opening balance
         #[arg(long)]
-        date: Option<chrono::NaiveDate>,
+        date: chrono::NaiveDate,
         /// User who owns this account (default: lookup first user)
         #[arg(long)]
         user: Option<String>,
