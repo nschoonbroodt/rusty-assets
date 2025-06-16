@@ -3,6 +3,7 @@ use crate::models::{
     Account, AccountOwnership, AccountOwnershipWithUser, AccountType, AccountWithOwnership,
     AccountWithOwnershipAndUsers, NewAccount,
 };
+use crate::{AccountSubtype, NewAccountByPath};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -166,6 +167,74 @@ impl AccountService {
                 self.create_account_without_ownership(new_account).await
             }
         }
+    }
+
+    /// Create an account by path, auto-creating missing parent accounts
+    pub async fn create_account_by_path(&self, account: NewAccountByPath) -> Result<Account> {
+        // Parse the path into components
+        let path_parts: Vec<&str> = account.full_path.split(':').collect();
+
+        if path_parts.is_empty() {
+            return Err(crate::CoreError::EmptyAccountName);
+        }
+
+        let mut current_parent_id: Option<Uuid> = None;
+        let mut current_path = String::new();
+
+        // Create or find each level of the hierarchy
+        for (i, part) in path_parts.iter().enumerate() {
+            if i > 0 {
+                current_path.push(':');
+            }
+            current_path.push_str(part);
+
+            // Check if this level already exists
+            if let Ok(existing_account) = self.get_account_by_path(&current_path).await {
+                current_parent_id = Some(existing_account.id);
+                continue;
+            }
+
+            // If this is the final part, create with specified type/subtype
+            if i == path_parts.len() - 1 {
+                let new_account = NewAccount {
+                    name: part.to_string(),
+                    account_type: account.account_type,
+                    account_subtype: account.account_subtype,
+                    parent_id: current_parent_id,
+                    currency: account.currency,
+                    symbol: account.symbol,
+                    quantity: account.quantity,
+                    average_cost: account.average_cost,
+                    address: account.address,
+                    purchase_date: account.purchase_date,
+                    purchase_price: account.purchase_price,
+                    notes: account.notes,
+                };
+
+                return self.create_account(new_account).await;
+            } else {
+                // Create intermediate account as Category
+                let intermediate_account = NewAccount {
+                    name: part.to_string(),
+                    account_type: account.account_type, // Same type as final account
+                    account_subtype: AccountSubtype::Category,
+                    parent_id: current_parent_id,
+                    currency: account.currency.clone(),
+                    symbol: None,
+                    quantity: None,
+                    average_cost: None,
+                    address: None,
+                    purchase_date: None,
+                    purchase_price: None,
+                    notes: None,
+                };
+
+                let created_account = self.create_account(intermediate_account).await?;
+                current_parent_id = Some(created_account.id);
+            }
+        }
+
+        unreachable!("Should have returned in the loop")
     }
 
     /// Create a new account without ownership (internal method)

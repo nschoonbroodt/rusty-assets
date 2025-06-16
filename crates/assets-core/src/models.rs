@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// Account types following double-entry bookkeeping principles
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq, Copy)]
 #[sqlx(type_name = "account_type", rename_all = "lowercase")]
 pub enum AccountType {
     Asset,     // Cash, investments, real estate, equipment
@@ -307,6 +307,30 @@ pub struct NewAccount {
     pub purchase_price: Option<Decimal>, // General fields
     #[builder(into, default = "EUR")]
     pub currency: String,
+    pub notes: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Builder)]
+pub struct NewAccountByPath {
+    #[builder(into)]
+    pub full_path: String,
+    pub account_type: AccountType,
+    pub account_subtype: AccountSubtype,
+
+    #[builder(into, default = "EUR")]
+    pub currency: String,
+
+    // Asset-specific fields (optional)
+    pub symbol: Option<String>,
+    pub quantity: Option<Decimal>,
+    pub average_cost: Option<Decimal>,
+
+    // Real estate specific (optional)
+    pub address: Option<String>,
+    pub purchase_date: Option<DateTime<Utc>>,
+    pub purchase_price: Option<Decimal>,
+
+    // General fields
     pub notes: Option<String>,
 }
 
