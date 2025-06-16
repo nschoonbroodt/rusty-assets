@@ -290,6 +290,7 @@ pub enum UserContext {
 /// New account data for creation
 #[derive(Debug, Clone, Serialize, Deserialize, Builder)]
 pub struct NewAccount {
+    #[builder(into)]
     pub name: String,
     pub account_type: AccountType,
     pub account_subtype: AccountSubtype,
@@ -303,10 +304,8 @@ pub struct NewAccount {
     // Real estate specific (optional)
     pub address: Option<String>,
     pub purchase_date: Option<DateTime<Utc>>,
-    pub purchase_price: Option<Decimal>,
-
-    // General fields
-    #[builder(default = "EUR".to_owned())]
+    pub purchase_price: Option<Decimal>, // General fields
+    #[builder(into, default = "EUR")]
     pub currency: String,
     pub notes: Option<String>,
 }
