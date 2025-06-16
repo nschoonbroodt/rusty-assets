@@ -1,8 +1,8 @@
 use anyhow::Result;
 
-pub async fn create_basic_household_demo() -> Result<()> {
-    todo!();
-}
+mod basic_household;
+
+pub use basic_household::create_basic_household_demo;
 pub async fn create_investment_demo() -> Result<()> {
     todo!();
 }
