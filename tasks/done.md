@@ -646,3 +646,40 @@ Tx3: Internal Transfer: Courant → LDD
 
 **Next Steps Prepared**: Foundation laid for investment demo, joint finances demo, and complete demo scenarios
 
+## ✅ Path-Based API Redesign - COMPLETED (June 16, 2025)
+
+**Context**: Demo data creation revealed API pain points. Successfully designed and implemented path-based APIs for both accounts and transactions.
+
+### Path-Based Account Creation ✅
+- ✅ Create `NewAccountByPath` struct with bon builder pattern
+- ✅ Implement `AccountService::create_account_by_path()` method
+- ✅ Auto-create missing parent accounts as Category types
+- ✅ Handle path parsing: "Assets:Current Assets:Main Checking" 
+- ✅ Validation: ensure path makes sense for account type
+- ✅ Conflict handling: what if parent exists with wrong type?
+- ✅ **Benefits**: Intuitive for users, perfect for CSV imports, eliminates parent ID tracking
+
+### Path-Based Transaction Creation ✅
+- ✅ Create `NewTransactionByPath` and `JournalEntryByPath` structs with bon builder pattern
+- ✅ Use positive/negative amounts instead of EntryType enum (cleaner, more intuitive)
+- ✅ Implement `TransactionService::create_transaction_by_path()` method
+- ✅ Add helper methods: `simple_transfer()`, `income()`, `expense()` for common patterns
+- ✅ Internal account path resolution works perfectly
+- ✅ **Benefits**: Much cleaner demo code, user-friendly real API, matches user mental models
+
+### Demo Integration ✅
+- ✅ Refactor basic household demo to use new path-based APIs
+- ✅ Add all 18 transactions to complete 2-month scenario
+- ✅ Use demos as proving ground for API usability
+- ✅ **Goal**: Demo feels intuitive - API is production-ready!
+
+**Results**: 
+- ✅ 27 accounts created with perfect hierarchy
+- ✅ 18 transactions created across 2 months (May-June 2025)
+- ✅ All transactions balanced (debits = credits = 0.00)
+- ✅ Realistic French household financial scenario
+- ✅ Path-based API is intuitive and maintainable
+- ✅ Database verification confirms perfect double-entry accounting
+
+**Impact**: This redesign makes RustyAssets significantly more user-friendly. Account and transaction creation is now as simple as specifying paths like "Assets:Current Assets:Main Checking" instead of managing hierarchical IDs.
+

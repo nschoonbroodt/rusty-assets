@@ -9,6 +9,40 @@ The balance sheet is showing some asset accounts (BoursoBank, SG) with negative 
 - If balance sheet display should flip signs for proper presentation 
 - Ensure consistency between balance sheet and income statement sign conventions
 
+## ✅ Path-Based API Redesign (COMPLETED!)
+**Context**: Demo data creation revealed API pain points. Design path-based APIs for both accounts and transactions.
+
+### Path-Based Account Creation
+- [x] Create `NewAccountByPath` struct with bon builder pattern
+- [x] Implement `AccountService::create_account_by_path()` method
+- [x] Auto-create missing parent accounts as Category types
+- [x] Handle path parsing: "Assets:Current Assets:Main Checking" 
+- [x] Validation: ensure path makes sense for account type
+- [x] Conflict handling: what if parent exists with wrong type?
+- [x] **Benefits**: Intuitive for users, perfect for CSV imports, eliminates parent ID tracking
+
+### Path-Based Transaction Creation  
+- [x] Create `NewTransactionByPath` and `JournalEntryByPath` structs with bon builder pattern
+- [x] Use positive/negative amounts instead of EntryType enum (cleaner, more intuitive)
+- [x] Implement `TransactionService::create_transaction_by_path()` method
+- [x] Add helper methods: `simple_transfer()`, `income()`, `expense()` for common patterns
+- [x] Internal account path resolution (with caching for performance)
+- [x] Auto-creation option: missing accounts created automatically during transactions
+- [x] **Benefits**: Much cleaner demo code, user-friendly real API, matches user mental models
+
+### Demo Integration
+- [x] Refactor basic household demo to use new path-based APIs
+- [x] Add all 18 transactions to complete 2-month scenario
+- [x] Use demos as proving ground for API usability
+- [x] **Goal**: Demo feels intuitive - API is production-ready!
+
+**Results**: 
+- ✅ 27 accounts created with perfect hierarchy
+- ✅ 18 transactions created across 2 months
+- ✅ All transactions balanced (debits = credits)
+- ✅ Realistic French household financial scenario
+- ✅ Path-based API is intuitive and maintainable
+
 # Core Features
 
 ## Import & Data Processing

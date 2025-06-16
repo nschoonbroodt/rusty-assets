@@ -3,8 +3,8 @@ use assets_core::{
     services::AccountService, AccountSubtype, AccountType, Database, NewAccountByPath,
     NewTransactionByPath,
 };
-use chrono::{Datelike, TimeZone};
-use log::{error, info};
+use chrono::{Datelike, Utc};
+use log::{debug, error, info};
 use rust_decimal::Decimal;
 
 pub async fn create_basic_household_demo() -> Result<()> {
@@ -84,45 +84,286 @@ async fn create_accounts(db: Database) -> Result<()> {
 use assets_core::services::TransactionService;
 
 async fn create_transactions(db: &Database) -> Result<()> {
-    let now = chrono::Utc::now();
-    let previous_month = now - chrono::Duration::days(30);
-    let previous_month_start = chrono::Utc
-        .with_ymd_and_hms(
-            previous_month.year(),
-            previous_month.month(),
-            1, // First day of the month
-            0,
-            0,
-            0,
-        )
-        .unwrap();
+    info!("💰 Creating sample transactions...");
 
     let account_service = AccountService::new(db.pool().clone());
     let transaction_service = TransactionService::new(db.pool().clone());
 
-    // Calculate dates: previous month (1st) and current month (1st)
+    // Calculate dates for previous month and current month
+    let now = Utc::now();
+    let current_month_start = now.with_day(1).unwrap();
+    let previous_month_start = current_month_start
+        .checked_sub_months(chrono::Months::new(1))
+        .unwrap();
+
     info!(
-        "📅 Creating transactions for previous month starting: {}",
-        previous_month_start
+        "📅 Creating transactions for {} and {}",
+        previous_month_start.format("%Y-%m"),
+        current_month_start.format("%Y-%m")
     );
 
-    let salary_transaction = NewTransactionByPath::income(
-        "Monthly Salary Deposit",
-        previous_month_start,
-        "Income:Employment:Salary",
-        "Assets:Current Assets:Main Checking",
-        Decimal::new(320000, 2), // €3,200.00
+    // Previous Month Transactions
+    let prev_month_transactions = vec![
+        // May 1: Salary
+        (
+            1,
+            "Monthly Salary Deposit",
+            NewTransactionByPath::income(
+                "Monthly Salary Deposit",
+                previous_month_start.with_day(1).unwrap(),
+                "Income:Employment:Salary",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(320000, 2), // €3,200.00
+            ),
+        ),
+        // May 2: Rent
+        (
+            2,
+            "Rent Payment",
+            NewTransactionByPath::expense(
+                "Rent Payment",
+                previous_month_start.with_day(2).unwrap(),
+                "Expenses:Housing:Rent",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(120000, 2), // €1,200.00
+            ),
+        ),
+        // May 3: Groceries
+        (
+            3,
+            "Groceries - Carrefour",
+            NewTransactionByPath::expense(
+                "Groceries - Carrefour",
+                previous_month_start.with_day(3).unwrap(),
+                "Expenses:Food:Groceries",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(8550, 2), // €85.50
+            ),
+        ),
+        // May 5: Electric Bill
+        (
+            5,
+            "Electric Bill - EDF",
+            NewTransactionByPath::expense(
+                "Electric Bill - EDF",
+                previous_month_start.with_day(5).unwrap(),
+                "Expenses:Utilities:Electric",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(6820, 2), // €68.20
+            ),
+        ),
+        // May 7: Gas
+        (
+            7,
+            "Gas Station - Total",
+            NewTransactionByPath::expense(
+                "Gas Station - Total",
+                previous_month_start.with_day(7).unwrap(),
+                "Expenses:Transportation:Gas",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(5500, 2), // €55.00
+            ),
+        ),
+        // May 10: Groceries
+        (
+            10,
+            "Groceries - Monoprix",
+            NewTransactionByPath::expense(
+                "Groceries - Monoprix",
+                previous_month_start.with_day(10).unwrap(),
+                "Expenses:Food:Groceries",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(9230, 2), // €92.30
+            ),
+        ),
+        // May 12: Internet
+        (
+            12,
+            "Internet Bill - Orange",
+            NewTransactionByPath::expense(
+                "Internet Bill - Orange",
+                previous_month_start.with_day(12).unwrap(),
+                "Expenses:Utilities:Internet",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(3599, 2), // €35.99
+            ),
+        ),
+        // May 15: Dining Out
+        (
+            15,
+            "Dinner - Bistrot",
+            NewTransactionByPath::expense(
+                "Dinner - Bistrot",
+                previous_month_start.with_day(15).unwrap(),
+                "Expenses:Food:Dining Out",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(4580, 2), // €45.80
+            ),
+        ),
+        // May 20: Emergency Fund Transfer
+        (
+            20,
+            "Emergency Fund Transfer",
+            NewTransactionByPath::simple_transfer(
+                "Emergency Fund Transfer",
+                previous_month_start.with_day(20).unwrap(),
+                "Assets:Current Assets:Main Checking",
+                "Assets:Current Assets:Emergency Fund",
+                Decimal::new(50000, 2), // €500.00
+            ),
+        ),
+        // May 25: Phone Bill
+        (
+            25,
+            "Phone Bill - SFR",
+            NewTransactionByPath::expense(
+                "Phone Bill - SFR",
+                previous_month_start.with_day(25).unwrap(),
+                "Expenses:Utilities:Phone",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(2599, 2), // €25.99
+            ),
+        ),
+    ];
+
+    // Current Month Transactions
+    let current_month_transactions = vec![
+        // June 1: Salary
+        (
+            1,
+            "Monthly Salary Deposit",
+            NewTransactionByPath::income(
+                "Monthly Salary Deposit",
+                current_month_start.with_day(1).unwrap(),
+                "Income:Employment:Salary",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(320000, 2), // €3,200.00
+            ),
+        ),
+        // June 2: Rent
+        (
+            2,
+            "Rent Payment",
+            NewTransactionByPath::expense(
+                "Rent Payment",
+                current_month_start.with_day(2).unwrap(),
+                "Expenses:Housing:Rent",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(120000, 2), // €1,200.00
+            ),
+        ),
+        // June 4: Groceries
+        (
+            4,
+            "Groceries - Leclerc",
+            NewTransactionByPath::expense(
+                "Groceries - Leclerc",
+                current_month_start.with_day(4).unwrap(),
+                "Expenses:Food:Groceries",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(7845, 2), // €78.45
+            ),
+        ),
+        // June 8: Gas
+        (
+            8,
+            "Gas Station - Shell",
+            NewTransactionByPath::expense(
+                "Gas Station - Shell",
+                current_month_start.with_day(8).unwrap(),
+                "Expenses:Transportation:Gas",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(6200, 2), // €62.00
+            ),
+        ),
+        // June 10: Car Insurance
+        (
+            10,
+            "Car Insurance - Quarterly",
+            NewTransactionByPath::expense(
+                "Car Insurance - Quarterly",
+                current_month_start.with_day(10).unwrap(),
+                "Expenses:Transportation:Car Insurance",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(8500, 2), // €85.00
+            ),
+        ),
+        // June 12: Groceries
+        (
+            12,
+            "Groceries - Carrefour",
+            NewTransactionByPath::expense(
+                "Groceries - Carrefour",
+                current_month_start.with_day(12).unwrap(),
+                "Expenses:Food:Groceries",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(8920, 2), // €89.20
+            ),
+        ),
+        // June 14: Clothing
+        (
+            14,
+            "Clothing - Zara",
+            NewTransactionByPath::expense(
+                "Clothing - Zara",
+                current_month_start.with_day(14).unwrap(),
+                "Expenses:Personal:Clothing",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(12000, 2), // €120.00
+            ),
+        ),
+        // June 15: Entertainment
+        (
+            15,
+            "Cinema - UGC",
+            NewTransactionByPath::expense(
+                "Cinema - UGC",
+                current_month_start.with_day(15).unwrap(),
+                "Expenses:Personal:Entertainment",
+                "Assets:Current Assets:Main Checking",
+                Decimal::new(3550, 2), // €35.50
+            ),
+        ),
+    ];
+
+    // Create previous month transactions
+    info!(
+        "📅 Creating {} previous month transactions...",
+        prev_month_transactions.len()
     );
+    for (day, desc, transaction) in prev_month_transactions {
+        transaction_service
+            .create_transaction_by_path(&account_service, transaction)
+            .await
+            .map_err(|e| {
+                error!(
+                    "❌ Failed to create transaction '{}' (day {}): {}",
+                    desc, day, e
+                );
+                e
+            })?;
+        debug!("✅ Created: {}", desc);
+    }
 
-    transaction_service
-        .create_transaction_by_path(&account_service, salary_transaction)
-        .await
-        .map_err(|e| {
-            error!("❌ Failed to create salary transaction: {}", e);
-            e
-        })?;
+    // Create current month transactions
+    info!(
+        "📅 Creating {} current month transactions...",
+        current_month_transactions.len()
+    );
+    for (day, desc, transaction) in current_month_transactions {
+        transaction_service
+            .create_transaction_by_path(&account_service, transaction)
+            .await
+            .map_err(|e| {
+                error!(
+                    "❌ Failed to create transaction '{}' (day {}): {}",
+                    desc, day, e
+                );
+                e
+            })?;
+        debug!("✅ Created: {}", desc);
+    }
 
-    info!("✅ Sample transactions created successfully!");
-
+    info!("✅ All sample transactions created successfully!");
     Ok(())
 }
