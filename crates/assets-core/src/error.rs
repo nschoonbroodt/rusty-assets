@@ -35,6 +35,9 @@ pub enum CoreError {
 
     #[error("Generic error: {0}")]
     Generic(String),
+
+    #[error("Account not found: {0}")]
+    AccountNotFound(String),
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;

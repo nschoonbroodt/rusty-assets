@@ -1,6 +1,7 @@
 use anyhow::Result;
 use assets_core::{
     services::AccountService, AccountSubtype, AccountType, Database, NewAccountByPath,
+    NewTransactionByPath,
 };
 use chrono::{Datelike, TimeZone};
 use log::{error, info};
@@ -40,151 +41,40 @@ pub async fn create_basic_household_demo() -> Result<()> {
 async fn create_accounts(db: Database) -> Result<()> {
     let account_service = AccountService::new(db.pool().clone());
 
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Assets:Current Assets:Main Checking")
-                .account_type(AccountType::Asset)
-                .account_subtype(AccountSubtype::Checking)
-                .build(),
-        )
-        .await?;
+    #[rustfmt::skip]
+    let accounts= vec![
+        ("Assets:Current Assets:Main Checking", AccountType::Asset, AccountSubtype::Checking),
+        ("Assets:Current Assets:Savings Account", AccountType::Asset, AccountSubtype::Savings),
+        ("Assets:Current Assets:Emergency Fund", AccountType::Asset, AccountSubtype::Savings),
+        ("Liabilities:Credit Cards:Visa Card", AccountType::Liability, AccountSubtype::CreditCard),
+        ("Income:Employment:Salary", AccountType::Income, AccountSubtype::Salary),
+        ("Expenses:Food:Dining Out", AccountType::Expense, AccountSubtype::Food),
+        ("Expenses:Food:Groceries", AccountType::Expense, AccountSubtype::Food),
+        ("Expenses:Housing:Rent", AccountType::Expense, AccountSubtype::Housing),
+        ("Expenses:Personal:Clothing", AccountType::Expense, AccountSubtype::Personal),
+        ("Expenses:Personal:Entertainment", AccountType::Expense, AccountSubtype::Personal),
+        ("Expenses:Transportation:Car Insurance", AccountType::Expense, AccountSubtype::Transportation),
+        ("Expenses:Transportation:Gas", AccountType::Expense, AccountSubtype::Transportation),
+        ("Expenses:Utilities:Electric", AccountType::Expense, AccountSubtype::Utilities),
+        ("Expenses:Utilities:Internet", AccountType::Expense, AccountSubtype::Utilities),
+        ("Expenses:Utilities:Phone", AccountType::Expense, AccountSubtype::Utilities),
+    ];
 
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Assets:Current Assets:Savings Account")
-                .account_type(AccountType::Asset)
-                .account_subtype(AccountSubtype::Savings)
-                .build(),
-        )
-        .await?;
-
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Assets:Current Assets:Emergency Fund")
-                .account_type(AccountType::Asset)
-                .account_subtype(AccountSubtype::Savings)
-                .build(),
-        )
-        .await?;
-
-    // Create Liabilities
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Liabilities:Credit Cards:Visa Card")
-                .account_type(AccountType::Liability)
-                .account_subtype(AccountSubtype::CreditCard)
-                .build(),
-        )
-        .await?;
-
-    // Create Income accounts
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Income:Employment:Salary")
-                .account_type(AccountType::Income)
-                .account_subtype(AccountSubtype::Salary)
-                .build(),
-        )
-        .await?;
-
-    // Create Expense accounts
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Food:Dining Out")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Food)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Food:Groceries")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Food)
-                .build(),
-        )
-        .await?;
-
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Housing:Rent")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Housing)
-                .build(),
-        )
-        .await?;
-
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Personal:Clothing")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Personal)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Personal:Entertainment")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Personal)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Transportation:Car Insurance")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Transportation)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Transportation:Gas")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Transportation)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Utilities:Electric")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Utilities)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Utilities:Internet")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Utilities)
-                .build(),
-        )
-        .await?;
-    account_service
-        .create_account_by_path(
-            NewAccountByPath::builder()
-                .full_path("Expenses:Utilities:Phone")
-                .account_type(AccountType::Expense)
-                .account_subtype(AccountSubtype::Utilities)
-                .build(),
-        )
-        .await?;
+    for (path, account_type, account_subtype) in accounts {
+        account_service
+            .create_account_by_path(
+                NewAccountByPath::builder()
+                    .full_path(path)
+                    .account_type(account_type)
+                    .account_subtype(account_subtype)
+                    .build(),
+            )
+            .await
+            .map_err(|e| {
+                error!("❌ Failed to create account '{}': {}", path, e);
+                e
+            })?;
+    }
 
     info!("✅ Complete chart of accounts created successfully!");
 
@@ -210,34 +100,27 @@ async fn create_transactions(db: &Database) -> Result<()> {
     let account_service = AccountService::new(db.pool().clone());
     let transaction_service = TransactionService::new(db.pool().clone());
 
-    // Get account references
-    let checking_account = account_service
-        .get_account_by_path("Assets:Current Assets:Main Checking")
-        .await?;
-    let salary_account = account_service
-        .get_account_by_path("Income:Employment:Salary")
-        .await?;
-
     // Calculate dates: previous month (1st) and current month (1st)
     info!(
         "📅 Creating transactions for previous month starting: {}",
         previous_month_start
     );
 
-    // First transaction: Monthly Salary Deposit (previous month)
-    let salary_transaction = TransactionService::create_simple_transaction(
-        "Monthly Salary Deposit".to_string(),
-        checking_account.id,     // Debit (asset increases)
-        salary_account.id,       // Credit (income increases)
-        Decimal::new(320000, 2), // €3,200.00
+    let salary_transaction = NewTransactionByPath::income(
+        "Monthly Salary Deposit",
         previous_month_start,
-        None, // no reference
-        None, // no user context for demo
+        "Income:Employment:Salary",
+        "Assets:Current Assets:Main Checking",
+        Decimal::new(320000, 2), // €3,200.00
     );
 
     transaction_service
-        .create_transaction(salary_transaction)
-        .await?;
+        .create_transaction_by_path(&account_service, salary_transaction)
+        .await
+        .map_err(|e| {
+            error!("❌ Failed to create salary transaction: {}", e);
+            e
+        })?;
 
     info!("✅ Sample transactions created successfully!");
 

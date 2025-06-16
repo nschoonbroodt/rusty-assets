@@ -3,6 +3,7 @@ use crate::models::{
     JournalEntry, JournalEntryWithAccount, NewJournalEntry, NewTransaction, Transaction,
     TransactionWithEntries, TransactionWithEntriesAndAccounts,
 };
+use crate::{AccountService, CoreError, NewTransactionByPath};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
@@ -15,6 +16,45 @@ pub struct TransactionService {
 impl TransactionService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
+    }
+
+    /// Create transaction using account paths
+    pub async fn create_transaction_by_path(
+        &self,
+        account_service: &AccountService,
+        transaction: NewTransactionByPath,
+    ) -> Result<TransactionWithEntries> {
+        // Resolve all account paths to IDs and convert to NewJournalEntry format
+        let mut resolved_entries = Vec::new();
+
+        for entry in transaction.entries {
+            // Get account by path
+            let account = account_service
+                .get_account_by_path(&entry.account_path)
+                .await
+                .map_err(|_| CoreError::AccountNotFound(entry.account_path.clone()))?;
+
+            resolved_entries.push(NewJournalEntry {
+                account_id: account.id,
+                memo: entry.memo,
+                amount: entry.amount,
+            });
+        }
+
+        // Create the transaction with resolved entries
+        let new_transaction = NewTransaction {
+            description: transaction.description,
+            transaction_date: transaction.date,
+            reference: transaction.reference,
+            external_reference: transaction.memo,
+            entries: resolved_entries,
+
+            created_by: None,
+            import_source: None,
+            import_batch_id: None,
+        };
+
+        self.create_transaction(new_transaction).await
     }
 
     /// Create a new transaction with journal entries
@@ -31,7 +71,8 @@ impl TransactionService {
         }
 
         let mut tx = self.pool.begin().await?; // Insert transaction header
-        let transaction_id = Uuid::new_v4();        let transaction = sqlx::query_as::<_, Transaction>(
+        let transaction_id = Uuid::new_v4();
+        let transaction = sqlx::query_as::<_, Transaction>(
             r#"
             INSERT INTO transactions (id, description, reference, transaction_date, created_by, import_source, import_batch_id, external_reference)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -77,7 +118,8 @@ impl TransactionService {
     /// Get a transaction with all its journal entries
     pub async fn get_transaction(
         &self,
-        transaction_id: Uuid,    ) -> Result<Option<TransactionWithEntries>> {
+        transaction_id: Uuid,
+    ) -> Result<Option<TransactionWithEntries>> {
         let transaction = sqlx::query_as::<_, Transaction>(
             "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
@@ -106,7 +148,8 @@ impl TransactionService {
     pub async fn get_transaction_with_accounts(
         &self,
         transaction_id: Uuid,
-    ) -> Result<Option<TransactionWithEntriesAndAccounts>> {        let transaction = sqlx::query_as::<_, Transaction>(
+    ) -> Result<Option<TransactionWithEntriesAndAccounts>> {
+        let transaction = sqlx::query_as::<_, Transaction>(
             "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
@@ -252,7 +295,8 @@ impl TransactionService {
         to_date: Option<DateTime<Utc>>,
         account_path: Option<&str>,
         user_id: Option<Uuid>,
-        limit: u32,    ) -> Result<Vec<TransactionWithEntriesAndAccounts>> {
+        limit: u32,
+    ) -> Result<Vec<TransactionWithEntriesAndAccounts>> {
         // Build the base query
         let mut query = String::from(
             r#"
@@ -374,8 +418,12 @@ impl TransactionService {
         let result = sqlx::query("DELETE FROM transactions WHERE id = $1")
             .bind(transaction_id)
             .execute(&mut *tx)
-            .await?;        if result.rows_affected() == 0 {
-            return Err(crate::error::CoreError::NotFound(format!("Transaction {}", transaction_id)));
+            .await?;
+        if result.rows_affected() == 0 {
+            return Err(crate::error::CoreError::NotFound(format!(
+                "Transaction {}",
+                transaction_id
+            )));
         }
 
         tx.commit().await?;
@@ -391,7 +439,8 @@ impl TransactionService {
         transaction_date: DateTime<Utc>,
         reference: Option<String>,
         created_by: Option<Uuid>,
-    ) -> NewTransaction {        NewTransaction {
+    ) -> NewTransaction {
+        NewTransaction {
             description,
             reference,
             transaction_date,
