@@ -1,6 +1,24 @@
 use anyhow::Result;
 use assets_core::{Database, UserService};
+use clap::ValueEnum;
 use uuid::Uuid;
+
+/// Output format for reports
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    /// Display as a formatted table (default)
+    Table,
+    /// Export as JSON
+    Json,
+    /// Export as CSV
+    Csv,
+}
+
+impl Default for OutputFormat {
+    fn default() -> Self {
+        Self::Table
+    }
+}
 
 /// Helper function to get user UUID from username
 pub async fn get_user_id_by_name(username: &str) -> Result<Uuid> {

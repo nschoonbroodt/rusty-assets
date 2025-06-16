@@ -6,7 +6,7 @@ use comfy_table::{presets::UTF8_FULL, Table};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::get_user_id_by_name;
+use crate::{get_user_id_by_name, OutputFormat};
 
 #[derive(Subcommand)]
 pub enum TransactionCommands {
@@ -61,13 +61,6 @@ pub struct ListTransactionsArgs {
     /// Output format
     #[arg(long, value_enum, default_value = "table")]
     format: OutputFormat,
-}
-
-#[derive(clap::ValueEnum, Clone)]
-enum OutputFormat {
-    Table,
-    Json,
-    Csv,
 }
 
 pub async fn handle_transaction_command(command: TransactionCommands) -> Result<()> {

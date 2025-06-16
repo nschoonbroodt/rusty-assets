@@ -3,29 +3,12 @@ use assets_core::{Database, ReportService, UserService};
 use clap::{Args, ValueEnum};
 use uuid::Uuid;
 
-use crate::{get_user_id_by_name, DateRange, SingleDate};
+use crate::{get_user_id_by_name, DateRange, OutputFormat, SingleDate};
 
 mod account_ledger;
 mod balance_sheet;
 mod cash_flow;
 mod income_statement;
-
-/// Output format for reports
-#[derive(Debug, Clone, ValueEnum)]
-pub enum OutputFormat {
-    /// Display as a formatted table (default)
-    Table,
-    /// Export as JSON
-    Json,
-    /// Export as CSV
-    Csv,
-}
-
-impl Default for OutputFormat {
-    fn default() -> Self {
-        Self::Table
-    }
-}
 
 /// Generate balance sheet report
 pub async fn generate_balance_sheet(params: BalanceSheetParams) -> Result<()> {
