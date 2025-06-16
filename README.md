@@ -395,6 +395,24 @@ cargo run -- accounts create
 cargo run -- --help
 ```
 
+## Shell Completion
+
+Generate shell completion scripts for faster command entry:
+
+```bash
+# Bash
+assets-cli completion bash > ~/.bash_completion.d/assets-cli
+
+# Zsh  
+assets-cli completion zsh > ~/.zsh/completions/_assets-cli
+
+# Fish
+assets-cli completion fish > ~/.config/fish/completions/assets-cli.fish
+
+# PowerShell
+assets-cli completion powershell | Out-String | Invoke-Expression
+```
+
 ## Contributing
 
 Contributions and suggestions are welcome! See the project structure and add new crates for additional interfaces or features.

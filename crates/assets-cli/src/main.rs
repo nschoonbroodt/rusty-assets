@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::{CommandFactory, Parser, Subcommand};
 use rust_decimal::Decimal;
 
 mod commands;
@@ -64,6 +64,10 @@ enum Commands {
     Duplicates {
         #[command(subcommand)]
         action: DuplicateCommands,
+    },
+    Completion {
+        #[arg(value_enum)]
+        shell: clap_complete::Shell,
     },
     #[cfg(feature = "demo")]
     /// Demo and examples
@@ -302,6 +306,14 @@ async fn main() -> Result<()> {
         Commands::Transactions { action } => handle_transaction_command(action).await?,
         Commands::Import { action } => handle_import_command(action).await?,
         Commands::Duplicates { action } => handle_duplicate_command(action).await?,
+        Commands::Completion { shell } => {
+            clap_complete::generate(
+                shell,
+                &mut Cli::command(),
+                "assets-cli",
+                &mut std::io::stdout(),
+            );
+        }
         #[cfg(feature = "demo")]
         Commands::Demo { action } => handle_demo_command(action).await?,
     }
