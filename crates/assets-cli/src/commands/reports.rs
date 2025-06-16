@@ -3,23 +3,12 @@ use assets_core::{Database, ReportService, UserService};
 use clap::{Args, ValueEnum};
 use uuid::Uuid;
 
-use crate::{DateRange, SingleDate};
+use crate::{get_user_id_by_name, DateRange, SingleDate};
 
 mod account_ledger;
 mod balance_sheet;
 mod cash_flow;
 mod income_statement;
-
-/// Helper function to get user UUID from username
-async fn get_user_id_by_name(username: &str) -> Result<Uuid> {
-    let db = Database::from_env().await?;
-    let user_service = UserService::new(db.pool().clone());
-
-    match user_service.get_user_by_name(username).await? {
-        Some(user) => Ok(user.id),
-        None => Err(anyhow::anyhow!("User '{}' not found", username)),
-    }
-}
 
 /// Output format for reports
 #[derive(Debug, Clone, ValueEnum)]

@@ -10,6 +10,8 @@ use commands::{
 };
 pub mod date_utils;
 pub use date_utils::*;
+mod utils;
+pub use utils::*;
 
 #[derive(Parser)]
 #[command(name = "assets-cli")]
