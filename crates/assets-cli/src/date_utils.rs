@@ -1,6 +1,9 @@
 use chrono::{Datelike, NaiveDate};
 use clap::Args;
 
+// Note: the unwrap in date arithmetic functions should be safe as we are working with valid dates
+// and the operations are designed to stay within valid date ranges.
+
 #[derive(Args, Clone, Debug)]
 #[group(required = false, multiple = false)]
 pub struct SingleDate {
