@@ -1,5 +1,5 @@
 use anyhow::Result;
-use assets_core::{Database, TransactionService, TransactionWithEntriesAndAccounts, UserService};
+use assets_core::{Database, TransactionService, TransactionWithEntriesAndAccounts};
 use chrono::{DateTime, NaiveDate, Utc};
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};

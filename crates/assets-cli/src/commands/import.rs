@@ -1,9 +1,8 @@
 use anyhow::Result;
 use assets_core::importers::{BoursoBankImporter, QtPayslipImporter, SocietegeneraleImporter};
-use assets_core::{Database, DestinationAccount, ImportService, PayslipImportService, UserService};
+use assets_core::{Database, DestinationAccount, ImportService, PayslipImportService};
 use clap::{Args, Subcommand};
 use rust_decimal::Decimal;
-use uuid::Uuid;
 
 use crate::get_user_id_by_name;
 

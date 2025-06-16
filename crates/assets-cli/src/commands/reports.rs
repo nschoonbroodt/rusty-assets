@@ -1,7 +1,6 @@
 use anyhow::Result;
-use assets_core::{Database, ReportService, UserService};
-use clap::{Args, ValueEnum};
-use uuid::Uuid;
+use assets_core::{Database, ReportService};
+use clap::Args;
 
 use crate::{get_user_id_by_name, DateRange, OutputFormat, SingleDate};
 
