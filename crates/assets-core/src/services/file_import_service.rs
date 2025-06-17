@@ -27,29 +27,27 @@ impl FileImportService {
     pub fn get_file_size<P: AsRef<Path>>(file_path: P) -> Result<i64> {
         let metadata = fs::metadata(file_path)?;
         Ok(metadata.len() as i64)
-    }
-    /// Check if a file has already been imported (by hash)
+    }    /// Check if a file has already been imported (by hash)
     pub async fn is_file_already_imported(&self, file_hash: &str) -> Result<bool> {
-        let count: Option<i64> = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM imported_files WHERE file_hash = $1",
-            file_hash
+        let count: Option<i64> = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM imported_files WHERE file_hash = $1"
         )
+        .bind(file_hash)
         .fetch_one(&self.pool)
         .await?;
 
         Ok(count.unwrap_or(0) > 0)
-    }
-    /// Check if a file path has already been imported for a specific source
+    }    /// Check if a file path has already been imported for a specific source
     pub async fn is_file_path_already_imported(
         &self,
         file_path: &str,
         import_source: &str,
     ) -> Result<bool> {
-        let count: Option<i64> = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM imported_files WHERE file_path = $1 AND import_source = $2",
-            file_path,
-            import_source
+        let count: Option<i64> = sqlx::query_scalar(
+            "SELECT COUNT(*) FROM imported_files WHERE file_path = $1 AND import_source = $2"
         )
+        .bind(file_path)
+        .bind(import_source)
         .fetch_one(&self.pool)
         .await?;
 
