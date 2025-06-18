@@ -12,6 +12,7 @@ pub use services::*;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Row;
     use testcontainers_modules::{
         postgres,
         testcontainers::{ImageExt, runners::AsyncRunner},
@@ -51,10 +52,10 @@ mod tests {
         database.migrate().await.expect("Failed to run migrations");
 
         // Verify core tables exist
-        let tables = sqlx::query!(
+        let tables = sqlx::query(
             "SELECT table_name FROM information_schema.tables 
              WHERE table_schema = 'public'
-             ORDER BY table_name"
+             ORDER BY table_name",
         )
         .fetch_all(database.pool())
         .await
@@ -62,7 +63,10 @@ mod tests {
 
         let table_names: Vec<String> = tables
             .iter()
-            .map(|row| row.table_name.clone().unwrap_or_default())
+            .map(|row| {
+                row.get::<Option<String>, _>("table_name")
+                    .unwrap_or_default()
+            })
             .collect();
 
         // Verify essential tables exist
@@ -84,18 +88,16 @@ mod tests {
         );
 
         // Verify we can query tables (basic connectivity test)
-        let table_count = sqlx::query!(
+        let table_count = sqlx::query(
             "SELECT COUNT(*) as count FROM information_schema.tables 
-             WHERE table_schema = 'public'"
+             WHERE table_schema = 'public'",
         )
         .fetch_one(database.pool())
         .await
         .expect("Failed to count tables");
 
-        assert!(
-            table_count.count.unwrap_or(0) > 0,
-            "No tables found after migration"
-        );
+        let count: i64 = table_count.get("count");
+        assert!(count > 0, "No tables found after migration");
 
         println!(
             "✅ Migration test passed! Created {} tables",
