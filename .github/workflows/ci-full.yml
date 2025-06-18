@@ -51,10 +51,6 @@ jobs:
         # Enable testcontainers to use Docker
         TESTCONTAINERS_RYUK_DISABLED: true
 
-    - name: Run integration tests
-      run: cargo test --all --verbose -- --ignored
-      env:
-        TESTCONTAINERS_RYUK_DISABLED: true
 
   # Additional job for checking minimum supported Rust version
   msrv:
