@@ -8,7 +8,7 @@ RustyAssets is a modular, extensible personal finance tracker written in Rust. I
 - **Real estate** (property value and mortgage tracking)
 - **Other assets** (easily extensible)
 
-Note: This project was heavily help by LLMs, so some parts are difficult to read, and use at your own risk.
+Note: This project was heavily help by LLMs (copilot & claude), so some parts are difficult to read, and use at your own risk.
 
 ## Project Structure
 
