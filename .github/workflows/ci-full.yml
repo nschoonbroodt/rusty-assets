@@ -86,10 +86,6 @@ jobs:
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: nschoonbroodt/rusty-assets
-        files: ./cobertura.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
         verbose: true
 
     - name: Upload coverage report as artifact
