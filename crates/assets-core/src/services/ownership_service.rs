@@ -12,7 +12,7 @@ impl OwnershipService {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    
+
     /// Get ownership for a specific account
     pub async fn get_account_ownership(&self, account_id: Uuid) -> Result<Vec<AccountOwnership>> {
         let ownership = sqlx::query_as::<_, AccountOwnership>(
@@ -29,7 +29,7 @@ impl OwnershipService {
 
         Ok(ownership)
     }
-    
+
     /// Get all accounts owned by a user (with ownership percentage)
     pub async fn get_user_accounts(&self, user_id: Uuid) -> Result<Vec<AccountWithOwnership>> {
         // For now, we'll use a simpler approach that doesn't rely on compile-time query validation
