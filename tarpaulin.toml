@@ -47,52 +47,14 @@ exclude-files = [
     "*/.cargo/*"
 ]
 
-# Functions/modules to exclude
-exclude = [
-    # Main functions are typically just CLI entry points
-    "main",
-    
-    # Test modules
-    "test*",
-    "tests::*",
-    
-    # Debug and development utilities
-    "*::fmt::Debug*",
-    "*::fmt::Display*",
-    
-    # Default implementations that are often trivial
-    "*::default::Default*"
-]
+# Note: Function exclusions can be added via command line if needed
+# Common exclusions: main, test*, *::fmt::Debug*, *::default::Default*
 
-# Coverage thresholds (will be used for pass/fail in CI)
-# Note: These are target thresholds, actual enforcement is in CI
-[thresholds]
-# Overall project threshold (start low, increase over time)
-line = 60.0
+# Note: Coverage thresholds are enforced in CI/CD, not here
+# Target thresholds:
+# - assets-core: 80% (core business logic)
+# - assets-cli: 70% (CLI commands)
+# - assets-demo: 60% (demo data)
 
-# Per-crate thresholds
-[crate.assets-core]
-# Core business logic should have highest coverage
-line = 80.0
-
-[crate.assets-cli] 
-# CLI code is harder to test, lower threshold
-line = 70.0
-
-[crate.assets-demo]
-# Demo code is for examples, lowest threshold
-line = 60.0
-
-# HTML report customization
-[html]
-# Output directory for HTML reports
-output-dir = "target/tarpaulin"
-
-# Include source code in HTML output
-include-tests = false
-
-# Engine configuration
-[engine]
-# Use default engine (llvm when available, ptrace fallback)
-Llvm = true
-Ptrace = false
+# These advanced sections are not supported in all tarpaulin versions
+# so we keep the config minimal and use command-line options instead
