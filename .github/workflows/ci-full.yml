@@ -1,10 +1,10 @@
-name: Tests
+name: CI (Full)
 
 on:
   push:
-    branches: [ main, feature/* ]
-  pull_request:
     branches: [ main ]
+  release:
+    types: [ published ]
 
 env:
   CARGO_TERM_COLOR: always
