@@ -36,3 +36,9 @@ db-data/
 # Ignore my personal bank account file
 perso/
 *.csv
+
+# Coverage reports (generated locally)
+tarpaulin-report.html
+cobertura.xml
+tarpaulin-report.json
+coverage.json
