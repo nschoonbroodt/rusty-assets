@@ -1,0 +1,4 @@
+[alias]
+# Test coverage commands
+cov = "tarpaulin --out html"
+cov-ci = "tarpaulin --out xml --timeout 120"
