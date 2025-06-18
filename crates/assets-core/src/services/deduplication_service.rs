@@ -72,22 +72,31 @@ impl DeduplicationService {
     }
 
     /// Find a transaction by partial UUID (useful for CLI commands)
-    pub async fn find_transaction_by_partial_uuid(&self, partial_uuid: &str) -> Result<Option<Uuid>> {
-        let query = format!("SELECT id FROM transactions WHERE id::text LIKE '{}%' LIMIT 1", partial_uuid);
+    pub async fn find_transaction_by_partial_uuid(
+        &self,
+        partial_uuid: &str,
+    ) -> Result<Option<Uuid>> {
+        let query = format!(
+            "SELECT id FROM transactions WHERE id::text LIKE '{}%' LIMIT 1",
+            partial_uuid
+        );
         let result = sqlx::query_scalar::<_, Uuid>(&query)
             .fetch_optional(&self.pool)
             .await?;
-        
+
         Ok(result)
     }
 
     /// Find a transaction match by partial UUID (useful for CLI commands)
     pub async fn find_match_by_partial_uuid(&self, partial_uuid: &str) -> Result<Option<Uuid>> {
-        let query = format!("SELECT id FROM transaction_matches WHERE id::text LIKE '{}%' LIMIT 1", partial_uuid);
+        let query = format!(
+            "SELECT id FROM transaction_matches WHERE id::text LIKE '{}%' LIMIT 1",
+            partial_uuid
+        );
         let result = sqlx::query_scalar::<_, Uuid>(&query)
             .fetch_optional(&self.pool)
             .await?;
-        
+
         Ok(result)
     }
 
@@ -108,7 +117,7 @@ impl DeduplicationService {
                 match_confidence,
                 match_criteria
             FROM fn_find_potential_duplicates($1, $2, $3)
-            "#
+            "#,
         )
         .bind(transaction_id)
         .bind(amount_tolerance)
@@ -117,7 +126,8 @@ impl DeduplicationService {
         .await?;
 
         Ok(duplicates)
-    }    /// Create a transaction match record
+    }
+    /// Create a transaction match record
     pub async fn create_transaction_match(
         &self,
         primary_transaction_id: Uuid,
@@ -145,7 +155,8 @@ impl DeduplicationService {
         .await?;
 
         Ok(transaction_match)
-    }    /// Update match status (confirm or reject)
+    }
+    /// Update match status (confirm or reject)
     pub async fn update_match_status(
         &self,
         match_id: Uuid,
@@ -159,7 +170,7 @@ impl DeduplicationService {
             RETURNING id, primary_transaction_id, duplicate_transaction_id, 
                       match_confidence, match_criteria, match_type, 
                       status, created_at, updated_at
-            "#
+            "#,
         )
         .bind(match_id)
         .bind(status)
@@ -167,7 +178,8 @@ impl DeduplicationService {
         .await?;
 
         Ok(updated_match)
-    }    /// Get all transactions with their duplicate information
+    }
+    /// Get all transactions with their duplicate information
     pub async fn get_transactions_with_duplicates(
         &self,
         limit: Option<i32>,
@@ -182,7 +194,7 @@ impl DeduplicationService {
                 WHERE has_duplicates = true
                 ORDER BY transaction_date DESC
                 LIMIT $1
-                "#
+                "#,
             )
             .bind(limit.unwrap_or(100))
             .fetch_all(&self.pool)
@@ -195,7 +207,7 @@ impl DeduplicationService {
                 FROM v_transactions_with_duplicates
                 ORDER BY transaction_date DESC
                 LIMIT $1
-                "#
+                "#,
             )
             .bind(limit.unwrap_or(100))
             .fetch_all(&self.pool)
@@ -203,7 +215,8 @@ impl DeduplicationService {
         };
 
         Ok(transactions)
-    }    /// Get all matches for a transaction
+    }
+    /// Get all matches for a transaction
     pub async fn get_matches_for_transaction(
         &self,
         transaction_id: Uuid,
@@ -216,43 +229,43 @@ impl DeduplicationService {
             FROM transaction_matches
             WHERE primary_transaction_id = $1 OR duplicate_transaction_id = $1
             ORDER BY match_confidence DESC
-            "#
+            "#,
         )
         .bind(transaction_id)
         .fetch_all(&self.pool)
         .await?;
 
         Ok(matches)
-    }    /// Run automatic duplicate detection on all transactions from a specific import batch
+    }
+    /// Run automatic duplicate detection on all transactions from a specific import batch
     pub async fn detect_duplicates_for_batch(
         &self,
         import_batch_id: Uuid,
         auto_confirm_exact_matches: bool,
     ) -> Result<Vec<TransactionMatch>> {
         // Get all transactions from this batch
-        let batch_transactions = sqlx::query(
-            "SELECT id FROM transactions WHERE import_batch_id = $1"
-        )
-        .bind(import_batch_id)
-        .fetch_all(&self.pool)
-        .await?;        let mut created_matches = Vec::new();
+        let batch_transactions =
+            sqlx::query("SELECT id FROM transactions WHERE import_batch_id = $1")
+                .bind(import_batch_id)
+                .fetch_all(&self.pool)
+                .await?;
+        let mut created_matches = Vec::new();
 
         for tx_row in batch_transactions {
             let tx_id: Uuid = tx_row.get("id");
-            let potential_duplicates = self
-                .find_potential_duplicates(tx_id, None, None)
-                .await?;
+            let potential_duplicates = self.find_potential_duplicates(tx_id, None, None).await?;
 
             for duplicate in potential_duplicates {
                 // Only create matches above a minimum confidence threshold
                 if duplicate.match_confidence >= Decimal::from_str("0.6").unwrap() {
-                    let match_type = if duplicate.match_confidence >= Decimal::from_str("0.95").unwrap() {
-                        MatchType::Exact
-                    } else if duplicate.match_confidence >= Decimal::from_str("0.8").unwrap() {
-                        MatchType::Probable
-                    } else {
-                        MatchType::Possible
-                    };
+                    let match_type =
+                        if duplicate.match_confidence >= Decimal::from_str("0.95").unwrap() {
+                            MatchType::Exact
+                        } else if duplicate.match_confidence >= Decimal::from_str("0.8").unwrap() {
+                            MatchType::Probable
+                        } else {
+                            MatchType::Possible
+                        };
 
                     let mut transaction_match = self
                         .create_transaction_match(
@@ -277,59 +290,50 @@ impl DeduplicationService {
         }
 
         Ok(created_matches)
-    }    /// Merge two transactions by marking one as duplicate and hiding it from reports
+    }
+    /// Merge two transactions by marking one as duplicate and hiding it from reports
     pub async fn merge_duplicate_transactions(
         &self,
         primary_transaction_id: Uuid,
         duplicate_transaction_id: Uuid,
     ) -> Result<()> {
         // Use the database function to hide the duplicate transaction
-        sqlx::query(
-            "SELECT fn_hide_duplicate_transaction($1, $2)"
-        )
-        .bind(duplicate_transaction_id)
-        .bind(primary_transaction_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("SELECT fn_hide_duplicate_transaction($1, $2)")
+            .bind(duplicate_transaction_id)
+            .bind(primary_transaction_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
 
     /// Unhide a previously merged transaction (undo the merge)
-    pub async fn unhide_duplicate_transaction(
-        &self,
-        transaction_id: Uuid,
-    ) -> Result<()> {
+    pub async fn unhide_duplicate_transaction(&self, transaction_id: Uuid) -> Result<()> {
         // Use the database function to unhide the transaction
-        sqlx::query(
-            "SELECT fn_unhide_duplicate_transaction($1)"
-        )
-        .bind(transaction_id)
-        .execute(&self.pool)
-        .await?;
+        sqlx::query("SELECT fn_unhide_duplicate_transaction($1)")
+            .bind(transaction_id)
+            .execute(&self.pool)
+            .await?;
 
         Ok(())
     }
 
     /// Convenience method for CLI - merge transactions by IDs
-    pub async fn merge_transaction(
-        &self,
-        primary_id: Uuid,
-        duplicate_id: Uuid,
-    ) -> Result<()> {
-        self.merge_duplicate_transactions(primary_id, duplicate_id).await
+    pub async fn merge_transaction(&self, primary_id: Uuid, duplicate_id: Uuid) -> Result<()> {
+        self.merge_duplicate_transactions(primary_id, duplicate_id)
+            .await
     }
 
     /// Convenience method for CLI - unmerge transaction by ID
-    pub async fn unmerge_transaction(
-        &self,
-        transaction_id: Uuid,
-    ) -> Result<()> {
+    pub async fn unmerge_transaction(&self, transaction_id: Uuid) -> Result<()> {
         self.unhide_duplicate_transaction(transaction_id).await
     }
 
     /// Get detailed transaction information for duplicate comparison
-    pub async fn get_transaction_details_for_comparison(&self, transaction_id: Uuid) -> Result<Option<TransactionComparisonDetails>> {
+    pub async fn get_transaction_details_for_comparison(
+        &self,
+        transaction_id: Uuid,
+    ) -> Result<Option<TransactionComparisonDetails>> {
         let query = r#"
             SELECT 
                 t.id,

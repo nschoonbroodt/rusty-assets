@@ -114,7 +114,7 @@ impl PriceHistoryService {
         .bind(account.id)
         .fetch_one(&self.pool)
         .await?;
-        let book_value = book_value_result.unwrap_or_default();        // Fetch market data from the new view
+        let book_value = book_value_result.unwrap_or_default(); // Fetch market data from the new view
         let market_data_row = sqlx::query(
             r#"
             SELECT
@@ -129,21 +129,33 @@ impl PriceHistoryService {
                 price_created_at
             FROM latest_account_market_values
             WHERE account_id = $1
-            "#
+            "#,
         )
         .bind(account.id)
         .fetch_optional(&self.pool)
-        .await?;        let (market_value, unrealized_gain_loss, latest_price) = if let Some(row) = market_data_row
+        .await?;
+        let (market_value, unrealized_gain_loss, latest_price) = if let Some(row) = market_data_row
         {
             let price_history = PriceHistory {
-                id: row.try_get::<Option<uuid::Uuid>, _>("price_history_id")?.unwrap_or_else(uuid::Uuid::new_v4), // Handle potential NULL if view is not populated
-                symbol: row.try_get::<Option<String>, _>("asset_symbol")?.unwrap_or_default(), // Handle potential NULL
-                price: row.try_get::<Option<Decimal>, _>("price_per_unit")?.unwrap_or_default(), // Handle potential NULL
-                price_date: row.try_get::<Option<chrono::NaiveDate>, _>("value_date")?
+                id: row
+                    .try_get::<Option<uuid::Uuid>, _>("price_history_id")?
+                    .unwrap_or_else(uuid::Uuid::new_v4), // Handle potential NULL if view is not populated
+                symbol: row
+                    .try_get::<Option<String>, _>("asset_symbol")?
+                    .unwrap_or_default(), // Handle potential NULL
+                price: row
+                    .try_get::<Option<Decimal>, _>("price_per_unit")?
+                    .unwrap_or_default(), // Handle potential NULL
+                price_date: row
+                    .try_get::<Option<chrono::NaiveDate>, _>("value_date")?
                     .unwrap_or_else(|| chrono::NaiveDate::from_ymd_opt(1970, 1, 1).unwrap()), // Handle potential NULL
-                currency: row.try_get::<Option<String>, _>("value_currency")?.unwrap_or_default(), // Handle potential NULL
+                currency: row
+                    .try_get::<Option<String>, _>("value_currency")?
+                    .unwrap_or_default(), // Handle potential NULL
                 source: row.try_get("price_source")?,
-                created_at: row.try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("price_created_at")?.unwrap_or_else(chrono::Utc::now), // Handle potential NULL
+                created_at: row
+                    .try_get::<Option<chrono::DateTime<chrono::Utc>>, _>("price_created_at")?
+                    .unwrap_or_else(chrono::Utc::now), // Handle potential NULL
             };
             let mv = row.try_get::<Option<Decimal>, _>("market_value")?;
             let ugl = mv.map(|m| m - book_value);
