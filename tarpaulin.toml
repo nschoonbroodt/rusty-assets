@@ -1,0 +1,98 @@
+# Tarpaulin Configuration for RustyAssets
+# https://github.com/xd009642/tarpaulin
+
+[run]
+# Run tests with full feature set and workspace
+all-features = true
+workspace = true
+timeout = "120s"
+follow-symlinks = true
+
+# Test execution options
+skip-clean = false
+frozen = false
+locked = false
+
+[report]
+# Output formats for different use cases
+out = ["Html", "Xml", "Json"]
+
+# Coverage calculation options
+count = false
+branch = false
+forward = false
+# Disabled external services by default
+ciserver = "github"
+
+[coverage]
+# Files to exclude from coverage calculation
+exclude-files = [
+    # Database migrations are infrastructure, not business logic
+    "*/migrations/*",
+    
+    # Build artifacts and dependencies
+    "*/target/*",
+    "*/deps/*",
+    
+    # Test files themselves don't need coverage
+    "*/tests/*",
+    
+    # Integration test utilities
+    "*/test_utils.rs",
+    "*/test_helpers.rs",
+    
+    # Generated code and build scripts
+    "*/build.rs",
+    "*/proto/*",
+    "*/.cargo/*"
+]
+
+# Functions/modules to exclude
+exclude = [
+    # Main functions are typically just CLI entry points
+    "main",
+    
+    # Test modules
+    "test*",
+    "tests::*",
+    
+    # Debug and development utilities
+    "*::fmt::Debug*",
+    "*::fmt::Display*",
+    
+    # Default implementations that are often trivial
+    "*::default::Default*"
+]
+
+# Coverage thresholds (will be used for pass/fail in CI)
+# Note: These are target thresholds, actual enforcement is in CI
+[thresholds]
+# Overall project threshold (start low, increase over time)
+line = 60.0
+
+# Per-crate thresholds
+[crate.assets-core]
+# Core business logic should have highest coverage
+line = 80.0
+
+[crate.assets-cli] 
+# CLI code is harder to test, lower threshold
+line = 70.0
+
+[crate.assets-demo]
+# Demo code is for examples, lowest threshold
+line = 60.0
+
+# HTML report customization
+[html]
+# Output directory for HTML reports
+output-dir = "target/tarpaulin"
+
+# Include source code in HTML output
+include-tests = false
+
+# Engine configuration
+[engine]
+# Use default engine (llvm when available, ptrace fallback)
+Llvm = true
+Ptrace = false

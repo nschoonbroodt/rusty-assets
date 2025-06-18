@@ -168,6 +168,23 @@ When you're ready to connect to a database:
    sqlx migrate run --source crates/assets-core/migrations
    ```
 
+### Testing and Coverage
+
+Run tests with coverage analysis to track code quality:
+
+```bash
+# Run all tests
+cargo test
+
+# Generate HTML coverage report
+cargo cov
+
+# Generate XML coverage report for CI
+cargo cov-ci
+```
+
+Coverage reports help identify untested code areas and track testing progress toward the 80% coverage goal.
+
 ### Project Status
 
 ✅ **Completed:**

@@ -51,6 +51,50 @@ jobs:
         # Enable testcontainers to use Docker
         TESTCONTAINERS_RYUK_DISABLED: true
 
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+    needs: test  # Run coverage after tests pass
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Setup Rust cache
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: . -> target
+
+    - name: Install Docker (for testcontainers)
+      run: |
+        sudo systemctl start docker
+        sudo docker --version
+
+    - name: Install cargo-tarpaulin
+      run: cargo install cargo-tarpaulin
+
+    - name: Generate coverage report
+      run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+      env:
+        TESTCONTAINERS_RYUK_DISABLED: true
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./cobertura.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false  # Don't fail CI if Codecov upload fails
+        verbose: true
+
+    - name: Upload coverage report as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: ./cobertura.xml
 
   # Additional job for checking minimum supported Rust version
   msrv:
