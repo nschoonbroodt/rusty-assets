@@ -56,6 +56,29 @@ Perform computation in postgres if possible (with view, functions) over performi
 5. Write tests with appropriate coverage
 6. Run quality checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
+### Testing and Coverage
+```bash
+# Run all tests
+cargo test
+
+# Generate HTML coverage report (fast!)
+cargo cov
+
+# Open coverage report in browser
+cargo cov-open
+
+# Generate coverage for CI (Cobertura XML format)
+cargo cov-ci
+
+# Generate text coverage report
+cargo cov-text
+
+# Generate JSON coverage report
+cargo cov-json
+```
+
+Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
+
 ### Database Schema Changes
 1. Create new migration: `sqlx migrate add --source crates/assets-core/ <description>`
 2. Write both up and down migrations
