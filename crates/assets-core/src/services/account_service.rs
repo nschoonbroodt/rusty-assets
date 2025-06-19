@@ -413,7 +413,7 @@ mod tests {
     async fn test_create_account_with_custom_ownership() {
         let (pool, _container) = setup_test_db().await;
         let user1 = create_test_user(&pool).await;
-        
+
         // Create second user
         let user2 = create_test_user_with_names(&pool, "user2", "User 2").await;
 
@@ -465,10 +465,12 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Total ownership percentage cannot exceed 100%"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Total ownership percentage cannot exceed 100%")
+        );
     }
 
     #[tokio::test]
@@ -579,7 +581,10 @@ mod tests {
 
         assert_eq!(account.symbol, Some("AAPL".to_string()));
         assert_eq!(account.quantity, Some(Decimal::from(100)));
-        assert_eq!(account.average_cost, Some(Decimal::from_str("150.50").unwrap()));
+        assert_eq!(
+            account.average_cost,
+            Some(Decimal::from_str("150.50").unwrap())
+        );
         assert_eq!(account.notes, Some("Technology stock".to_string()));
     }
 

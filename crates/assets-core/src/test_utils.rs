@@ -1,9 +1,9 @@
 #[cfg(test)]
 pub mod helpers {
-    use crate::models::{User, NewAccount, AccountType, AccountSubtype};
+    use crate::models::{AccountSubtype, AccountType, NewAccount, User};
     use crate::services::UserService;
     use sqlx::PgPool;
-    use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage, ImageExt};
+    use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
 
     /// Test helper to create a test database with migrations
     /// Returns (pool, container) - keep container alive for the test duration
@@ -22,8 +22,11 @@ pub mod helpers {
             .await
             .expect("Failed to get PostgreSQL port");
 
-        let database_url = format!("postgres://postgres:password@localhost:{}/test_db?sslmode=disable", port);
-        
+        let database_url = format!(
+            "postgres://postgres:password@localhost:{}/test_db?sslmode=disable",
+            port
+        );
+
         // Wait a bit for PostgreSQL to start up
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
@@ -57,7 +60,11 @@ pub mod helpers {
     }
 
     /// Test helper to create a test user with custom names
-    pub async fn create_test_user_with_names(pool: &PgPool, name: &str, display_name: &str) -> User {
+    pub async fn create_test_user_with_names(
+        pool: &PgPool,
+        name: &str,
+        display_name: &str,
+    ) -> User {
         let user_service = UserService::new(pool.clone());
         user_service
             .create_user(name.to_string(), display_name.to_string())
