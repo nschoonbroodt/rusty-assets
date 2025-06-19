@@ -1,9 +1,12 @@
 # CLAUDE.md - RustyAssets Development Guide
 
+Challenge me when about questionable choices.
+
 ## Project Overview
 
 RustyAssets is a modular, extensible personal finance tracker written in Rust using double-entry bookkeeping principles. The project uses a PostgreSQL database and follows a workspace structure with multiple crates.
 
+When opening issues, use tag to configure them.
 ## Project Structure
 
 ```
