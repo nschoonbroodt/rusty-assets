@@ -7,7 +7,6 @@ use regex::Regex;
 use rust_decimal::Decimal;
 use rust_decimal::prelude::FromPrimitive;
 use std::collections::HashMap;
-use std::process::Command;
 use std::str::FromStr;
 
 /// Qt Company Payslip Importer
@@ -98,26 +97,9 @@ impl QtPayslipImporter {
     }
     /// Extract text from PDF using pdftotext with Latin1 encoding
     fn extract_text_from_pdf(&self, file_path: &str) -> Result<String> {
-        let output = Command::new("pdftotext.exe")
-            .args(["-table", "-enc", "Latin1", file_path, "-"])
-            .output()
-            .map_err(|e| CoreError::ImportError(format!("Failed to run pdftotext: {}", e)))?;
-
-        if !output.status.success() {
-            return Err(CoreError::ImportError(format!(
-                "pdftotext failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
-        }
-
-        // Handle Latin1 encoding properly
-        let latin1_bytes = output.stdout;
-        let text = latin1_bytes
-            .iter()
-            .map(|&byte| byte as char)
-            .collect::<String>();
-
-        Ok(text)
+        let bytes = std::fs::read(file_path)?;
+        let out = pdf_extract::extract_text_from_mem(&bytes)?;
+        Ok(out)
     }
 
     /// Extract payslip period from the text
@@ -313,9 +295,13 @@ impl QtPayslipImporter {
 
             if line.contains("sur le revenu prélevé") {
                 // Extract the amount from this line
-                if let Some(amount) = self.extract_amount_from_line(line) {
-                    return Ok(amount);
+                let amounts = self.extract_all_amounts_from_line(line);
+                if amounts.is_empty() {
+                    return Err(CoreError::ImportError(
+                        "No amounts found in 'Impot sur le revenu' line".to_string(),
+                    ));
                 }
+                return Ok(*amounts.last().unwrap());
             }
         }
 
@@ -396,6 +382,7 @@ mod tests {
             .import_from_file("../../perso/Qt/2025/Bulletins 05_2025.pdf")
             .await
             .unwrap();
+
         debug!("{:#?}", result);
     }
 }

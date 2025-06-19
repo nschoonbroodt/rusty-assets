@@ -38,6 +38,9 @@ pub enum CoreError {
 
     #[error("Account not found: {0}")]
     AccountNotFound(String),
+
+    #[error(transparent)]
+    PdfImportError(#[from] pdf_extract::OutputError),
 }
 
 pub type Result<T> = std::result::Result<T, CoreError>;
