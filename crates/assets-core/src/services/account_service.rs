@@ -359,86 +359,11 @@ impl AccountService {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::User;
-    use crate::services::UserService;
+    use crate::test_utils::helpers::*;
     use chrono::Utc;
     use rust_decimal::Decimal;
-    use sqlx::PgPool;
     use std::str::FromStr;
-    use testcontainers::{runners::AsyncRunner, ContainerAsync, GenericImage, ImageExt};
     use uuid::Uuid;
-
-    // Test helper to create a test database
-    async fn setup_test_db() -> (PgPool, ContainerAsync<GenericImage>) {
-        // Start PostgreSQL in a container
-        let postgres = GenericImage::new("postgres", "15")
-            .with_env_var("POSTGRES_PASSWORD", "password")
-            .with_env_var("POSTGRES_DB", "test_db")
-            .with_env_var("POSTGRES_USER", "postgres")
-            .start()
-            .await
-            .expect("Failed to start PostgreSQL container");
-
-        let port = postgres
-            .get_host_port_ipv4(5432)
-            .await
-            .expect("Failed to get PostgreSQL port");
-
-        let database_url = format!("postgres://postgres:password@localhost:{}/test_db?sslmode=disable", port);
-        
-        // Wait a bit for PostgreSQL to start up
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-
-        // Connect to the database with retries
-        let mut attempts = 0;
-        let pool = loop {
-            match PgPool::connect(&database_url).await {
-                Ok(pool) => break pool,
-                Err(e) if attempts < 5 => {
-                    attempts += 1;
-                    eprintln!("Connection attempt {} failed: {}. Retrying...", attempts, e);
-                    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-                    continue;
-                }
-                Err(e) => panic!("Failed to connect to test database after 5 attempts: {}", e),
-            }
-        };
-
-        // Run migrations
-        sqlx::migrate!("./migrations")
-            .run(&pool)
-            .await
-            .expect("Failed to run migrations");
-
-        (pool, postgres)
-    }
-
-    // Test helper to create a test user
-    async fn create_test_user(pool: &PgPool) -> User {
-        let user_service = UserService::new(pool.clone());
-        user_service
-            .create_user("test_user".to_string(), "Test User".to_string())
-            .await
-            .expect("Failed to create test user")
-    }
-
-    // Test helper to create a basic NewAccount
-    fn create_test_new_account() -> NewAccount {
-        NewAccount {
-            name: "Test Account".to_string(),
-            account_type: AccountType::Asset,
-            account_subtype: AccountSubtype::Checking,
-            parent_id: None,
-            currency: "EUR".to_string(),
-            symbol: None,
-            quantity: None,
-            average_cost: None,
-            address: None,
-            purchase_date: None,
-            purchase_price: None,
-            notes: None,
-        }
-    }
 
     #[tokio::test]
     async fn test_create_account_without_users() {
@@ -490,11 +415,7 @@ mod tests {
         let user1 = create_test_user(&pool).await;
         
         // Create second user
-        let user_service = UserService::new(pool.clone());
-        let user2 = user_service
-            .create_user("user2".to_string(), "User 2".to_string())
-            .await
-            .expect("Failed to create second user");
+        let user2 = create_test_user_with_names(&pool, "user2", "User 2").await;
 
         let service = AccountService::new(pool);
 
