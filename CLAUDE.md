@@ -1,6 +1,8 @@
 # CLAUDE.md - RustyAssets Development Guide
 
-Challenge me when about questionable choices.
+- Challenge me when about questionable choices.
+- Explain your choices and argument
+- Work in new branches, not in main
 
 ## Project Overview
 
