@@ -22,7 +22,7 @@ uuid = { version = "1.0", features = [
 ] } # Added serde feature for Uuid
 dotenv = "0.15"
 serde_json = "1.0"
-comfy-table = "0.1" # Added comfy-table
+comfy-table = "7.1" # Added comfy-table
 csv = "1.1" # Added csv
 env_logger = "0.11" # Added env_logger for logging
 clap_complete = "4.5.54"
