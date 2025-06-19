@@ -1,5 +1,7 @@
 # RustyAssets
 
+[![codecov](https://codecov.io/github/nschoonbroodt/rusty-assets/graph/badge.svg?token=HQ6I7ZDIT2)](https://codecov.io/github/nschoonbroodt/rusty-assets)
+
 RustyAssets is a modular, extensible personal finance tracker written in Rust. It helps you track:
 
 - **Bank accounts**
