@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::{User, NewUser};
+use crate::models::{NewUser, User};
 use sqlx::PgPool;
 
 pub struct UserService {
@@ -88,10 +88,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_all_users() {
         let (pool, _container) = setup_test_db().await;
-        
+
         let user1 = create_test_user_with_names(&pool.clone(), "user1", "User One").await;
         let user2 = create_test_user_with_names(&pool.clone(), "user2", "User Two").await;
-        
+
         let service = UserService::new(pool);
         let result = service.get_all_users().await;
         assert!(result.is_ok());
@@ -104,10 +104,10 @@ mod tests {
     #[tokio::test]
     async fn test_get_user_by_name() {
         let (pool, _container) = setup_test_db().await;
-        
+
         let user1 = create_test_user_with_names(&pool.clone(), "user1", "User One").await;
         let _user2 = create_test_user_with_names(&pool.clone(), "user2", "User Two").await;
-        
+
         let service = UserService::new(pool);
         let user = service.get_user_by_name("user1").await;
         assert!(user.is_ok());
