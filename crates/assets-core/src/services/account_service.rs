@@ -4,9 +4,40 @@ use crate::models::{
     AccountWithOwnershipAndUsers, NewAccount,
 };
 use crate::{AccountSubtype, NewAccountByPath};
+use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
+use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use uuid::Uuid;
+
+/// Struct for updating existing accounts - all fields are optional
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct AccountUpdates {
+    pub name: Option<String>,
+    pub notes: Option<String>,
+    pub symbol: Option<String>,
+    pub quantity: Option<Decimal>,
+    pub average_cost: Option<Decimal>,
+    pub address: Option<String>,
+    pub purchase_date: Option<DateTime<Utc>>,
+    pub purchase_price: Option<Decimal>,
+    pub currency: Option<String>,
+}
+
+impl AccountUpdates {
+    /// Check if any fields are set for update
+    pub fn has_updates(&self) -> bool {
+        self.name.is_some()
+            || self.notes.is_some()
+            || self.symbol.is_some()
+            || self.quantity.is_some()
+            || self.average_cost.is_some()
+            || self.address.is_some()
+            || self.purchase_date.is_some()
+            || self.purchase_price.is_some()
+            || self.currency.is_some()
+    }
+}
 
 pub struct AccountService {
     pool: PgPool,
@@ -350,6 +381,120 @@ impl AccountService {
         )
         .bind(path)
         .fetch_one(&self.pool)
+        .await?;
+
+        Ok(account)
+    }
+
+    /// Update an existing account with partial data
+    pub async fn update_account(
+        &self,
+        account_id: Uuid,
+        updates: AccountUpdates,
+    ) -> Result<Account> {
+        if !updates.has_updates() {
+            // No updates provided, return the existing account
+            return match self.get_account(account_id).await? {
+                Some(account) => Ok(account),
+                None => Err(crate::error::CoreError::NotFound(format!(
+                    "Account with id {} not found",
+                    account_id
+                ))),
+            };
+        }
+
+        // Use COALESCE to update only non-NULL values from the updates
+        // This allows us to bind Option<T> directly and let SQL handle the logic
+        let updated_account = sqlx::query_as::<_, Account>(
+            r#"
+            UPDATE accounts 
+            SET 
+                name = COALESCE($2, name),
+                notes = COALESCE($3, notes),
+                symbol = COALESCE($4, symbol),
+                quantity = COALESCE($5, quantity),
+                average_cost = COALESCE($6, average_cost),
+                address = COALESCE($7, address),
+                purchase_date = COALESCE($8, purchase_date),
+                purchase_price = COALESCE($9, purchase_price),
+                currency = COALESCE($10, currency),
+                updated_at = NOW()
+            WHERE id = $1
+            RETURNING id, name, full_path, account_type, account_subtype, parent_id,
+                      symbol, quantity, average_cost, address, purchase_date,
+                      purchase_price, currency, is_active, notes, created_at, updated_at
+            "#,
+        )
+        .bind(account_id)
+        .bind(&updates.name)
+        .bind(&updates.notes)
+        .bind(&updates.symbol)
+        .bind(updates.quantity)
+        .bind(updates.average_cost)
+        .bind(&updates.address)
+        .bind(updates.purchase_date)
+        .bind(updates.purchase_price)
+        .bind(&updates.currency)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(updated_account)
+    }
+
+    /// Deactivate an account (soft delete)
+    pub async fn deactivate_account(&self, account_id: Uuid) -> Result<()> {
+        let rows_affected =
+            sqlx::query("UPDATE accounts SET is_active = false, updated_at = NOW() WHERE id = $1")
+                .bind(account_id)
+                .execute(&self.pool)
+                .await?
+                .rows_affected();
+
+        if rows_affected == 0 {
+            return Err(crate::error::CoreError::NotFound(format!(
+                "Account with id {} not found",
+                account_id
+            )));
+        }
+
+        Ok(())
+    }
+
+    /// Reactivate a previously deactivated account
+    pub async fn reactivate_account(&self, account_id: Uuid) -> Result<Account> {
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            UPDATE accounts 
+            SET is_active = true, updated_at = NOW() 
+            WHERE id = $1
+            RETURNING id, name, full_path, account_type, account_subtype, parent_id,
+                      symbol, quantity, average_cost, address, purchase_date,
+                      purchase_price, currency, is_active, notes, created_at, updated_at
+            "#,
+        )
+        .bind(account_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(account)
+    }
+
+    /// Make get_account_by_path return Option for consistency
+    pub async fn get_account_by_path_optional(&self, path: &str) -> Result<Option<Account>> {
+        let account = sqlx::query_as::<_, Account>(
+            r#"
+            SELECT 
+                id, name, full_path,
+                account_type, account_subtype,
+                parent_id, symbol, quantity, average_cost, address, 
+                purchase_date, purchase_price, currency, is_active, 
+                notes, created_at, updated_at
+            FROM accounts 
+            WHERE full_path = $1 AND is_active = true
+            "#,
+        )
+        .bind(path)
+        .fetch_optional(&self.pool)
         .await?;
 
         Ok(account)
@@ -710,5 +855,245 @@ mod tests {
         let result = service.create_account_by_path(account_by_path).await;
         assert!(result.is_err());
         // Should return EmptyAccountName error
+    }
+
+    #[tokio::test]
+    async fn test_update_account_name() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Create an account
+        let new_account = create_test_new_account();
+        let account = service.create_account(new_account).await.unwrap();
+
+        // Update the name
+        let updates = AccountUpdates {
+            name: Some("Updated Account Name".to_string()),
+            ..Default::default()
+        };
+
+        let result = service.update_account(account.id, updates).await;
+        assert!(result.is_ok());
+        let updated_account = result.unwrap();
+
+        assert_eq!(updated_account.name, "Updated Account Name");
+        assert_eq!(updated_account.id, account.id);
+        assert!(updated_account.updated_at > account.updated_at);
+    }
+
+    #[tokio::test]
+    async fn test_update_account_investment_fields() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Create an investment account
+        let investment_account = NewAccount {
+            name: "Stock Account".to_string(),
+            account_type: AccountType::Asset,
+            account_subtype: AccountSubtype::Stocks,
+            parent_id: None,
+            currency: "EUR".to_string(),
+            symbol: Some("AAPL".to_string()),
+            quantity: Some(Decimal::from(100)),
+            average_cost: Some(Decimal::from_str("150.00").unwrap()),
+            address: None,
+            purchase_date: None,
+            purchase_price: None,
+            notes: None,
+        };
+
+        let account = service.create_account(investment_account).await.unwrap();
+
+        // Update investment fields
+        let updates = AccountUpdates {
+            symbol: Some("MSFT".to_string()),
+            quantity: Some(Decimal::from(200)),
+            average_cost: Some(Decimal::from_str("250.00").unwrap()),
+            notes: Some("Updated to Microsoft stock".to_string()),
+            ..Default::default()
+        };
+
+        let result = service.update_account(account.id, updates).await;
+        assert!(result.is_ok());
+        let updated_account = result.unwrap();
+
+        assert_eq!(updated_account.symbol, Some("MSFT".to_string()));
+        assert_eq!(updated_account.quantity, Some(Decimal::from(200)));
+        assert_eq!(
+            updated_account.average_cost,
+            Some(Decimal::from_str("250.00").unwrap())
+        );
+        assert_eq!(
+            updated_account.notes,
+            Some("Updated to Microsoft stock".to_string())
+        );
+    }
+
+    #[tokio::test]
+    async fn test_update_account_no_changes() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Create an account
+        let new_account = create_test_new_account();
+        let account = service.create_account(new_account).await.unwrap();
+
+        // Update with no changes
+        let updates = AccountUpdates::default();
+        let result = service.update_account(account.id, updates).await;
+        assert!(result.is_ok());
+        let updated_account = result.unwrap();
+
+        // Should return the same account unchanged
+        assert_eq!(updated_account.name, account.name);
+        assert_eq!(updated_account.updated_at, account.updated_at);
+    }
+
+    #[tokio::test]
+    async fn test_update_nonexistent_account() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        let random_id = Uuid::new_v4();
+        let updates = AccountUpdates {
+            name: Some("New Name".to_string()),
+            ..Default::default()
+        };
+
+        let result = service.update_account(random_id, updates).await;
+        assert!(result.is_err());
+        // Should get a database error (no rows found) when trying to fetch_one
+    }
+
+    #[tokio::test]
+    async fn test_deactivate_account() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Create an account
+        let new_account = create_test_new_account();
+        let account = service.create_account(new_account).await.unwrap();
+
+        // Verify it's active initially
+        assert!(account.is_active);
+
+        // Deactivate the account
+        let result = service.deactivate_account(account.id).await;
+        assert!(result.is_ok());
+
+        // Verify the account is deactivated
+        let retrieved = service.get_account(account.id).await.unwrap().unwrap();
+        assert!(!retrieved.is_active);
+
+        // Verify it doesn't appear in active account lists
+        let all_accounts = service.get_all_accounts().await.unwrap();
+        assert!(!all_accounts.iter().any(|a| a.id == account.id));
+    }
+
+    #[tokio::test]
+    async fn test_deactivate_nonexistent_account() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        let random_id = Uuid::new_v4();
+        let result = service.deactivate_account(random_id).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+    }
+
+    #[tokio::test]
+    async fn test_reactivate_account() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Create and deactivate an account
+        let new_account = create_test_new_account();
+        let account = service.create_account(new_account).await.unwrap();
+        service.deactivate_account(account.id).await.unwrap();
+
+        // Reactivate the account
+        let result = service.reactivate_account(account.id).await;
+        assert!(result.is_ok());
+        let reactivated_account = result.unwrap();
+
+        assert!(reactivated_account.is_active);
+        assert_eq!(reactivated_account.id, account.id);
+        assert_eq!(reactivated_account.name, account.name);
+
+        // Verify it appears in active account lists again
+        let all_accounts = service.get_all_accounts().await.unwrap();
+        assert!(all_accounts.iter().any(|a| a.id == account.id));
+    }
+
+    #[tokio::test]
+    async fn test_reactivate_nonexistent_account() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        let random_id = Uuid::new_v4();
+        let result = service.reactivate_account(random_id).await;
+        assert!(result.is_err());
+        // Should fail with database error (account not found)
+    }
+
+    #[tokio::test]
+    async fn test_get_account_by_path_optional() {
+        let (pool, _container) = setup_test_db().await;
+        let service = AccountService::new(pool);
+
+        // Test with nonexistent path
+        let result = service
+            .get_account_by_path_optional("Nonexistent:Path")
+            .await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
+
+        // Create an account and test with existing path
+        let account_by_path = NewAccountByPath {
+            full_path: "Test:Path".to_string(),
+            account_type: AccountType::Asset,
+            account_subtype: AccountSubtype::Checking,
+            currency: "EUR".to_string(),
+            symbol: None,
+            quantity: None,
+            average_cost: None,
+            address: None,
+            purchase_date: None,
+            purchase_price: None,
+            notes: None,
+        };
+
+        let created_account = service
+            .create_account_by_path(account_by_path)
+            .await
+            .unwrap();
+
+        let result = service.get_account_by_path_optional("Test:Path").await;
+        assert!(result.is_ok());
+        let found_account = result.unwrap().unwrap();
+        assert_eq!(found_account.id, created_account.id);
+    }
+
+    #[tokio::test]
+    async fn test_account_updates_has_updates() {
+        // Test empty updates
+        let empty_updates = AccountUpdates::default();
+        assert!(!empty_updates.has_updates());
+
+        // Test with name update
+        let name_update = AccountUpdates {
+            name: Some("New Name".to_string()),
+            ..Default::default()
+        };
+        assert!(name_update.has_updates());
+
+        // Test with multiple updates
+        let multiple_updates = AccountUpdates {
+            name: Some("New Name".to_string()),
+            notes: Some("New notes".to_string()),
+            symbol: Some("STOCK".to_string()),
+            ..Default::default()
+        };
+        assert!(multiple_updates.has_updates());
     }
 }
