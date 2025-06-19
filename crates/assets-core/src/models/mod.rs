@@ -39,7 +39,7 @@ pub use transaction::{
 };
 
 // User types
-pub use user::User;
+pub use user::{User, NewUser};
 
 // Pricing types
 pub use pricing::{NewPriceHistory, PriceHistory};

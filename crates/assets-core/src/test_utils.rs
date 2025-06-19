@@ -1,6 +1,6 @@
 #[cfg(test)]
 pub mod helpers {
-    use crate::models::{AccountSubtype, AccountType, NewAccount, User};
+    use crate::models::{AccountSubtype, AccountType, NewAccount, User, NewUser};
     use crate::services::UserService;
     use sqlx::PgPool;
     use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
@@ -67,7 +67,7 @@ pub mod helpers {
     ) -> User {
         let user_service = UserService::new(pool.clone());
         user_service
-            .create_user(name.to_string(), display_name.to_string())
+            .create_user(NewUser::builder().name(name).display_name(display_name).build())
             .await
             .expect("Failed to create test user")
     }
