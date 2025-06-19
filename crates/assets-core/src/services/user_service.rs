@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::models::User;
+use crate::models::{NewUser, User};
 use sqlx::PgPool;
 
 pub struct UserService {
@@ -35,7 +35,7 @@ impl UserService {
     }
 
     /// Create a new user
-    pub async fn create_user(&self, name: String, display_name: String) -> Result<User> {
+    pub async fn create_user(&self, new_user: NewUser) -> Result<User> {
         let user = sqlx::query_as::<_, User>(
             r#"
             INSERT INTO users (name, display_name)
@@ -43,8 +43,8 @@ impl UserService {
             RETURNING id, name, display_name, is_active, created_at
             "#,
         )
-        .bind(&name)
-        .bind(&display_name)
+        .bind(&new_user.name)
+        .bind(&new_user.display_name)
         .fetch_one(&self.pool)
         .await?;
 
@@ -60,5 +60,74 @@ impl UserService {
         .await?;
 
         Ok(user)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_utils::helpers::*;
+
+    #[tokio::test]
+    async fn test_create_user() {
+        let (pool, _container) = setup_test_db().await;
+        let service = UserService::new(pool);
+
+        let new_user = NewUser::builder()
+            .name("testuser")
+            .display_name("Test User")
+            .build();
+        let result = service.create_user(new_user).await;
+
+        assert!(result.is_ok());
+        let user = result.unwrap();
+        assert_eq!(user.name, "testuser");
+        assert_eq!(user.display_name, "Test User");
+    }
+
+    #[tokio::test]
+    async fn test_get_all_users() {
+        let (pool, _container) = setup_test_db().await;
+
+        let user1 = create_test_user_with_names(&pool.clone(), "user1", "User One").await;
+        let user2 = create_test_user_with_names(&pool.clone(), "user2", "User Two").await;
+
+        let service = UserService::new(pool);
+        let result = service.get_all_users().await;
+        assert!(result.is_ok());
+        let users = result.unwrap();
+        assert_eq!(users.len(), 2);
+        assert!(users.iter().any(|u| u.id == user1.id));
+        assert!(users.iter().any(|u| u.id == user2.id));
+    }
+
+    #[tokio::test]
+    async fn test_get_user_by_name() {
+        let (pool, _container) = setup_test_db().await;
+
+        let user1 = create_test_user_with_names(&pool.clone(), "user1", "User One").await;
+        let _user2 = create_test_user_with_names(&pool.clone(), "user2", "User Two").await;
+
+        let service = UserService::new(pool);
+        let user = service.get_user_by_name("user1").await;
+        assert!(user.is_ok());
+        let user = user.unwrap();
+        assert!(user.is_some());
+        assert_eq!(user.unwrap().id, user1.id);
+    }
+
+    #[tokio::test]
+    async fn test_get_first_user() {
+        let (pool, _container) = setup_test_db().await;
+        let _user1 = create_test_user_with_names(&pool.clone(), "user1", "User One").await;
+        let _user2 = create_test_user_with_names(&pool.clone(), "user2", "User Two").await;
+
+        let service = UserService::new(pool);
+
+        let user = service.get_first_user().await;
+        assert!(user.is_ok());
+        let user = user.unwrap();
+        assert!(user.is_some());
+        assert_eq!(user.unwrap().name, "user1"); // Assuming "user1" is the first created user in setup
     }
 }

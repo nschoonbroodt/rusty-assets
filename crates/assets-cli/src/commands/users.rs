@@ -1,4 +1,5 @@
 use anyhow::Result;
+use assets_core::models::NewUser;
 use assets_core::{Database, UserService};
 use clap::{Args, Subcommand};
 use comfy_table::{presets::UTF8_FULL, Table};
@@ -83,7 +84,12 @@ async fn add_user(args: AddUserArgs) -> Result<()> {
     }
 
     let user = user_service
-        .create_user(args.name.clone(), args.display_name.clone())
+        .create_user(
+            NewUser::builder()
+                .name(args.name)
+                .display_name(args.display_name)
+                .build(),
+        )
         .await?;
 
     println!("✅ User created successfully!");
