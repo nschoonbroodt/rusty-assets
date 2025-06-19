@@ -79,7 +79,7 @@ jobs:
       run: cargo install cargo-llvm-cov
 
     - name: Generate coverage report
-      run: cargo llvm-cov --cobertura --workspace
+      run: cargo llvm-cov --workspace --codecov --output-path codecov.json
       env:
         TESTCONTAINERS_RYUK_DISABLED: true
 
