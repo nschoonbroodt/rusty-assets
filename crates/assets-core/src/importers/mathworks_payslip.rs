@@ -6,7 +6,6 @@ use log::{debug, info, warn};
 use regex::Regex;
 use rust_decimal::Decimal;
 use std::collections::HashMap;
-use std::process::Command;
 use std::str::FromStr;
 
 /// MathWorks Payslip Importer
@@ -105,20 +104,10 @@ impl MathWorksPayslipImporter {
 
     /// Extract text from PDF using pdftotext with UTF-8 encoding
     fn extract_text_from_pdf(&self, file_path: &str) -> Result<String> {
-        let output = Command::new("pdftotext.exe")
-            .args(["-table", "-enc", "UTF-8", file_path, "-"])
-            .output()
-            .map_err(|e| CoreError::ImportError(format!("Failed to run pdftotext: {}", e)))?;
-
-        if !output.status.success() {
-            return Err(CoreError::ImportError(format!(
-                "pdftotext failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )));
-        }
-
-        String::from_utf8(output.stdout)
-            .map_err(|e| CoreError::ImportError(format!("Failed to decode PDF text: {}", e)))
+        // TODO: this function exists in at least 2 places, refactor to a common place
+        let bytes = std::fs::read(file_path)?;
+        let out = pdf_extract::extract_text_from_mem(&bytes)?;
+        Ok(out)
     }
 
     /// Extract pay date from the text
