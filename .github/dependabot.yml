@@ -1,0 +1,83 @@
+version: 2
+updates:
+  # Cargo dependencies
+  - package-ecosystem: "cargo"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "nschoonbroodt"
+    assignees:
+      - "nschoonbroodt"
+    labels:
+      - "dependencies"
+      - "automation"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    # Group minor and patch updates together to reduce PR noise
+    groups:
+      rust-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "sqlx*"
+          - "tokio*"
+          - "serde*"
+      # Keep major dependencies separate for careful review
+      major-sql-deps:
+        patterns:
+          - "sqlx*"
+        update-types:
+          - "major"
+      major-async-deps:
+        patterns:
+          - "tokio*"
+        update-types:
+          - "major"
+      major-serde-deps:
+        patterns:
+          - "serde*"
+        update-types:
+          - "major"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "nschoonbroodt"
+    assignees:
+      - "nschoonbroodt"
+    labels:
+      - "ci-cd"
+      - "automation"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+
+  # Docker dependencies (if any Dockerfiles exist)
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "nschoonbroodt"
+    assignees:
+      - "nschoonbroodt"
+    labels:
+      - "docker"
+      - "automation"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
