@@ -1,4 +1,11 @@
 [alias]
-# Test coverage commands
-cov = "tarpaulin --out html"
-cov-ci = "tarpaulin --out xml --timeout 120"
+# Coverage commands using cargo-llvm-cov (faster than tarpaulin)
+cov = "llvm-cov --html --workspace"
+cov-open = "llvm-cov --open --workspace" 
+cov-ci = "llvm-cov --cobertura --workspace"
+cov-text = "llvm-cov --text --workspace"
+cov-json = "llvm-cov --json --workspace"
+
+[env]
+# Disable showing instantiations for cleaner coverage reports
+CARGO_LLVM_COV_SHOW_INSTANTIATIONS = "false"
