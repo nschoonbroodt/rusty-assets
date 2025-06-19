@@ -10,7 +10,7 @@ mod report_service;
 mod transaction_service;
 mod user_service;
 
-pub use account_service::AccountService;
+pub use account_service::{AccountService, AccountUpdates};
 pub use deduplication_service::{
     DeduplicationService, MatchStatus, MatchType, TransactionComparisonDetails, TransactionMatch,
     TransactionWithDuplicateInfo,
