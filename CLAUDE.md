@@ -69,6 +69,31 @@ rusty-assets/
 5. Write tests with appropriate coverage
 6. Run quality checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
+### Testing and Coverage
+
+#### Test Types
+- **Unit Tests**: `cargo test --lib` - Tests individual modules/functions
+- **All Tests**: `cargo test` - Runs all unit tests (no integration tests currently)
+- **Specific Tests**: `cargo test <pattern>` - Run tests matching pattern
+
+#### Coverage Commands
+```bash
+# Generate HTML coverage report
+cargo cov --lib
+
+# Open coverage report in browser
+cargo cov-open --lib
+
+# Generate coverage for CI (Cobertura XML format)
+cargo cov-ci --lib
+
+# Generate text coverage report
+cargo cov-text --lib
+```
+
+**Note**: Coverage automatically excludes test helper code located in `src/tests/` modules.
+
+Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 
 ### Database Schema Changes
 1. Create new migration: `sqlx migrate add --source crates/assets-core/ <description>`
