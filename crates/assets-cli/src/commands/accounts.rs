@@ -712,7 +712,7 @@ fn prompt_account_subtype(account_type: &AccountType) -> Result<AccountSubtype> 
         let input = prompt_input(&format!("\nEnter choice (1-{}): ", options.len()))?;
         if let Ok(choice) = input.parse::<usize>() {
             if choice >= 1 && choice <= options.len() {
-                return Ok(options[choice - 1].0.clone());
+                return Ok(options[choice - 1].0);
             }
         }
         println!(
