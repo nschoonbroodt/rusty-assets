@@ -1,7 +1,7 @@
 [alias]
 # Coverage commands using cargo-llvm-cov (faster than tarpaulin)
 cov = "llvm-cov --html --workspace"
-cov-open = "llvm-cov --open --workspace" 
+cov-open = "llvm-cov --open --workspace"
 cov-ci = "llvm-cov --cobertura --workspace"
 cov-text = "llvm-cov --text --workspace"
 cov-json = "llvm-cov --json --workspace"

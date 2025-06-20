@@ -79,7 +79,7 @@ jobs:
       run: cargo install cargo-llvm-cov
 
     - name: Generate coverage report
-      run: cargo llvm-cov --lib --cobertura --output-path ./cobertura.xml --ignore-filename-regex "test_utils\.rs$"
+      run: cargo llvm-cov --lib --cobertura --output-path ./cobertura.xml
       env:
         TESTCONTAINERS_RYUK_DISABLED: true
 
