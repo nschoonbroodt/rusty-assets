@@ -59,25 +59,31 @@ Perform computation in postgres if possible (with view, functions) over performi
 6. Run quality checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
 ### Testing and Coverage
-```bash
-# Run all tests
-cargo test
 
-# Generate HTML coverage report (fast!)
-cargo cov
+#### Test Types
+- **Unit Tests**: `cargo test --lib` - Tests individual modules/functions
+- **All Tests**: `cargo test` - Runs all unit tests (no integration tests currently)
+- **Specific Tests**: `cargo test <pattern>` - Run tests matching pattern
+
+#### Coverage Commands
+```bash
+# Generate HTML coverage report (clean, excludes test utilities)
+cargo cov --lib --ignore-filename-regex "test_utils\.rs$"
 
 # Open coverage report in browser
-cargo cov-open
+cargo cov-open --lib --ignore-filename-regex "test_utils\.rs$"
 
 # Generate coverage for CI (Cobertura XML format)
-cargo cov-ci
+cargo cov-ci --lib --ignore-filename-regex "test_utils\.rs$"
 
-# Generate text coverage report
-cargo cov-text
+# Generate text coverage report (clean)
+cargo cov-text --lib --ignore-filename-regex "test_utils\.rs$"
 
-# Generate JSON coverage report
-cargo cov-json
+# Quick coverage check (may include test utilities)
+cargo cov-text --lib
 ```
+
+**Note**: Always use `--lib --ignore-filename-regex "test_utils\.rs$"` for accurate coverage that excludes test helper code.
 
 Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 

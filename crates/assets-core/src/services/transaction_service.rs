@@ -500,3 +500,6 @@ impl TransactionService {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
