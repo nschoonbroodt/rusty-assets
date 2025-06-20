@@ -1,7 +1,16 @@
 # CLAUDE.md - RustyAssets Development Guide
 
-- Challenge me when about questionable choices.
-- Explain your choices and argument
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Essential Commands
+
+This project uses `cargo` for dependency management, build and tests.
+
+- **Linting**: cargo fmt --all
+- **Testing**: cargo test
+- **Code coverage**: cargo cov-text
+
+## Workflow
 - Work in new branches, not in main
 
 ## Project Overview
@@ -9,6 +18,7 @@
 RustyAssets is a modular, extensible personal finance tracker written in Rust using double-entry bookkeeping principles. The project uses a PostgreSQL database and follows a workspace structure with multiple crates.
 
 When opening issues, use tag to configure them.
+
 ## Project Structure
 
 ```
@@ -24,7 +34,8 @@ rusty-assets/
 
 ## Key Technical Details
 
-Perform computation in postgres if possible (with view, functions) over performing them in the rust code
+- Perform computation in postgres if possible (with view, functions) over performing them in the rust code
+- Avoid roundtripping rust -> sql -> rust -> sql ... when possible
 
 ### Database
 - **Engine**: PostgreSQL 15+
@@ -67,23 +78,20 @@ Perform computation in postgres if possible (with view, functions) over performi
 
 #### Coverage Commands
 ```bash
-# Generate HTML coverage report (clean, excludes test utilities)
-cargo cov --lib --ignore-filename-regex "test_utils\.rs$"
+# Generate HTML coverage report
+cargo cov --lib
 
 # Open coverage report in browser
-cargo cov-open --lib --ignore-filename-regex "test_utils\.rs$"
+cargo cov-open --lib
 
 # Generate coverage for CI (Cobertura XML format)
-cargo cov-ci --lib --ignore-filename-regex "test_utils\.rs$"
+cargo cov-ci --lib
 
-# Generate text coverage report (clean)
-cargo cov-text --lib --ignore-filename-regex "test_utils\.rs$"
-
-# Quick coverage check (may include test utilities)
+# Generate text coverage report
 cargo cov-text --lib
 ```
 
-**Note**: Always use `--lib --ignore-filename-regex "test_utils\.rs$"` for accurate coverage that excludes test helper code.
+**Note**: Coverage automatically excludes test helper code located in `src/tests/` modules.
 
 Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 
@@ -99,10 +107,6 @@ Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 ```bash
 DATABASE_URL=postgresql://rustyassets:rustyassets@127.0.0.1:5432/rustyassets
 ```
-
-### Docker Compose Services
-- **PostgreSQL**: Port 5432, credentials in `docker-compose.yml`
-- **Data persistence**: Uses Docker volume `rustyassets_postgres_data`
 
 ## Code Conventions
 
