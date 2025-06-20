@@ -231,6 +231,7 @@ name = "assets-tauri"
 version = "0.1.0"
 dependencies = [
  "assets-core",
+ "chrono",
  "serde",
  "serde_json",
  "tauri",
