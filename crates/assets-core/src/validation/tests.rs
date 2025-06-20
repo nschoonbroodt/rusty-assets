@@ -1,6 +1,6 @@
 use super::account_validator::{AccountValidator, ValidationConfig};
 use super::errors::ValidationError;
-use crate::models::account::{types::*, NewAccount};
+use crate::models::account::{NewAccount, types::*};
 use crate::tests::utils::*;
 use rust_decimal::Decimal;
 use std::str::FromStr;
@@ -65,7 +65,7 @@ async fn test_validate_invalid_type_subtype_combination() {
 
     let account = NewAccount {
         name: "Test Account".to_string(),
-        account_type: AccountType::Asset, // Asset type
+        account_type: AccountType::Asset,        // Asset type
         account_subtype: AccountSubtype::Salary, // Income subtype - invalid combination
         parent_id: None,
         currency: "EUR".to_string(),
@@ -277,7 +277,7 @@ async fn test_validate_valid_investment_account() {
 #[tokio::test]
 async fn test_validation_config_strict_currency_disabled() {
     let (pool, _container) = setup_test_db().await;
-    
+
     let config = ValidationConfig {
         strict_currency_validation: false,
         ..ValidationConfig::default()
