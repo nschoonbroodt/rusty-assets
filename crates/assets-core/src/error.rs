@@ -21,6 +21,9 @@ pub enum CoreError {
     #[error("Validation error: {0}")]
     ValidationError(String),
 
+    #[error("Account validation failed: {0}")]
+    AccountValidation(#[from] crate::validation::ValidationError),
+
     #[error("Not found: {0}")]
     NotFound(String),
 

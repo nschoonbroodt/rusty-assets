@@ -1,6 +1,5 @@
 use super::*;
 use crate::tests::utils::*;
-use chrono::Utc;
 use rust_decimal::Decimal;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -121,8 +120,8 @@ async fn test_create_investment_account() {
         quantity: Some(Decimal::from(100)),
         average_cost: Some(Decimal::from_str("150.50").unwrap()),
         address: None,
-        purchase_date: Some(Utc::now()),
-        purchase_price: Some(Decimal::from_str("15050.00").unwrap()),
+        purchase_date: None,  // Real estate fields should be None for stocks
+        purchase_price: None, // Real estate fields should be None for stocks
         notes: Some("Technology stock".to_string()),
     };
 
