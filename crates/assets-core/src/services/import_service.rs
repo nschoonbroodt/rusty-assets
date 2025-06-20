@@ -29,7 +29,6 @@ impl ImportService {
         importer: &T,
         file_path: &str,
         target_account_path: &str,
-        user_id: Uuid,
     ) -> Result<ImportSummary> {
         // Generate a batch ID for this import
         let import_batch_id = Uuid::new_v4();
@@ -82,7 +81,6 @@ impl ImportService {
                 .create_transaction_from_import(
                     &imported_tx,
                     &target_account.id,
-                    user_id,
                     import_batch_id,
                     &import_source,
                 )
@@ -107,7 +105,6 @@ impl ImportService {
                 file_path,
                 &import_source,
                 import_batch_id,
-                user_id,
                 created_count as i32,
                 Some(format!(
                     "Imported {} transactions, skipped {}",
@@ -191,7 +188,6 @@ impl ImportService {
         &self,
         imported: &ImportedTransaction,
         target_account_id: &Uuid,
-        user_id: Uuid,
         import_batch_id: Uuid,
         import_source: &str,
     ) -> Result<Uuid> {
@@ -214,7 +210,6 @@ impl ImportService {
                 amount,
                 transaction_date,
                 None,
-                Some(user_id),
                 Some(import_source.to_string()),
                 Some(import_batch_id),
                 Some(imported.description.clone()),
@@ -232,7 +227,6 @@ impl ImportService {
                 amount,
                 transaction_date,
                 None,
-                Some(user_id),
                 Some(import_source.to_string()),
                 Some(import_batch_id),
                 Some(imported.description.clone()),
@@ -250,7 +244,6 @@ impl ImportService {
                     imported.amount,
                     transaction_date,
                     None,
-                    Some(user_id),
                     Some(import_source.to_string()),
                     Some(import_batch_id),
                     Some(imported.description.clone()),
@@ -265,7 +258,6 @@ impl ImportService {
                     abs_amount,
                     transaction_date,
                     None,
-                    Some(user_id),
                     Some(import_source.to_string()),
                     Some(import_batch_id),
                     Some(imported.description.clone()),

@@ -2,7 +2,7 @@ use anyhow::Result;
 use assets_core::{Database, ReportService};
 use clap::Args;
 
-use crate::{get_user_id_by_name, DateRange, OutputFormat, SingleDate};
+use crate::{DateRange, OutputFormat, SingleDate};
 
 mod account_ledger;
 mod balance_sheet;
@@ -35,10 +35,8 @@ pub async fn generate_income_statement(params: IncomeStatementParams) -> Result<
 
     let (start_date, end_date) = params.date_range.range();
 
-    let user_uuid = get_user_id_by_name(&params.user).await?;
-
     let income_statement_data = report_service
-        .income_statement(start_date, end_date, user_uuid) // user_uuid is already a Uuid
+        .income_statement(start_date, end_date) // user_uuid is already a Uuid
         .await?;
     match params.format {
         OutputFormat::Json => {
@@ -60,13 +58,10 @@ pub async fn generate_cash_flow_statement(params: CashFlowParams) -> Result<()> 
     let db = Database::from_env().await?;
     let report_service = ReportService::new(db.pool().clone());
 
-    // Get user ID from username
-    let user_id = get_user_id_by_name(&params.user).await?;
-
     let (start_date, end_date) = params.date_range.range();
 
     let cash_flow_data = report_service
-        .cash_flow_statement(start_date, end_date, user_id)
+        .cash_flow_statement(start_date, end_date)
         .await?;
     match params.format {
         OutputFormat::Json => {
@@ -182,9 +177,6 @@ pub struct BalanceSheetParams {
 /// Parameters for income statement report
 #[derive(Args)]
 pub struct IncomeStatementParams {
-    /// Username for the report
-    #[arg(long)]
-    pub user: String,
     #[command(flatten)]
     pub date_range: DateRange,
     /// Output format
@@ -195,9 +187,6 @@ pub struct IncomeStatementParams {
 /// Parameters for cash flow statement
 #[derive(Args)]
 pub struct CashFlowParams {
-    /// Username for the report
-    #[arg(long)]
-    pub user: String,
     #[command(flatten)]
     pub date_range: DateRange,
 

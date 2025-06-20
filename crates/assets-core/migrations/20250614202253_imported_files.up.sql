@@ -6,7 +6,6 @@ CREATE TABLE imported_files (
     file_size BIGINT NOT NULL,
     import_source VARCHAR(50) NOT NULL, -- 'BoursoBank', 'SocieteGenerale', 'Payslip', etc.
     import_batch_id UUID NOT NULL,
-    imported_by UUID NOT NULL REFERENCES users(id),
     imported_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     transaction_count INTEGER NOT NULL DEFAULT 0, -- Number of transactions imported from this file
     notes TEXT,

@@ -11,7 +11,6 @@ pub struct NewTransaction {
     pub description: String,
     pub reference: Option<String>,
     pub transaction_date: DateTime<Utc>,
-    pub created_by: Option<Uuid>, // User creating the transaction
     pub entries: Vec<NewJournalEntry>,
     // Import tracking fields
     pub import_source: Option<String>,

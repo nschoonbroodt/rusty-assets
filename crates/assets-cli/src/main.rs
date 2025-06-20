@@ -5,9 +5,7 @@ use rust_decimal::Decimal;
 mod commands;
 #[cfg(feature = "demo")]
 use commands::demo::*;
-use commands::{
-    accounts::*, db::*, duplicates::*, import::*, prices, reports::*, transactions::*, users::*,
-};
+use commands::{accounts::*, db::*, duplicates::*, import::*, prices, reports::*, transactions::*};
 pub mod date_utils;
 pub use date_utils::*;
 mod utils;
@@ -46,11 +44,6 @@ enum Commands {
     Reports {
         #[command(subcommand)]
         action: ReportCommands,
-    },
-    /// User management
-    Users {
-        #[command(subcommand)]
-        action: UserCommands,
     },
     /// Transaction management and viewing
     Transactions {
@@ -138,9 +131,6 @@ enum AccountCommands {
         /// Date for the opening balance
         #[arg(long)]
         date: chrono::NaiveDate,
-        /// User who owns this account (default: lookup first user)
-        #[arg(long)]
-        user: Option<String>,
     },
 }
 
@@ -265,8 +255,7 @@ async fn main() -> Result<()> {
                 account_path,
                 amount,
                 date,
-                user,
-            } => set_account_opening_balance(&account_path, amount, date, user.as_deref()).await?,
+            } => set_account_opening_balance(&account_path, amount, date).await?,
         },
         Commands::Prices { action } => match action {
             PriceCommands::Add => prices::add_price_interactive().await?,
@@ -304,7 +293,6 @@ async fn main() -> Result<()> {
                 generate_investment_performance(params).await?;
             }
         },
-        Commands::Users { action } => handle_user_command(action).await?,
         Commands::Transactions { action } => handle_transaction_command(action).await?,
         Commands::Import { action } => handle_import_command(action).await?,
         Commands::Duplicates { action } => handle_duplicate_command(action).await?,

@@ -56,11 +56,7 @@ async fn test_database_migrations() {
         })
         .collect();
 
-    // Verify essential tables exist
-    assert!(
-        table_names.contains(&"users".to_string()),
-        "Users table missing"
-    );
+    // Verify essential tables exist (users table removed with ownership model)
     assert!(
         table_names.contains(&"accounts".to_string()),
         "Accounts table missing"

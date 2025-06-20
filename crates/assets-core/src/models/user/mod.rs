@@ -1,10 +1,7 @@
-//! User-related models and types
+//! User management models (removed - ownership functionality eliminated)
 //!
-//! This module contains all types related to user management:
-//! - Core user structures (User)
-//! - User authentication and session management (future)
+//! This module is kept for backward compatibility but is now empty
 
 pub mod core;
 
-// Re-export all public types for easier importing
-pub use core::*;
+// Re-exports removed - no types to export

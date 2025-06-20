@@ -10,7 +10,6 @@ pub struct Transaction {
     pub description: String,
     pub reference: Option<String>, // Check number, transfer ID, etc.
     pub transaction_date: DateTime<Utc>,
-    pub created_by: Option<Uuid>, // User who created the transaction
     pub created_at: DateTime<Utc>,
     // Import tracking fields
     pub import_source: Option<String>,

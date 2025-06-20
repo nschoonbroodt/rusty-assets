@@ -4,8 +4,6 @@ use assets_core::{Database, DestinationAccount, ImportService, PayslipImportServ
 use clap::{Args, Subcommand};
 use rust_decimal::Decimal;
 
-use crate::get_user_id_by_name;
-
 #[derive(Subcommand)]
 pub enum ImportCommands {
     /// Import BoursoBank CSV transactions
@@ -24,10 +22,6 @@ pub struct BoursoBankArgs {
     /// Target account path (e.g., "Assets:Current Assets:BoursoBank")
     #[arg(short, long)]
     account: String,
-
-    /// Username (instead of UUID)
-    #[arg(short, long)]
-    user: String,
 }
 
 #[derive(Args)]
@@ -38,19 +32,12 @@ pub struct SgArgs {
     /// Target account path (e.g., "Assets:Current Assets:SG")
     #[arg(short, long)]
     account: String,
-
-    /// Username (instead of UUID)
-    #[arg(short, long)]
-    user: String,
 }
 
 #[derive(Args)]
 pub struct PayslipArgs {
     /// Path to the payslip file to import
     file: String,
-    /// Username (instead of UUID)
-    #[arg(short, long)]
-    user: String,
     #[arg(short = 'f', long = "fixed-income")]
     fixed_gross_income: String,
     #[arg(short = 'v', long = "variable-income")]
@@ -85,13 +72,11 @@ async fn import_boursobank(args: BoursoBankArgs) -> Result<()> {
     println!("====================================\n");
 
     let db = Database::from_env().await?;
-    let user_id = get_user_id_by_name(&args.user).await?;
-
     let import_service = ImportService::new(db.pool().clone());
     let importer = BoursoBankImporter::default();
 
     let summary = import_service
-        .import_transactions(&importer, &args.file, &args.account, user_id)
+        .import_transactions(&importer, &args.file, &args.account)
         .await?;
 
     summary.print_summary();
@@ -109,13 +94,11 @@ async fn import_sg(args: SgArgs) -> Result<()> {
     println!("==========================================\n");
 
     let db = Database::from_env().await?;
-    let user_id = get_user_id_by_name(&args.user).await?;
-
     let import_service = ImportService::new(db.pool().clone());
     let importer = SocietegeneraleImporter::default();
 
     let summary = import_service
-        .import_transactions(&importer, &args.file, &args.account, user_id)
+        .import_transactions(&importer, &args.file, &args.account)
         .await?;
 
     summary.print_summary();
@@ -150,13 +133,13 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
         "qt" => {
             let importer = QtPayslipImporter::new();
             payslip_import_service
-                .import_payslip(&importer, &args.file, &destinations, &args.user)
+                .import_payslip(&importer, &args.file, &destinations)
                 .await?
         }
         "mathworks" => {
             let importer = assets_core::importers::MathWorksPayslipImporter::new();
             payslip_import_service
-                .import_payslip(&importer, &args.file, &destinations, &args.user)
+                .import_payslip(&importer, &args.file, &destinations)
                 .await?
         }
         _ => {
@@ -211,10 +194,7 @@ async fn import_payslip(args: PayslipArgs) -> Result<()> {
 
     println!("\n✅ Payslip import completed successfully!");
     println!("💡 Tip: Run 'assets-cli reports balance-sheet' to see your updated balance");
-    println!(
-        "💡 Tip: Run 'assets-cli reports income-statement --user {}' to see income details",
-        args.user
-    );
+    println!("💡 Tip: Run 'assets-cli reports income-statement' to see income details");
 
     Ok(())
 }
