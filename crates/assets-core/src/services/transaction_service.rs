@@ -228,7 +228,6 @@ impl TransactionService {
             bind_index += 1;
         }
 
-
         // Add all conditions to query
         for condition in conditions {
             query.push_str(&condition);
@@ -316,7 +315,6 @@ impl TransactionService {
             conditions.push(format!(" AND a.full_path LIKE ${}", bind_index));
             bind_index += 1;
         }
-
 
         // Add all conditions to query
         for condition in conditions {

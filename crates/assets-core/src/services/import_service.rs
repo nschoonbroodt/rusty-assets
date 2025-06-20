@@ -244,7 +244,7 @@ impl ImportService {
                     imported.amount,
                     transaction_date,
                     None,
-                        Some(import_source.to_string()),
+                    Some(import_source.to_string()),
                     Some(import_batch_id),
                     Some(imported.description.clone()),
                 )
@@ -258,7 +258,7 @@ impl ImportService {
                     abs_amount,
                     transaction_date,
                     None,
-                        Some(import_source.to_string()),
+                    Some(import_source.to_string()),
                     Some(import_batch_id),
                     Some(imported.description.clone()),
                 )

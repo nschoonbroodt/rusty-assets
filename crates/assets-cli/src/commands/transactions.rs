@@ -66,10 +66,7 @@ pub async fn handle_transaction_command(command: TransactionCommands) -> Result<
             to,
             auto_confirm,
             allow_different_descriptions,
-        } => {
-            merge_internal_transfers(from, to, auto_confirm, allow_different_descriptions)
-                .await
-        }
+        } => merge_internal_transfers(from, to, auto_confirm, allow_different_descriptions).await,
     }
 }
 
@@ -322,7 +319,7 @@ async fn merge_internal_transfers(
         None
     };
 
- // Find potential internal transfers using SQL
+    // Find potential internal transfers using SQL
     let potential_transfers = find_potential_internal_transfers(
         &db,
         from_date.map(|d| d.date_naive()),

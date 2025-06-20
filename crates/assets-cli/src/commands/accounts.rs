@@ -302,10 +302,7 @@ pub async fn create_account_interactive() -> Result<()> {
     // Step 9: Ownership logic removed
 
     // Step 10: Create account (ownership model removed)
-    match account_service
-        .create_account(new_account)
-        .await
-    {
+    match account_service.create_account(new_account).await {
         Ok(account) => {
             println!("✅ Account created successfully!");
             println!("   ID: {}", account.id);
@@ -431,12 +428,8 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
     // Expect a UUID for specific account ownership
     match Uuid::from_str(account_id_str) {
         Ok(account_uuid) => {
-            match account_service
-                .get_account(account_uuid)
-                .await?
-            {
+            match account_service.get_account(account_uuid).await? {
                 Some(account) => {
-
                     println!("📊 Account: {} (ID: {})", account.name, account.id);
                     println!(
                         "   Type: {:?} ({:?})",

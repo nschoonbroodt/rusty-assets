@@ -208,8 +208,6 @@ impl AccountService {
         unreachable!("Should have returned in the loop")
     }
 
-
-
     /// Get account by full path (e.g., "Assets:Current Assets:Checking")
     pub async fn get_account_by_path(&self, path: &str) -> Result<Account> {
         let account = sqlx::query_as::<_, Account>(

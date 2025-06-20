@@ -5,9 +5,7 @@ use rust_decimal::Decimal;
 mod commands;
 #[cfg(feature = "demo")]
 use commands::demo::*;
-use commands::{
-    accounts::*, db::*, duplicates::*, import::*, prices, reports::*, transactions::*,
-};
+use commands::{accounts::*, db::*, duplicates::*, import::*, prices, reports::*, transactions::*};
 pub mod date_utils;
 pub use date_utils::*;
 mod utils;

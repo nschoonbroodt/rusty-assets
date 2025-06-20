@@ -4,7 +4,6 @@ use assets_core::{Database, DestinationAccount, ImportService, PayslipImportServ
 use clap::{Args, Subcommand};
 use rust_decimal::Decimal;
 
-
 #[derive(Subcommand)]
 pub enum ImportCommands {
     /// Import BoursoBank CSV transactions
@@ -23,7 +22,6 @@ pub struct BoursoBankArgs {
     /// Target account path (e.g., "Assets:Current Assets:BoursoBank")
     #[arg(short, long)]
     account: String,
-
 }
 
 #[derive(Args)]
@@ -34,7 +32,6 @@ pub struct SgArgs {
     /// Target account path (e.g., "Assets:Current Assets:SG")
     #[arg(short, long)]
     account: String,
-
 }
 
 #[derive(Args)]
