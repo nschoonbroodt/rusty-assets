@@ -3,6 +3,7 @@ pub mod error;
 pub mod importers;
 pub mod models;
 pub mod services;
+pub mod validation;
 
 #[cfg(test)]
 pub mod tests;

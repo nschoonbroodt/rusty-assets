@@ -1,5 +1,6 @@
 use crate::error::Result;
 use crate::models::{Account, AccountType, NewAccount};
+use crate::validation::AccountValidator;
 use crate::{AccountSubtype, NewAccountByPath};
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
@@ -38,11 +39,13 @@ impl AccountUpdates {
 
 pub struct AccountService {
     pool: PgPool,
+    validator: AccountValidator,
 }
 
 impl AccountService {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        let validator = AccountValidator::new(pool.clone());
+        Self { pool, validator }
     }
     /// Get all accounts
     pub async fn get_all_accounts(&self) -> Result<Vec<Account>> {
@@ -108,6 +111,9 @@ impl AccountService {
 
     /// Create a new account
     pub async fn create_account(&self, new_account: NewAccount) -> Result<Account> {
+        // Validate the account before creation
+        self.validator.validate_new_account(&new_account).await?;
+
         let account = sqlx::query_as::<_, Account>(
             r#"
             INSERT INTO accounts (
@@ -245,6 +251,11 @@ impl AccountService {
                 ))),
             };
         }
+
+        // Validate the updates before applying them
+        self.validator
+            .validate_account_updates(account_id, &updates)
+            .await?;
 
         // Use COALESCE to update only non-NULL values from the updates
         // This allows us to bind Option<T> directly and let SQL handle the logic

@@ -12,7 +12,7 @@ pub enum AccountType {
 }
 
 /// Account subtypes for more specific categorization
-#[derive(Debug, Clone, Serialize, Deserialize, sqlx::Type, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "account_subtype", rename_all = "snake_case")]
 pub enum AccountSubtype {
     // Asset subtypes
