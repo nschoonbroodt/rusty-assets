@@ -88,16 +88,12 @@ impl ReportService {
 
     pub async fn income_statement(
         &self,
-        start_date: NaiveDate, // Reordered and changed user_ids to user_id
+        start_date: NaiveDate,
         end_date: NaiveDate,
-        user_id: Uuid, // Changed from &[Uuid] to Uuid
     ) -> Result<Vec<IncomeStatementRow>> {
-        // Convert single Uuid to a slice for the SQL query
-        let user_ids_array = [user_id];
         let rows = sqlx::query_as::<_, IncomeStatementRow>(
-            "SELECT category_name, account_name, account_path, total_amount FROM fn_income_statement($1, $2, $3)", // Updated to include account_path
+            "SELECT category_name, account_name, account_path, total_amount FROM fn_income_statement($1, $2)",
         )
-        .bind(user_ids_array) // Bind as a slice
         .bind(start_date)
         .bind(end_date)
         .fetch_all(&self.pool)
@@ -128,14 +124,10 @@ impl ReportService {
         &self,
         start_date: NaiveDate,
         end_date: NaiveDate,
-        user_id: Uuid,
     ) -> Result<Vec<CashFlowRow>> {
-        // Convert single Uuid to a slice for the SQL query
-        let user_ids_array = [user_id];
         let rows = sqlx::query_as::<_, CashFlowRow>(
-            "SELECT activity_type, category_name, account_name, account_path, cash_flow FROM fn_cash_flow_statement($1, $2, $3)",
+            "SELECT activity_type, category_name, account_name, account_path, cash_flow FROM fn_cash_flow_statement($1, $2)",
         )
-        .bind(user_ids_array)
         .bind(start_date)
         .bind(end_date)
         .fetch_all(&self.pool)

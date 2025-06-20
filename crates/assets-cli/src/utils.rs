@@ -1,7 +1,4 @@
-use anyhow::Result;
-use assets_core::Database;
 use clap::ValueEnum;
-use uuid::Uuid;
 
 /// Output format for reports
 #[derive(Debug, Clone, ValueEnum)]

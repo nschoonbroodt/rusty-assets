@@ -232,7 +232,6 @@ pub async fn create_account_interactive() -> Result<()> {
     println!("=====================\n"); // Connect to database
     let db = Database::from_env().await?;
     let account_service = AccountService::new(db.pool().clone());
-    let user_service = UserService::new(db.pool().clone());
 
     // Step 1: Select account type
     let account_type = prompt_account_type()?;
@@ -300,12 +299,7 @@ pub async fn create_account_interactive() -> Result<()> {
     };
     println!("\n🔄 Creating account...");
 
-    // Step 9: Set up ownership data before creating account (if requested)
-    let ownership_data = if prompt_setup_ownership()? {
-        prompt_account_ownership(&user_service).await?
-    } else {
-        Vec::new()
-    };
+    // Step 9: Ownership logic removed
 
     // Step 10: Create account (ownership model removed)
     match account_service
@@ -450,42 +444,7 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
                     );
                     println!("   Currency: {}", account.currency);
                     println!();
-                    if account_with_ownership.ownership.is_empty() {
-                        println!("🏦 Ownership: 100% Unassigned (no specific owners)");
-                        println!("   This account has no fractional ownership setup.");
-                    } else {
-                        println!("👥 Ownership Distribution:");
-                        for ownership in &account_with_ownership.ownership {
-                            let percentage = ownership
-                                .ownership_percentage
-                                .to_string()
-                                .parse::<f64>()
-                                .unwrap_or(0.0);
-                            println!(
-                                "   • {}: {:.1}%",
-                                ownership.user_display_name,
-                                percentage * 100.0
-                            );
-                        }
-
-                        let total_percentage: f64 = account_with_ownership
-                            .ownership
-                            .iter()
-                            .map(|o| {
-                                o.ownership_percentage
-                                    .to_string()
-                                    .parse::<f64>()
-                                    .unwrap_or(0.0)
-                            })
-                            .sum();
-
-                        println!();
-                        println!("📊 Total Ownership: {:.1}%", total_percentage * 100.0);
-
-                        if (total_percentage - 1.0).abs() > 0.001 {
-                            println!("⚠️  Warning: Ownership does not sum to 100%!");
-                        }
-                    }
+                    // Ownership display removed as ownership model has been eliminated
                 }
                 None => {
                     println!("❌ Account not found with ID: {}", account_id_str);
@@ -928,102 +887,18 @@ fn confirm_creation() -> Result<bool> {
     }
 }
 
-fn prompt_setup_ownership() -> Result<bool> {
-    loop {
-        let input = prompt_input("\n👥 Set up account ownership (multi-user)? (y/n): ")?;
-        match input.to_lowercase().as_str() {
-            "y" | "yes" => return Ok(true),
-            "n" | "no" => return Ok(false),
-            _ => println!("Please enter 'y' for yes or 'n' for no."),
-        }
-    }
-}
-
-async fn prompt_account_ownership(user_service: &UserService) -> Result<Vec<(Uuid, Decimal)>> {
-    println!("\n👥 Account Ownership Setup");
-    println!("=========================");
-
-    // Get all users
-    let users = user_service.get_all_users().await?;
-
-    if users.is_empty() {
-        println!("❌ No users found. Create users first with sample data.");
-        return Ok(Vec::new());
-    }
-
-    println!("Available users:");
-    for (i, user) in users.iter().enumerate() {
-        println!("{}. {} ({})", i + 1, user.display_name, user.name);
-    }
-
-    let mut ownership_data = Vec::new();
-    let mut total_percentage = Decimal::from(0);
-
-    loop {
-        let input = prompt_input(&format!(
-            "\nSelect user (1-{}, or Enter to finish): ",
-            users.len()
-        ))?;
-
-        if input.is_empty() {
-            break;
-        }
-
-        if let Ok(choice) = input.parse::<usize>() {
-            if choice >= 1 && choice <= users.len() {
-                let user = &users[choice - 1];
-                let percentage_input = prompt_input(&format!(
-                    "Ownership percentage for {} (0-100): ",
-                    user.display_name
-                ))?;
-                if let Ok(percentage) = Decimal::from_str(&percentage_input) {
-                    if percentage >= Decimal::from(0) && percentage <= Decimal::from(100) {
-                        let decimal_percentage = percentage / Decimal::from(100); // Convert percentage to decimal
-                        if total_percentage + decimal_percentage <= Decimal::from(1) {
-                            ownership_data.push((user.id, decimal_percentage));
-                            total_percentage += decimal_percentage;
-                            println!(
-                                "✅ Added {}% ownership for {}",
-                                percentage, user.display_name
-                            );
-
-                            if total_percentage == Decimal::from(1) {
-                                println!("💯 Total ownership is now 100%");
-                                break;
-                            }
-                        } else {
-                            println!(
-                                "❌ Total ownership cannot exceed 100%. Current total: {}%",
-                                total_percentage * Decimal::from(100)
-                            );
-                        }
-                    } else {
-                        println!("❌ Percentage must be between 0 and 100.");
-                    }
-                } else {
-                    println!("❌ Invalid percentage format.");
-                }
-            } else {
-                println!("❌ Invalid user choice.");
-            }
-        }
-    }
-
-    Ok(ownership_data)
-}
+// Ownership functions removed as ownership model has been eliminated
 
 /// Set opening balance for an account
 pub async fn set_account_opening_balance(
     account_path: &str,
     amount: Decimal,
     date: chrono::NaiveDate,
-    user: Option<&str>,
 ) -> Result<()> {
     use assets_core::{NewJournalEntry, NewTransaction, TransactionService};
 
     let db = Database::from_env().await?;
     let account_service = AccountService::new(db.pool().clone());
-    let user_service = UserService::new(db.pool().clone());
     let transaction_service = TransactionService::new(db.pool().clone());
 
     // Find the account
@@ -1033,20 +908,7 @@ pub async fn set_account_opening_balance(
         .await
         .map_err(|_| anyhow::anyhow!("Account '{}' not found", account_path))?;
 
-    // Find or use first user
-    let target_user = if let Some(username) = user {
-        match user_service.get_user_by_name(username).await? {
-            Some(user) => user,
-            None => return Err(anyhow::anyhow!("User '{}' not found", username)),
-        }
-    } else {
-        // Get first user as default
-        let users = user_service.get_all_users().await?;
-        if users.is_empty() {
-            return Err(anyhow::anyhow!("No users found. Create a user first."));
-        }
-        users.into_iter().next().unwrap()
-    };
+    // User logic removed with ownership model
 
     // Find or create opening balance equity account
     let opening_balance_account = match account_service
@@ -1148,7 +1010,6 @@ pub async fn set_account_opening_balance(
     println!("   📊 Account: {}", account_path);
     println!("   💰 Amount: € {:.2}", amount);
     println!("   📅 Date: {}", transaction_date);
-    println!("   👤 User: {}", target_user.name);
     println!(
         "   🔗 Transaction ID: {}",
         created_transaction.transaction.id

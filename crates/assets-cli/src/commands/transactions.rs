@@ -6,7 +6,7 @@ use comfy_table::{presets::UTF8_FULL, Table};
 use rust_decimal::Decimal;
 use uuid::Uuid;
 
-use crate::{get_user_id_by_name, OutputFormat};
+use crate::OutputFormat;
 
 #[derive(Subcommand)]
 pub enum TransactionCommands {
@@ -25,9 +25,6 @@ pub enum TransactionCommands {
         /// Date range end (YYYY-MM-DD format)  
         #[arg(long)]
         to: Option<String>,
-        /// Username for context
-        #[arg(long)]
-        user: String,
         /// Automatically confirm all merges without prompting
         #[arg(long)]
         auto_confirm: bool,
@@ -50,9 +47,6 @@ pub struct ListTransactionsArgs {
     /// Filter by account path (e.g., "Assets:Current Assets:BoursoBank")
     #[arg(long)]
     account: Option<String>,
-    /// Filter by username
-    #[arg(long)]
-    user: Option<String>,
 
     /// Maximum number of transactions to show
     #[arg(long, default_value = "50")]
@@ -70,11 +64,10 @@ pub async fn handle_transaction_command(command: TransactionCommands) -> Result<
         TransactionCommands::MergeTransfers {
             from,
             to,
-            user,
             auto_confirm,
             allow_different_descriptions,
         } => {
-            merge_internal_transfers(from, to, &user, auto_confirm, allow_different_descriptions)
+            merge_internal_transfers(from, to, auto_confirm, allow_different_descriptions)
                 .await
         }
     }
@@ -99,18 +92,12 @@ async fn list_transactions(args: ListTransactionsArgs) -> Result<()> {
     } else {
         None
     };
-    let user_id = if let Some(user_str) = &args.user {
-        Some(get_user_id_by_name(user_str).await?)
-    } else {
-        None
-    };
     // Get transactions with filters
     let transactions = transaction_service
         .get_transactions_with_filters_and_accounts(
             from_date,
             to_date,
             args.account.as_deref(),
-            user_id,
             args.limit,
         )
         .await?;
@@ -245,9 +232,6 @@ fn display_transaction_detail(transaction_with_entries: &TransactionWithEntriesA
     if let Some(ref reference) = tx.reference {
         println!("   Reference: {}", reference);
     }
-    if let Some(created_by) = tx.created_by {
-        println!("   Created by: {}", created_by);
-    }
     println!("   Created at: {}", tx.created_at.format("%Y-%m-%d %H:%M"));
 
     println!();
@@ -316,7 +300,6 @@ fn escape_csv(s: &str) -> String {
 async fn merge_internal_transfers(
     from: Option<String>,
     to: Option<String>,
-    username: &str,
     auto_confirm: bool,
     allow_different_descriptions: bool,
 ) -> Result<()> {
@@ -339,8 +322,7 @@ async fn merge_internal_transfers(
         None
     };
 
-    // Get user ID
-    let user_id = get_user_id_by_name(username).await?; // Find potential internal transfers using SQL
+ // Find potential internal transfers using SQL
     let potential_transfers = find_potential_internal_transfers(
         &db,
         from_date.map(|d| d.date_naive()),
@@ -375,7 +357,7 @@ async fn merge_internal_transfers(
         }
 
         // Perform the merge
-        match merge_transfer_group(&transaction_service, group, user_id).await {
+        match merge_transfer_group(&transaction_service, group).await {
             Ok(new_transaction_id) => {
                 println!(
                     "✅ Successfully merged transfer group into transaction: {}",
@@ -424,7 +406,7 @@ async fn find_potential_internal_transfers(
     let from_datetime = from_date.map(|d| d.and_hms_opt(0, 0, 0).unwrap().and_utc());
     let to_datetime = to_date.map(|d| d.and_hms_opt(23, 59, 59).unwrap().and_utc());
     let transactions = transaction_service
-        .get_transactions_with_filters_and_accounts(from_datetime, to_datetime, None, None, 1000)
+        .get_transactions_with_filters_and_accounts(from_datetime, to_datetime, None, 1000)
         .await?;
 
     let mut potential_transfers = Vec::new(); // Find transactions that involve Equity:Uncategorized
@@ -536,7 +518,6 @@ fn display_transfer_group(group_num: usize, group: &TransferGroup) {
 async fn merge_transfer_group(
     transaction_service: &TransactionService,
     group: &TransferGroup,
-    user_id: Uuid,
 ) -> Result<Uuid> {
     // Find the source (negative amount) and destination (positive amount) accounts
     let source = group
@@ -573,7 +554,6 @@ async fn merge_transfer_group(
         group.amount,
         group.date,
         None,
-        Some(user_id),
     );
 
     // Create the transaction in the database
