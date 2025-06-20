@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "identifier": "com.rustyassets.app",
   "build": {
-    "beforeDevCommand": "npm --prefix ui run dev",
-    "beforeBuildCommand": "npm --prefix ui run build",
+    "beforeDevCommand": "./start-dev.sh",
+    "beforeBuildCommand": "./build-ui.sh",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "ui/dist"
+    "frontendDist": "ui/dist",
+    "withGlobalTauri": false
   },
   "app": {
     "windows": [
