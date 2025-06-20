@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "identifier": "com.rustyassets.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
-    "devUrl": "http://localhost:1420",
-    "frontendDist": "../ui/dist"
+    "beforeDevCommand": "cd ui && npm run dev",
+    "beforeBuildCommand": "cd ui && npm run build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "ui/dist"
   },
   "app": {
     "windows": [
