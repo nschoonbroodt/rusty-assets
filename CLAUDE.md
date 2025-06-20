@@ -1,7 +1,16 @@
 # CLAUDE.md - RustyAssets Development Guide
 
-- Challenge me when about questionable choices.
-- Explain your choices and argument
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Essential Commands
+
+This project uses `cargo` for dependency management, build and tests.
+
+- **Linting**: cargo fmt --all
+- **Testing**: cargo test
+- **Code coverage**: cargo cov-text
+
+## Workflow
 - Work in new branches, not in main
 
 ## Project Overview
@@ -9,6 +18,7 @@
 RustyAssets is a modular, extensible personal finance tracker written in Rust using double-entry bookkeeping principles. The project uses a PostgreSQL database and follows a workspace structure with multiple crates.
 
 When opening issues, use tag to configure them.
+
 ## Project Structure
 
 ```
@@ -24,7 +34,8 @@ rusty-assets/
 
 ## Key Technical Details
 
-Perform computation in postgres if possible (with view, functions) over performing them in the rust code
+- Perform computation in postgres if possible (with view, functions) over performing them in the rust code
+- Avoid roundtripping rust -> sql -> rust -> sql ... when possible
 
 ### Database
 - **Engine**: PostgreSQL 15+
@@ -58,28 +69,6 @@ Perform computation in postgres if possible (with view, functions) over performi
 5. Write tests with appropriate coverage
 6. Run quality checks: `cargo fmt`, `cargo clippy`, `cargo test`
 
-### Testing and Coverage
-```bash
-# Run all tests
-cargo test
-
-# Generate HTML coverage report (fast!)
-cargo cov
-
-# Open coverage report in browser
-cargo cov-open
-
-# Generate coverage for CI (Cobertura XML format)
-cargo cov-ci
-
-# Generate text coverage report
-cargo cov-text
-
-# Generate JSON coverage report
-cargo cov-json
-```
-
-Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 
 ### Database Schema Changes
 1. Create new migration: `sqlx migrate add --source crates/assets-core/ <description>`
@@ -93,10 +82,6 @@ Uses `cargo-llvm-cov` for fast, accurate coverage analysis instead of tarpaulin.
 ```bash
 DATABASE_URL=postgresql://rustyassets:rustyassets@127.0.0.1:5432/rustyassets
 ```
-
-### Docker Compose Services
-- **PostgreSQL**: Port 5432, credentials in `docker-compose.yml`
-- **Data persistence**: Uses Docker volume `rustyassets_postgres_data`
 
 ## Code Conventions
 
