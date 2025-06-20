@@ -48,8 +48,6 @@ impl TransactionService {
             reference: transaction.reference,
             external_reference: transaction.memo,
             entries: resolved_entries,
-
-            created_by: None,
             import_source: None,
             import_batch_id: None,
         };
@@ -74,16 +72,15 @@ impl TransactionService {
         let transaction_id = Uuid::new_v4();
         let transaction = sqlx::query_as::<_, Transaction>(
             r#"
-            INSERT INTO transactions (id, description, reference, transaction_date, created_by, import_source, import_batch_id, external_reference)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id
+            INSERT INTO transactions (id, description, reference, transaction_date, import_source, import_batch_id, external_reference)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, description, reference, transaction_date, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id
             "#,
         )
         .bind(transaction_id)
         .bind(&new_transaction.description)
         .bind(&new_transaction.reference)
         .bind(new_transaction.transaction_date)
-        .bind(new_transaction.created_by)
         .bind(&new_transaction.import_source)
         .bind(new_transaction.import_batch_id)
         .bind(&new_transaction.external_reference)
@@ -121,7 +118,7 @@ impl TransactionService {
         transaction_id: Uuid,
     ) -> Result<Option<TransactionWithEntries>> {
         let transaction = sqlx::query_as::<_, Transaction>(
-            "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
+            "SELECT id, description, reference, transaction_date, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
         .fetch_optional(&self.pool)
@@ -150,7 +147,7 @@ impl TransactionService {
         transaction_id: Uuid,
     ) -> Result<Option<TransactionWithEntriesAndAccounts>> {
         let transaction = sqlx::query_as::<_, Transaction>(
-            "SELECT id, description, reference, transaction_date, created_by, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
+            "SELECT id, description, reference, transaction_date, created_at, import_source, import_batch_id, external_reference, is_duplicate, merged_into_transaction_id FROM transactions WHERE id = $1",
         )
         .bind(transaction_id)
         .fetch_optional(&self.pool)
@@ -193,13 +190,12 @@ impl TransactionService {
         from_date: Option<DateTime<Utc>>,
         to_date: Option<DateTime<Utc>>,
         account_path: Option<&str>,
-        user_id: Option<Uuid>,
         limit: u32,
     ) -> Result<Vec<TransactionWithEntries>> {
         // Build the base query
         let mut query = String::from(
             r#"
-            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_by, t.created_at
+            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_at
             FROM transactions t
             "#,
         );
@@ -208,13 +204,9 @@ impl TransactionService {
         let mut bind_index = 1;
 
         // Join with journal entries and accounts if needed
-        if account_path.is_some() || user_id.is_some() {
+        if account_path.is_some() {
             query.push_str(" INNER JOIN journal_entries je ON t.id = je.transaction_id");
             query.push_str(" INNER JOIN accounts a ON je.account_id = a.id");
-
-            if user_id.is_some() {
-                query.push_str(" INNER JOIN account_ownership ao ON a.id = ao.account_id");
-            }
         }
 
         query.push_str(" WHERE 1=1");
@@ -236,11 +228,6 @@ impl TransactionService {
             bind_index += 1;
         }
 
-        // Add user filter
-        if user_id.is_some() {
-            conditions.push(format!(" AND ao.user_id = ${}", bind_index));
-            bind_index += 1;
-        }
 
         // Add all conditions to query
         for condition in conditions {
@@ -261,9 +248,6 @@ impl TransactionService {
         }
         if let Some(path) = account_path {
             query_builder = query_builder.bind(format!("{}%", path));
-        }
-        if let Some(uid) = user_id {
-            query_builder = query_builder.bind(uid);
         }
         query_builder = query_builder.bind(limit as i64);
 
@@ -294,13 +278,12 @@ impl TransactionService {
         from_date: Option<DateTime<Utc>>,
         to_date: Option<DateTime<Utc>>,
         account_path: Option<&str>,
-        user_id: Option<Uuid>,
         limit: u32,
     ) -> Result<Vec<TransactionWithEntriesAndAccounts>> {
         // Build the base query
         let mut query = String::from(
             r#"
-            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_by, t.created_at, 
+            SELECT DISTINCT t.id, t.description, t.reference, t.transaction_date, t.created_at, 
                    t.import_source, t.import_batch_id, t.external_reference, t.is_duplicate, t.merged_into_transaction_id
             FROM transactions t
             "#,
@@ -310,13 +293,9 @@ impl TransactionService {
         let mut bind_index = 1;
 
         // Join with journal entries and accounts if needed
-        if account_path.is_some() || user_id.is_some() {
+        if account_path.is_some() {
             query.push_str(" INNER JOIN journal_entries je ON t.id = je.transaction_id");
             query.push_str(" INNER JOIN accounts a ON je.account_id = a.id");
-
-            if user_id.is_some() {
-                query.push_str(" INNER JOIN account_ownership ao ON a.id = ao.account_id");
-            }
         }
 
         query.push_str(" WHERE 1=1");
@@ -338,11 +317,6 @@ impl TransactionService {
             bind_index += 1;
         }
 
-        // Add user filter
-        if user_id.is_some() {
-            conditions.push(format!(" AND ao.user_id = ${}", bind_index));
-            bind_index += 1;
-        }
 
         // Add all conditions to query
         for condition in conditions {
@@ -363,9 +337,6 @@ impl TransactionService {
         }
         if let Some(path) = account_path {
             query_builder = query_builder.bind(format!("{}%", path));
-        }
-        if let Some(uid) = user_id {
-            query_builder = query_builder.bind(uid);
         }
         query_builder = query_builder.bind(limit as i64);
 
@@ -438,13 +409,11 @@ impl TransactionService {
         amount: Decimal,
         transaction_date: DateTime<Utc>,
         reference: Option<String>,
-        created_by: Option<Uuid>,
     ) -> NewTransaction {
         NewTransaction {
             description,
             reference,
             transaction_date,
-            created_by,
             entries: vec![
                 NewJournalEntry {
                     account_id: debit_account_id,
@@ -472,7 +441,6 @@ impl TransactionService {
         amount: Decimal,
         transaction_date: DateTime<Utc>,
         reference: Option<String>,
-        created_by: Option<Uuid>,
         import_source: Option<String>,
         import_batch_id: Option<Uuid>,
         external_reference: Option<String>,
@@ -481,7 +449,6 @@ impl TransactionService {
             description,
             reference,
             transaction_date,
-            created_by,
             entries: vec![
                 NewJournalEntry {
                     account_id: debit_account_id,

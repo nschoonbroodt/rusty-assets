@@ -1,1 +1,2 @@
-DROP TABLE IF EXISTS users;-- Add down migration script here
+-- Users table migration removed - ownership model eliminated
+-- This migration is now a no-op

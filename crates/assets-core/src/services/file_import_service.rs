@@ -70,9 +70,9 @@ impl FileImportService {
             r#"
             INSERT INTO imported_files (
                 file_path, file_name, file_hash, file_size, import_source,
-                import_batch_id, imported_by, transaction_count, notes
+                import_batch_id, transaction_count, notes
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             RETURNING *
             "#,
         )
@@ -82,7 +82,6 @@ impl FileImportService {
         .bind(new_file.file_size)
         .bind(&new_file.import_source)
         .bind(new_file.import_batch_id)
-        .bind(new_file.imported_by)
         .bind(new_file.transaction_count)
         .bind(&new_file.notes)
         .fetch_one(&self.pool)
@@ -127,7 +126,6 @@ impl FileImportService {
         file_path: P,
         import_source: &str,
         import_batch_id: Uuid,
-        imported_by: Uuid,
         transaction_count: i32,
         notes: Option<String>,
     ) -> Result<NewImportedFile> {
@@ -147,7 +145,6 @@ impl FileImportService {
             file_size,
             import_source: import_source.to_string(),
             import_batch_id,
-            imported_by,
             transaction_count,
             notes,
         })

@@ -11,7 +11,6 @@ pub struct ImportedFile {
     pub file_size: i64,
     pub import_source: String,
     pub import_batch_id: Uuid,
-    pub imported_by: Uuid,
     pub imported_at: DateTime<Utc>,
     pub transaction_count: i32,
     pub notes: Option<String>,
@@ -25,7 +24,6 @@ pub struct NewImportedFile {
     pub file_size: i64,
     pub import_source: String,
     pub import_batch_id: Uuid,
-    pub imported_by: Uuid,
     pub transaction_count: i32,
     pub notes: Option<String>,
 }

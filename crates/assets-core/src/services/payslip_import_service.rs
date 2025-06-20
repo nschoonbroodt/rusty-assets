@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::importers::{ImportedPayslip, PayslipImporter};
 use crate::models::{NewJournalEntry, NewTransaction};
-use crate::services::{AccountService, TransactionService, UserService};
+use crate::services::{AccountService, TransactionService};
 use rust_decimal::Decimal;
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -9,7 +9,6 @@ use uuid::Uuid;
 pub struct PayslipImportService {
     transaction_service: TransactionService,
     account_service: AccountService,
-    user_service: UserService,
 }
 
 pub struct DestinationAccount {
@@ -27,12 +26,10 @@ impl PayslipImportService {
     pub fn new(pool: PgPool) -> Self {
         let transaction_service = TransactionService::new(pool.clone());
         let account_service = AccountService::new(pool.clone());
-        let user_service = UserService::new(pool.clone());
 
         Self {
             transaction_service,
             account_service,
-            user_service,
         }
     }
 
@@ -42,23 +39,13 @@ impl PayslipImportService {
         importer: &T,
         file_path: &str,
         destination_account: &DestinationAccount,
-        user_name: &str,
     ) -> Result<ImportResult> {
         // Import the payslip data
         let payslip = importer.import_from_file(file_path).await?;
 
-        // Get the user
-        let user = self
-            .user_service
-            .get_user_by_name(user_name)
-            .await?
-            .ok_or_else(|| {
-                crate::error::CoreError::NotFound(format!("User not found: {}", user_name))
-            })?;
-
         // Convert payslip to transaction
         let transaction_id = self
-            .create_payslip_transaction(&payslip, destination_account, user.id)
+            .create_payslip_transaction(&payslip, destination_account)
             .await?;
 
         Ok(ImportResult {
@@ -74,7 +61,6 @@ impl PayslipImportService {
         &self,
         payslip: &ImportedPayslip,
         destination_account: &DestinationAccount,
-        user_id: Uuid,
     ) -> Result<Uuid> {
         let entries = [
             (
@@ -145,7 +131,6 @@ impl PayslipImportService {
                 payslip.employer_name.replace(" ", "")
             )),
             transaction_date: payslip.pay_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
-            created_by: Some(user_id),
             entries: journal_entries,
             import_source: Some("Payslip".to_string()),
             import_batch_id: None, // Payslips are imported individually

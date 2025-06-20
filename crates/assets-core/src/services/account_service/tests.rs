@@ -22,96 +22,7 @@ async fn test_create_account_without_users() {
     assert!(account.is_active);
 }
 
-#[tokio::test]
-async fn test_create_account_with_user() {
-    let (pool, _container) = setup_test_db().await;
-    let user = create_test_user(&pool).await;
-    let service = AccountService::new(pool);
-
-    let new_account = create_test_new_account();
-    let result = service.create_account(new_account).await;
-
-    assert!(result.is_ok());
-    let account = result.unwrap();
-
-    // Verify account was created
-    assert_eq!(account.name, "Test Account");
-
-    // Verify ownership was created
-    let ownership_result = service.get_account_with_ownership(account.id).await;
-    assert!(ownership_result.is_ok());
-    let account_with_ownership = ownership_result.unwrap().unwrap();
-    assert_eq!(account_with_ownership.ownership.len(), 1);
-    assert_eq!(account_with_ownership.ownership[0].user_id, user.id);
-    assert_eq!(
-        account_with_ownership.ownership[0].ownership_percentage,
-        Decimal::from(1)
-    );
-}
-
-#[tokio::test]
-async fn test_create_account_with_custom_ownership() {
-    let (pool, _container) = setup_test_db().await;
-    let user1 = create_test_user(&pool).await;
-
-    // Create second user
-    let user2 = create_test_user_with_names(&pool, "user2", "User 2").await;
-
-    let service = AccountService::new(pool);
-
-    let new_account = create_test_new_account();
-    let ownership = vec![
-        (user1.id, Decimal::from_str("0.6").unwrap()), // 60%
-        (user2.id, Decimal::from_str("0.4").unwrap()), // 40%
-    ];
-
-    let result = service
-        .create_account_with_ownership(new_account, ownership)
-        .await;
-
-    assert!(result.is_ok());
-    let account = result.unwrap();
-
-    // Verify ownership
-    let ownership_result = service.get_account_with_ownership(account.id).await;
-    assert!(ownership_result.is_ok());
-    let account_with_ownership = ownership_result.unwrap().unwrap();
-    assert_eq!(account_with_ownership.ownership.len(), 2);
-
-    // Should be ordered by percentage DESC
-    assert_eq!(account_with_ownership.ownership[0].user_id, user1.id);
-    assert_eq!(
-        account_with_ownership.ownership[0].ownership_percentage,
-        Decimal::from_str("0.6").unwrap()
-    );
-    assert_eq!(account_with_ownership.ownership[1].user_id, user2.id);
-    assert_eq!(
-        account_with_ownership.ownership[1].ownership_percentage,
-        Decimal::from_str("0.4").unwrap()
-    );
-}
-
-#[tokio::test]
-async fn test_create_account_with_invalid_ownership() {
-    let (pool, _container) = setup_test_db().await;
-    let user = create_test_user(&pool).await;
-    let service = AccountService::new(pool);
-
-    let new_account = create_test_new_account();
-    let invalid_ownership = vec![(user.id, Decimal::from_str("1.5").unwrap())]; // 150%
-
-    let result = service
-        .create_account_with_ownership(new_account, invalid_ownership)
-        .await;
-
-    assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .to_string()
-            .contains("Total ownership percentage cannot exceed 100%")
-    );
-}
+// Ownership-related tests removed as ownership model has been eliminated
 
 #[tokio::test]
 async fn test_get_account_by_id() {
@@ -304,29 +215,7 @@ async fn test_create_account_by_path_with_hierarchy() {
     assert!(final_account.parent_id.is_some());
 }
 
-#[tokio::test]
-async fn test_get_account_with_ownership_and_users() {
-    let (pool, _container) = setup_test_db().await;
-    let user = create_test_user(&pool).await;
-    let service = AccountService::new(pool);
-
-    let new_account = create_test_new_account();
-    let account = service.create_account(new_account).await.unwrap();
-
-    let result = service
-        .get_account_with_ownership_and_users(account.id)
-        .await;
-    assert!(result.is_ok());
-    let account_with_users = result.unwrap().unwrap();
-
-    assert_eq!(account_with_users.ownership.len(), 1);
-    assert_eq!(account_with_users.ownership[0].user_id, user.id);
-    assert_eq!(account_with_users.ownership[0].user_name, "test_user");
-    assert_eq!(
-        account_with_users.ownership[0].user_display_name,
-        "Test User".to_string()
-    );
-}
+// Ownership-related test removed
 
 #[tokio::test]
 async fn test_empty_account_path() {

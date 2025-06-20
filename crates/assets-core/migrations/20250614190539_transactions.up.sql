@@ -9,12 +9,10 @@ CREATE TABLE transactions (
     external_reference VARCHAR(255),
     is_duplicate BOOLEAN DEFAULT FALSE,
     merged_into_transaction_id UUID REFERENCES transactions(id),
-    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 CREATE INDEX idx_transactions_date ON transactions(transaction_date);
-CREATE INDEX idx_transactions_created_by ON transactions(created_by);
 CREATE INDEX idx_transactions_import_source ON transactions(import_source);
 CREATE INDEX idx_transactions_import_batch ON transactions(import_batch_id);
 CREATE INDEX idx_transactions_external_ref ON transactions(external_reference);

@@ -1,8 +1,2 @@
-use uuid::Uuid;
-
-/// User context for filtering operations
-#[derive(Debug, Clone, PartialEq)]
-pub enum UserContext {
-    User(Uuid), // Specific user view
-    Family,     // Combined family view
-}
+// User context removed - ownership functionality eliminated
+// This file is kept for backward compatibility but is now empty

@@ -1,5 +1,4 @@
-use crate::models::{AccountSubtype, AccountType, NewAccount, NewUser, User};
-use crate::services::UserService;
+use crate::models::{AccountSubtype, AccountType, NewAccount};
 use sqlx::PgPool;
 use testcontainers::{ContainerAsync, GenericImage, ImageExt, runners::AsyncRunner};
 
@@ -52,24 +51,7 @@ pub async fn setup_test_db() -> (PgPool, ContainerAsync<GenericImage>) {
     (pool, postgres)
 }
 
-/// Test helper to create a test user with default name and display name
-pub async fn create_test_user(pool: &PgPool) -> User {
-    create_test_user_with_names(pool, "test_user", "Test User").await
-}
-
-/// Test helper to create a test user with custom names
-pub async fn create_test_user_with_names(pool: &PgPool, name: &str, display_name: &str) -> User {
-    let user_service = UserService::new(pool.clone());
-    user_service
-        .create_user(
-            NewUser::builder()
-                .name(name)
-                .display_name(display_name)
-                .build(),
-        )
-        .await
-        .expect("Failed to create test user")
-}
+// User-related test helpers removed as ownership model has been eliminated
 
 /// Test helper to create a basic NewAccount with Asset/Checking defaults
 pub fn create_test_new_account() -> NewAccount {

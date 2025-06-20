@@ -1,7 +1,6 @@
 -- Create cash flow statement function
 -- Categorizes cash flows into Operating, Investing, and Financing activities
 CREATE FUNCTION fn_cash_flow_statement(
-    p_user_ids UUID[],
     p_start_date DATE,
     p_end_date DATE
 )
@@ -49,15 +48,15 @@ BEGIN
             SUM(
                 CASE
                     -- For income accounts: positive amounts are cash inflows
-                    WHEN a.account_type = 'income' THEN (je.amount * -1.0 * ao.ownership_percentage)
+                    WHEN a.account_type = 'income' THEN (je.amount * -1.0)
                     -- For asset accounts: positive amounts are cash outflows (money leaving to buy assets)
-                    WHEN a.account_type = 'asset' THEN (je.amount * -1.0 * ao.ownership_percentage)
+                    WHEN a.account_type = 'asset' THEN (je.amount * -1.0)
                     -- For expense accounts: positive amounts are cash outflows  
-                    WHEN a.account_type = 'expense' THEN (je.amount * -1.0 * ao.ownership_percentage)
+                    WHEN a.account_type = 'expense' THEN (je.amount * -1.0)
                     -- For liability accounts: positive amounts are cash inflows (borrowing)
-                    WHEN a.account_type = 'liability' THEN (je.amount * ao.ownership_percentage)
+                    WHEN a.account_type = 'liability' THEN je.amount
                     -- For equity accounts: positive amounts are cash inflows
-                    WHEN a.account_type = 'equity' THEN (je.amount * ao.ownership_percentage)
+                    WHEN a.account_type = 'equity' THEN je.amount
                     ELSE 0.0
                 END
             ), 0.0
@@ -65,15 +64,13 @@ BEGIN
     FROM
         accounts a
     INNER JOIN
-        account_ownership ao ON a.id = ao.account_id
-    INNER JOIN
         journal_entries je ON je.account_id = a.id
     INNER JOIN
         transactions t ON t.id = je.transaction_id
     LEFT JOIN
         accounts parent_acc ON a.parent_id = parent_acc.id
     WHERE
-        ao.user_id = ANY(p_user_ids)
+        a.is_active = true
         AND t.transaction_date >= p_start_date
         AND t.transaction_date <= p_end_date
         -- Exclude opening balance transactions to focus on actual cash flows
@@ -85,11 +82,11 @@ BEGIN
         ABS(COALESCE(
             SUM(
                 CASE
-                    WHEN a.account_type = 'income' THEN (je.amount * -1.0 * ao.ownership_percentage)
-                    WHEN a.account_type = 'asset' THEN (je.amount * -1.0 * ao.ownership_percentage)
-                    WHEN a.account_type = 'expense' THEN (je.amount * -1.0 * ao.ownership_percentage)
-                    WHEN a.account_type = 'liability' THEN (je.amount * ao.ownership_percentage)
-                    WHEN a.account_type = 'equity' THEN (je.amount * ao.ownership_percentage)
+                    WHEN a.account_type = 'income' THEN (je.amount * -1.0)
+                    WHEN a.account_type = 'asset' THEN (je.amount * -1.0)
+                    WHEN a.account_type = 'expense' THEN (je.amount * -1.0)
+                    WHEN a.account_type = 'liability' THEN je.amount
+                    WHEN a.account_type = 'equity' THEN je.amount
                     ELSE 0.0
                 END
             ), 0.0

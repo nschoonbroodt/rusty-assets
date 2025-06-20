@@ -38,7 +38,6 @@ async fn test_create_balanced_transaction() {
         description: "Grocery shopping".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: groceries_account.id,
@@ -99,7 +98,6 @@ async fn test_reject_unbalanced_transaction() {
         description: "Unbalanced transaction".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: groceries_account.id,
@@ -139,7 +137,6 @@ async fn test_new_transaction_is_balanced_method() {
         description: "Test".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: Uuid::new_v4(),
@@ -163,7 +160,6 @@ async fn test_new_transaction_is_balanced_method() {
         description: "Test".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: Uuid::new_v4(),
@@ -189,7 +185,6 @@ async fn test_transaction_total_debits_credits() {
         description: "Test".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: Uuid::new_v4(),
@@ -233,7 +228,6 @@ async fn test_simple_transaction_helpers() {
     // Test the static helper methods
     let debit_account = Uuid::new_v4();
     let credit_account = Uuid::new_v4();
-    let user_id = Uuid::new_v4();
     let amount = Decimal::from_str("250.00").unwrap();
     let date = Utc::now();
 
@@ -244,12 +238,10 @@ async fn test_simple_transaction_helpers() {
         amount,
         date,
         Some("REF-123".to_string()),
-        Some(user_id),
     );
 
     assert_eq!(simple.description, "Simple transfer");
     assert_eq!(simple.reference, Some("REF-123".to_string()));
-    assert_eq!(simple.created_by, Some(user_id));
     assert_eq!(simple.transaction_date, date);
     assert_eq!(simple.entries.len(), 2);
 
@@ -313,7 +305,6 @@ async fn test_double_entry_bookkeeping_principles() {
         description: "Monthly salary".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: checking.id,
@@ -341,7 +332,6 @@ async fn test_double_entry_bookkeeping_principles() {
         description: "Monthly rent".to_string(),
         transaction_date: Utc::now(),
         reference: None,
-        created_by: None,
         entries: vec![
             NewJournalEntry {
                 account_id: rent.id,

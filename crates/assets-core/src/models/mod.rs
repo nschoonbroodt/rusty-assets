@@ -1,9 +1,8 @@
 //! RustyAssets Data Models
 //!
 //! This module contains all data models organized by domain:
-//! - `account`: Account management, types, ownership, and enhanced views
+//! - `account`: Account management, types, and enhanced views
 //! - `transaction`: Transaction processing, journal entries, and builders
-//! - `user`: User management and authentication
 //! - `pricing`: Asset pricing and market data
 //! - `reports`: Financial reporting structures
 //! - `import`: Data import tracking and management
@@ -27,9 +26,7 @@ pub mod user;
 
 // Account types
 pub use account::{
-    Account, AccountOwnership, AccountOwnershipWithUser, AccountSubtype, AccountType,
-    AccountWithMarketValue, AccountWithOwnership, AccountWithOwnershipAndUsers, NewAccount,
-    NewAccountByPath, UserContext,
+    Account, AccountSubtype, AccountType, AccountWithMarketValue, NewAccount, NewAccountByPath,
 };
 
 // Transaction types
@@ -37,9 +34,6 @@ pub use transaction::{
     JournalEntry, JournalEntryByPath, JournalEntryWithAccount, NewJournalEntry, NewTransaction,
     NewTransactionByPath, Transaction, TransactionWithEntries, TransactionWithEntriesAndAccounts,
 };
-
-// User types
-pub use user::{NewUser, User};
 
 // Pricing types
 pub use pricing::{NewPriceHistory, PriceHistory};

@@ -17,9 +17,9 @@ pub use deduplication_service::{
 };
 pub use file_import_service::FileImportService;
 pub use import_service::{ImportService, ImportSummary};
-pub use ownership_service::OwnershipService;
+// OwnershipService export removed - ownership functionality eliminated
 pub use payslip_import_service::{DestinationAccount, ImportResult, PayslipImportService};
 pub use price_history_service::PriceHistoryService;
 pub use report_service::{AccountBalance, BalanceSheetData, ReportService};
 pub use transaction_service::TransactionService;
-pub use user_service::UserService;
+// UserService export removed - ownership functionality eliminated

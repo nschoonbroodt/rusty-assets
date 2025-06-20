@@ -1,5 +1,5 @@
 use anyhow::Result;
-use assets_core::{AccountService, AccountSubtype, AccountType, Database, NewAccount, UserService};
+use assets_core::{AccountService, AccountSubtype, AccountType, Database, NewAccount};
 use rust_decimal::Decimal;
 use std::io::{self, Write};
 use std::str::FromStr;
@@ -307,9 +307,9 @@ pub async fn create_account_interactive() -> Result<()> {
         Vec::new()
     };
 
-    // Step 10: Create account with ownership in a single transaction
+    // Step 10: Create account (ownership model removed)
     match account_service
-        .create_account_with_ownership(new_account, ownership_data)
+        .create_account(new_account)
         .await
     {
         Ok(account) => {
@@ -438,11 +438,10 @@ pub async fn show_account_ownership(account_id_str: &str) -> Result<()> {
     match Uuid::from_str(account_id_str) {
         Ok(account_uuid) => {
             match account_service
-                .get_account_with_ownership_and_users(account_uuid)
+                .get_account(account_uuid)
                 .await?
             {
-                Some(account_with_ownership) => {
-                    let account = &account_with_ownership.account;
+                Some(account) => {
 
                     println!("📊 Account: {} (ID: {})", account.name, account.id);
                     println!(
@@ -1117,7 +1116,6 @@ pub async fn set_account_opening_balance(
         description: format!("Opening balance for {}", account.name),
         reference: Some("OPENING".to_string()),
         transaction_date: transaction_date.and_hms_opt(12, 0, 0).unwrap().and_utc(),
-        created_by: Some(target_user.id),
         entries: vec![
             NewJournalEntry {
                 account_id: account.id,
