@@ -42,3 +42,36 @@ tarpaulin-report.html
 cobertura.xml
 tarpaulin-report.json
 coverage.json
+
+# Node.js / npm
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+*.tgz
+.npm
+.yarn/
+
+# Tauri
+**/target/
+**/gen/
+**/dist/
+**/.tauri/
+bundle/
+.tauri/
+**/*tauri.conf.json.bak
+**/*.tauri.conf.json.bak
+
+# SvelteKit
+.svelte-kit/
+build/
+.vercel/
+.netlify/
+.output/
+
+# Auto-generated schemas and manifests
+**/schemas/
+**/acl-manifests.json
+**/capabilities.json
+**/*-schema.json
