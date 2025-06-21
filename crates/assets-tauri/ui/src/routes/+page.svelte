@@ -1,6 +1,7 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
+	import { setupPluginListeners, cleanupPluginListeners } from 'tauri-plugin-mcp';
 	import Dashboard from '$lib/components/Dashboard.svelte';
 	
 	let accounts: any[] = [];
@@ -9,11 +10,24 @@
 
 	onMount(async () => {
 		try {
+			// Initialize MCP plugin listeners
+			await setupPluginListeners();
+			console.log('MCP plugin listeners set up successfully');
+			
 			accounts = await invoke('get_accounts');
 		} catch (e) {
 			error = `Failed to load accounts: ${e}`;
 		} finally {
 			loading = false;
+		}
+	});
+
+	onDestroy(async () => {
+		try {
+			await cleanupPluginListeners();
+			console.log('MCP plugin listeners cleaned up');
+		} catch (e) {
+			console.error('Error cleaning up MCP plugin listeners:', e);
 		}
 	});
 </script>
