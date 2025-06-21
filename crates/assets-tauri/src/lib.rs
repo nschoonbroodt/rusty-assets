@@ -1,8 +1,9 @@
-use assets_core::services::{AccountService, ReportService};
+use assets_core::database::Database;
 use assets_core::models::account::Account;
 use assets_core::models::transaction::Transaction;
-use assets_core::database::Database;
-use chrono::{NaiveDate, Datelike};
+use assets_core::services::{AccountService, ReportService};
+use chrono::{Datelike, NaiveDate};
+use tauri_plugin_mcp::PluginConfig;
 
 // Tauri commands that expose our backend services to the frontend
 
@@ -33,7 +34,10 @@ async fn get_balance_sheet() -> Result<String, String> {
     let db = Database::from_env().await.map_err(|e| e.to_string())?;
     let service = ReportService::new(db.pool().clone());
     let today = chrono::Utc::now().naive_utc().date();
-    let _report = service.balance_sheet(today).await.map_err(|e| e.to_string())?;
+    let _report = service
+        .balance_sheet(today)
+        .await
+        .map_err(|e| e.to_string())?;
     // Return placeholder data since BalanceSheetData doesn't implement Serialize
     Ok("{}".to_string())
 }
@@ -44,7 +48,10 @@ async fn get_income_statement() -> Result<String, String> {
     let service = ReportService::new(db.pool().clone());
     let today = chrono::Utc::now().naive_utc().date();
     let start_of_year = NaiveDate::from_ymd_opt(today.year(), 1, 1).unwrap();
-    let _report = service.income_statement(start_of_year, today).await.map_err(|e| e.to_string())?;
+    let _report = service
+        .income_statement(start_of_year, today)
+        .await
+        .map_err(|e| e.to_string())?;
     // Return placeholder data for now
     Ok("[]".to_string())
 }
@@ -52,8 +59,9 @@ async fn get_income_statement() -> Result<String, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_mcp::init_with_config(
+            PluginConfig::new("MyApp".to_string()).tcp("127.0.0.1".to_string(), 4000),
+        ))
         .invoke_handler(tauri::generate_handler![
             get_accounts,
             get_account_by_id,

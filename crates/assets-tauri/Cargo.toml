@@ -25,6 +25,8 @@ tokio = { version = "1", features = ["full"] }
 uuid = { version = "1.0", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 assets-core = { path = "../assets-core" }
+tauri-plugin-mcp = { path = "../../../tauri-plugin-mcp" }
+
 
 [target."cfg(not(any(target_os = \"android\", target_os = \"ios\")))".dependencies]
 tauri-plugin-updater = "2"

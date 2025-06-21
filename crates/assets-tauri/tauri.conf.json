@@ -3,13 +3,13 @@
   "version": "0.1.0",
   "identifier": "com.rustyassets.app",
   "build": {
-    "beforeDevCommand": "./start-dev.sh",
+    "beforeDevCommand": "npm --prefix . run dev",
     "beforeBuildCommand": "./build-ui.sh",
     "devUrl": "http://localhost:5173",
-    "frontendDist": "ui/dist",
-    "withGlobalTauri": false
+    "frontendDist": "ui/dist"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "RustyAssets",
@@ -20,16 +20,24 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "description": "Capability for main application",
+          "windows": ["main"],
+          "permissions": [
+            "core:default"
+          ]
+        }
+      ]
     }
+  },
+  "plugins": {
+    "mcp": {}
   },
   "bundle": {
     "active": true,
     "targets": "all"
-  },
-  "plugins": {
-    "updater": {
-      "active": false
-    }
   }
 }
